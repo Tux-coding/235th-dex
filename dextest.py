@@ -55,7 +55,7 @@ async def spawn(ctx):
         await ctx.send("You caught a wild Reyes!") # it sends a message that you caught the pokemon ;)
 
         embed = discord.Embed(title="Reyes", description="Here's your catch!")
-        embed.set_image(url="https://media.discordapp.net/attachments/1322202570529177642/1322585603518234624/CC-1598_Reyes_is_the_Marshal_Commander_of_the_235th_Elite_Corps._He_has_led_the_Corps_since_the_very_beginning_although_the_highest_rank_was_Senior_Commander_back_in_the_day._Known_for_his_steady_1.png?ex=67716954&is=677017d4&hm=16a62423e0586932801b05685067a7e701d1da66cdda6263df1ce97f7d7d5f5d&") 
+        embed.set_image(url="https://media.discordapp.net/attachments/1321821231850328068/1322584515146678335/CC-1598_Reyes_is_the_Marshal_Commander_of_the_235th_Elite_Corps._He_has_led_the_Corps_since_the_very_beginning_although_the_highest_rank_was_Senior_Commander_back_in_the_day._Known_for_his_steady.png?ex=67716850&is=677016d0&hm=c9811709d3f40e4f08220a9e1f553eeac4e89b32608473a88df31e646b6450a5&=&format=webp&quality=lossless&width=479&height=671") 
         await ctx.send(embed=embed)
     else:
         await ctx.send("You didn't catch anything, poor you...")
