@@ -1,5 +1,4 @@
 import discord # type: ignore
-from discord import commands
 import random
 import logging
 from discord.ext import commands # type: ignore
@@ -21,7 +20,7 @@ intents = discord.Intents.default()
 intents.message_content = True
 bot = commands.Bot(command_prefix='!', intents=intents)
 
-# Event: When the bot is ready, it prints to the console that it's online.
+# When the bot is ready, it prints to the console that it's online
 @bot.event
 async def on_ready():
     print(f'We have logged in as {bot.user}')
@@ -34,19 +33,10 @@ async def randomNumber(ctx):
     await ctx.send(random_number)
 
 
-# Command: Respond to a simple message
+# Respond to a simple message
 @bot.command(name='hello')
 async def hello(ctx):
     await ctx.send('Hello! I am your Discord bot.')
-
-class CatchButton(discord.ui.View):
-    def __init__(self, card_name):
-        super().__init__()
-        self.card_name = card_name
-
-    @discord.ui.button(label='Catch', style=discord.ButtonStyle.primary)
-    async def catch(self, button: discord.ui.Button, interaction: discord.Interaction):
-        await interaction.response.send_message(f'You caught a wild {self.card_name}!')
 
 #Command: basicly coded for chances of getting cards. Horribly coded, FIRST THING TO CHANGE IF IT IS DONE!!!!! 
 @bot.command(name='spawn')
