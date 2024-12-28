@@ -5,7 +5,7 @@ from discord.ext import commands # type: ignore
 from dotenv import load_dotenv
 import os
 
-# Configuring the logging into the terminal
+# Configuring logging into the terminal
 logging.basicConfig(level=logging.INFO)
 
 # Loading the token from the .env file
