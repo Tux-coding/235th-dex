@@ -24,6 +24,7 @@ bot = commands.Bot(command_prefix='!', intents=intents)
 @bot.event
 async def on_ready():
     print(f'We have logged in as {bot.user}')
+    logging.info("Logging is configured correctly.")
 
 #gives you a random number
 @bot.command(name='random_number')
