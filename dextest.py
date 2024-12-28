@@ -1,6 +1,12 @@
 import discord # type: ignore
 import random
 from discord.ext import commands # type: ignore
+from dotenv import load_dotenv
+import os
+
+# Load environment variables from .env file
+load_dotenv()
+token = os.getenv('DISCORD_TOKEN')
 
 # Bot Configuration, this holds what character you have to use to give the bot a command (in this case "!")
 intents = discord.Intents.default()
@@ -42,5 +48,5 @@ async def spawn(ctx):
         await ctx.send("You didn't catch anything, poor you...")
 
 
-# Run the bot, Bot code DO NOT SHARE!!!!! if you want to show someone the code online always use bot_code or something instead!
-bot.run('MTMyMTgxMzI1NDEyODkzMDg2Nw.GsJv7A.w_qdot6QcMKGPBPe65_1dycFQfxKZ9up7-uyBw')
+# Run the bot, located in .env (if everythink ok?) STILL DO NOT SHARE
+bot.run(token)
