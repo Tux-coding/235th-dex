@@ -2,7 +2,7 @@ import discord # type: ignore
 import random
 import logging
 from discord.ext import commands, tasks # type: ignore
-from discord.ui import Button, View, Modal, InputText #type:ignore 
+from discord.ui import Button, View #type:ignore 
 from dotenv import load_dotenv # type: ignore //please ensure that you have python-dotenv installed (command is "pip install python-dotenv")
 import os
 
@@ -33,29 +33,6 @@ bot = commands.Bot(command_prefix='!', intents=intents)
 
 # Player cards view starter
 player_cards = {}
-
-# Modal to prompt the user to enter the card name
-class CardNameModal(Modal):
-    def __init__(self, card_name):
-        super().__init__(title="Enter Card Name")
-        self.card_name = card_name
-        self.add_item(InputText(label="Card Name"))
-
-    async def callback(self, interaction: discord.Interaction):
-        entered_name = self.children[0].value
-        if entered_name.lower() == self.card_name.lower():
-            user = interaction.user
-            if user.id not in player_cards:
-                player_cards[user.id] = []
-            player_cards[user.id].append(self.card_name)
-            await interaction.response.send_message(f"{user.mention} caught the card: {self.card_name}!", ephemeral=True)
-
-            # Disable the button after it has been clicked
-            for item in interaction.message.components[0].children:
-                item.disabled = True
-            await interaction.message.edit(view=interaction.message.components[0])
-        else:
-            await interaction.response.send_message("Incorrect card name. Try again!", ephemeral=True)
 
 # Button that hopefully does the button work
 class CatchButton(Button):
