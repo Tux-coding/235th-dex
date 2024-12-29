@@ -7,16 +7,24 @@ from dotenv import load_dotenv # type: ignore //please ensure that you have pyth
 import os
 import asyncio
 
-player_cards = {}
-
 # Configuring logging into the terminal
 logging.basicConfig(level=logging.INFO, format='%(asctime)s:%(levelname)s:%(name)s: %(message)s')
 
 # Loading the token from the .env file
 load_dotenv()
 token = os.getenv('DISCORD_TOKEN')
-if not token: # If he can't find the token, error message and exit will occur
+channel_id = os.getenv('CHANNEL_ID')
+
+# Debugging prints
+print(f"DISCORD_TOKEN: {token}")
+print(f"CHANNEL_ID: {channel_id}")
+
+if not token: # If it can't find the token, error message and exit will occur
     logging.error("DISCORD_TOKEN missing!") 
+    exit(1)
+
+if not channel_id: # If it can't find the ID, error message and exit will occur
+    logging.error("CHANNEL_ID missing!") 
     exit(1)
 
 # Bot Configuration, this holds what character you have to use to give the bot a command (in this case "!")
@@ -24,6 +32,8 @@ intents = discord.Intents.default()
 intents.message_content = True
 bot = commands.Bot(command_prefix='!', intents=intents)
 
+# Player cards view starter
+player_cards = {}
 
 # Button that hopefully does the button work
 class CatchButton(Button):
@@ -45,9 +55,12 @@ class CatchView(View):
 
 # Part that holds the timer and the channel where the card spawns
 @tasks.loop(minutes=10)
-async def spawn.card():
-    channel = bot.get_channel(1322197080625647627) # Channel ID, DON'T SHARE
-    await channel.send("A wild card has appeared! Click the button below to catch it!")
+async def spawn_card():
+    channel = bot.get_channel(channel_id) # Channel ID, DON'T SHARE
+    if channel:
+        await channel.send("A wild card has appeared! Click the button below to catch it!", view=CatchView())
+    else:
+        print(f"Channel not found")
 
 # If error, he says why
 @bot.event
@@ -82,6 +95,10 @@ async def spawn(ctx):
     random_card = random.randint(1, 200) #chooses a random integer 
     logging.info(f'Generated random card number: {random_card}') # prints the integer to the console for troubleshooting purposes
     
+    user_id = ctx.author.id
+    if user_id not in player_cards:
+        player_cards[user_id] = []
+    
     if  random_card <= 21:  # basicly the chance, in this instance if random choosen integer is lower than 21 then:
         embed = discord.Embed(title = "mystery man", description ="Who is this?")      
         embed.set_image(url="https://media.discordapp.net/attachments/1322205679028670495/1322205863611600896/RobloxScreenShot20241227_145936188.png?ex=6771592b&is=677007ab&hm=dce13f31e721d625b43ac537d5d17b8e3dc5158d67a9035f59b5d4971bfe8502&=&format=webp&quality=lossless&width=650&height=667")
@@ -94,12 +111,16 @@ async def spawn(ctx):
         embed.set_image(url="https://media.discordapp.net/attachments/1322202570529177642/1322205795957342228/CC-1947_2.png?ex=6770079b&is=676eb61b&hm=1d292e779b29d2258042788a7f8e0783e881dccd821baf36d3668a9c58d6dd&=&format=webp&quality=lossless&width=479&height=671")
         await ctx.send(embed=embed)
 
-    elif random_card == 200: #if the random number is higher than 179 and lower than 190 then:
+        player_cards[user_id].append("Dicer") # adds the card to the player's collection
+
+    elif random_card == 200: # If the random number is 200:
         await ctx.send("You caught a wild Reyes!") 
 
         embed = discord.Embed(title="Reyes", description="Here's your catch!")
         embed.set_image(url="https://media.discordapp.net/attachments/1321821231850328068/1322584515146678335/CC-1598_Reyes_is_the_Marshal_Commander_of_the_235th_Elite_Corps._He_has_led_the_Corps_since_the_very_beginning_although_the_highest_rank_was_Senior_Commander_back_in_the_day._Known_for_his_steady.png?ex=67716850&is=677016d0&hm=c9811709d3f40e4f08220a9e1f553eeac4e89b32608473a88df31e646b6450a5&=&format=webp&quality=lossless&width=479&height=671") 
         await ctx.send(embed=embed)
+
+        player_cards[user_id].append("Reyes")
     else:
         await ctx.send("You didn't catch anything, poor you...")
 
@@ -107,6 +128,8 @@ async def spawn(ctx):
 @bot.command(name='mycards')
 async def my_cards(ctx):
     user_id = ctx.author.id
+    logging.info(f'User ID: {user_id}')
+    logging.info(f'Player cards: {player_cards}')
     if user_id in player_cards:
         cards = player_cards[user_id]
         await ctx.send(f"You have caught: {', '.join(cards)}")
@@ -116,6 +139,10 @@ async def my_cards(ctx):
 # Ensures that it will only work when executed directly, and will log any errors to the terminal
 if __name__ == "__main__":
     try:
+        @bot.event
+        async def on_ready():
+            logging.info(f'Logged in as {bot.user.name}')
+            spawn_card.start()
         bot.run(token)
     except Exception as e:
-        logging.error(f"Error running the bot: {e}")
+        logging.error(f'Error: {e}')
