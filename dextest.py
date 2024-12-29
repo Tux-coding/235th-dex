@@ -46,13 +46,17 @@ class CatchButton(Button):
         player_cards[user.id].append("Card")
         await interaction.response.send_message(f"{user.mention} caught the card!", ephemeral=True)
 
+        # Disable the button after it has been clicked
+        self.disabled = True
+        await interaction.message.edit(view=self.view)
+
 # Same as above
 class CatchView(View):
     def __init__(self):
         super().__init__(timeout=None)
         self.add_item(CatchButton())
 
-# NEW: ALL CARDS IN THE FOLLOWING FORMAT
+# List of cards with their names and image URLs
 cards = [
     {
         "name": "Dicer",
