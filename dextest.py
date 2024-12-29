@@ -1,10 +1,13 @@
 import discord # type: ignore
 import random
 import logging
-from discord.ext import commands # type: ignore
+from discord.ext import commands, tasks # type: ignore
 from discord.ui import Button, View #type:ignore 
 from dotenv import load_dotenv # type: ignore //please ensure that you have python-dotenv installed (command is "pip install python-dotenv")
 import os
+import asyncio
+
+player_cards = {}
 
 # Configuring logging into the terminal
 logging.basicConfig(level=logging.INFO, format='%(asctime)s:%(levelname)s:%(name)s: %(message)s')
@@ -20,6 +23,31 @@ if not token: # If he can't find the token, error message and exit will occur
 intents = discord.Intents.default()
 intents.message_content = True
 bot = commands.Bot(command_prefix='!', intents=intents)
+
+
+# Button that hopefully does the button work
+class CatchButton(Button):
+    def __init__(self):
+        super().__init__(label="Catch the card", style=discord.ButtonStyle.primary)
+    
+    async def callback(self, interaction: discord.Interaction):
+        user = interaction.user
+        if user.id not in player_cards:
+            player_cards[user.id] = []
+        player_cards[user.id].append("Card")
+        await interaction.response.send_message(f"{user.mention} caught the card!", ephemeral=True)
+
+# Same as above
+class CatchView(View):
+    def __init__(self):
+        super().__init__(timeout=None)
+        self.add_item(CatchButton())
+
+# Part that holds the timer and the channel where the card spawns
+@tasks.loop(minutes=10)
+async def spawn.card():
+    channel = bot.get_channel(1322197080625647627) # Channel ID, DON'T SHARE
+    await channel.send("A wild card has appeared! Click the button below to catch it!")
 
 # If error, he says why
 @bot.event
@@ -74,6 +102,16 @@ async def spawn(ctx):
         await ctx.send(embed=embed)
     else:
         await ctx.send("You didn't catch anything, poor you...")
+
+# Command that hopefully sees your cards
+@bot.command(name='mycards')
+async def my_cards(ctx):
+    user_id = ctx.author.id
+    if user_id in player_cards:
+        cards = player_cards[user_id]
+        await ctx.send(f"You have caught: {', '.join(cards)}")
+    else:
+        await ctx.send("You haven't caught any cards yet.")
 
 # Ensures that it will only work when executed directly, and will log any errors to the terminal
 if __name__ == "__main__":
