@@ -7,7 +7,7 @@ from dotenv import load_dotenv # type: ignore //please ensure that you have pyth
 import os
 
 # Configuring logging into the terminal
-logging.basicConfig(level=logging.INFO)
+logging.basicConfig(level=logging.INFO, format='%(asctime)s:%(levelname)s:%(name)s: %(message)s')
 
 # Loading the token from the .env file
 load_dotenv()
@@ -21,13 +21,23 @@ intents = discord.Intents.default()
 intents.message_content = True
 bot = commands.Bot(command_prefix='!', intents=intents)
 
+# If error, he says why
+@bot.event
+async def on_command_error(ctx, error):
+    if isinstance(error, commands.CommandNotFound):
+        await ctx.send("Command not found.")
+    elif isinstance(error, commands.MissingRequiredArgument):
+        await ctx.send("Missing arguments.")
+    else:
+        await ctx.send("An error occurred.")
+
 # When the bot is ready, it prints to the console that it's online
 @bot.event
 async def on_ready():
     print(f'We have logged in as {bot.user}')
     logging.info("Logging is configured correctly.")
 
-#gives you a random number
+# Gives a random number between 0 and 10000000
 @bot.command(name='random_number')
 async def randomNumber(ctx):
     random_number = random.randint(0, 10000000)
