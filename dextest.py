@@ -66,8 +66,21 @@ cards = [
     {
         "name": "Reyes",
         "image_url": "https://media.discordapp.net/attachments/1322205679028670495/1322503928591548482/RobloxScreenShot20241228_105546001.png?ex=67726ec3&is=67711d43&hm=4978a7aa74371952a439ec75fd2ac459bb1f49af739b8ec7d0f6d145c54642d9&=&format=webp&quality=lossless"
+    },
+    {
+        "name": "Sentinel",
+        "image_url": "https://media.discordapp.net/attachments/1322205679028670495/1322284693164523520/RobloxScreenShot20241227_202621517.png?ex=67724b55&is=6770f9d5&hm=79e9f8374ffa7b0138f938a11d7916b45ee79b2afdf1fc6c8197c27349b46684&=&format=webp&quality=lossless&width=377&height=350"
+    },
+    {
+        "name": "Blau",
+        "image_url": "https://media.discordapp.net/attachments/1322205679028670495/1322289394404687957/RobloxScreenShot20241227_204520218.png?ex=67724fb6&is=6770fe36&hm=b3fc9388163dfb8f6d33ea520cccc373156a6ea8c5b558d370d388a8ec8ae7d8&=&format=webp&quality=lossless&width=396&height=350"
+    },
+    {
+        "name": "Hounder",
+        "image_url": "https://media.discordapp.net/attachments/1322205679028670495/1322295423360176218/RobloxScreenShot20241227_210852940.png?ex=67725553&is=677103d3&hm=c32cad3bc0dc2ebc26cbdfeba7e8fb5ea83b55e557eafbfc3a0358a760654d7e&=&format=webp&quality=lossless"
     }
 ]
+
 # Part that holds the timer and the channel where the card spawns
 @tasks.loop(minutes=10)
 async def spawn_card():
@@ -76,9 +89,9 @@ async def spawn_card():
         if channel:
             card = random.choice(cards)
             logging.info(f"Selected card: {card['name']}")
-            embed = discord.Embed(title=f"A wild 235th clone has appeared!", description="Click the button below to catch it!")
+            embed = discord.Embed(title=f"A wild {card['name']} has appeared!", description="Click the button below to catch it!")
             embed.set_image(url=card['image_url'])
-            await channel.send(embed=embed, view=CatchView())
+            await channel.send(embed=embed, view=CatchView(card['name']))
         else:
             logging.error(f"Channel not found: {channel_id}")
     except Exception as e:
