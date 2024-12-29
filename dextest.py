@@ -36,9 +36,10 @@ player_cards = {}
 
 # Button that hopefully does the button work
 class CatchButton(Button):
-    def __init__(self):
+    def __init__(self, card_name):
         super().__init__(label="Catch the card", style=discord.ButtonStyle.primary)
-    
+        self.card_name = card_name
+
     async def callback(self, interaction: discord.Interaction):
         user = interaction.user
         if user.id not in player_cards:
@@ -98,6 +99,7 @@ async def on_command_error(ctx, error):
 async def on_ready():
     print(f'We have logged in as {bot.user}')
     logging.info("Logging is configured correctly.")
+    spawn_card.start()
 
 # Gives a random number between 0 and 10000000
 @bot.command(name='random_number')
@@ -160,10 +162,7 @@ async def my_cards(ctx):
 # Ensures that it will only work when executed directly, and will log any errors to the terminal
 if __name__ == "__main__":
     try:
-        @bot.event
-        async def on_ready():
-            logging.info(f'Logged in as {bot.user.name}')
-            spawn_card.start()
         bot.run(token)
+        logging.info(f'Logged in as {bot.user.name}')
     except Exception as e:
         logging.error(f'Error: {e}')
