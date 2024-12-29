@@ -15,8 +15,8 @@ token = os.getenv('DISCORD_TOKEN')
 channel_id = os.getenv('CHANNEL_ID')
 
 # Debugging prints
-print(f"DISCORD_TOKEN: {token}")
-print(f"CHANNEL_ID: {channel_id}")
+logging.info(f"DISCORD_TOKEN: {token}")
+logging.info(f"CHANNEL_ID: {channel_id}")
 
 if not token: # If it can't find the token, error message and exit will occur
     logging.error("DISCORD_TOKEN missing!") 
@@ -70,12 +70,13 @@ async def spawn_card():
         channel = bot.get_channel(int(channel_id))
         if channel:
             card = random.choice(cards)
-            embed = discord.Embed(title="A wild card has appeared!", description="Click the button below to catch it!")
-            embed.set_image(url=card["image_url"])
-            await channel.send("A wild card has appeared! Click the button below to catch it!", view=CatchView())
+            logging.info(f"Selected card: {card['name']}")
+            embed = discord.Embed(title=f"A wild {card['name']} has appeared!", description="Click the button below to catch it!")
+            embed.set_image(url=card['image_url'])
+            await channel.send(embed=embed, view=CatchView())
         else:
             logging.error(f"Channel not found: {channel_id}")
-    except:
+    except Exception as e:
         logging.error(f"An error occurred: {e}")
 
 # If error, he says why
@@ -155,10 +156,6 @@ async def my_cards(ctx):
 # Ensures that it will only work when executed directly, and will log any errors to the terminal
 if __name__ == "__main__":
     try:
-        @bot.event
-        async def on_ready():
-            logging.info(f'Logged in as {bot.user.name}')
-            spawn_card.start()
         bot.run(token)
     except Exception as e:
         logging.error(f'Error: {e}')
