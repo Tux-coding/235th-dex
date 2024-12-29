@@ -2,7 +2,7 @@ import discord # type: ignore
 import random
 import logging
 from discord.ext import commands, tasks # type: ignore
-from discord.ui import Button, View, Modal, Inputtext #type:ignore 
+from discord.ui import Button, View, Modal, InputText #type:ignore 
 from dotenv import load_dotenv # type: ignore //please ensure that you have python-dotenv installed (command is "pip install python-dotenv")
 import os
 
