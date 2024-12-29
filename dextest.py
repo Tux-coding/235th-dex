@@ -32,7 +32,6 @@ async def randomNumber(ctx):
     random_number = random.randint(1, 150)
     await ctx.send(random_number)
 
-
 # Respond to a simple message
 @bot.command(name='hello')
 async def hello(ctx):
