@@ -39,9 +39,9 @@ async def on_ready():
 
 # Gives a random number between 0 and 10000000
 @bot.command(name='random_number')
-async def randomNumber(ctx):
+async def random_number(ctx):
     random_number = random.randint(0, 10000000)
-    await ctx.send(random_number)
+    await ctx.send(f'Your random number is: {random_number}')
 
 # Respond to a simple message
 @bot.command(name='hello')
