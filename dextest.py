@@ -5,7 +5,6 @@ from discord.ext import commands, tasks # type: ignore
 from discord.ui import Button, View #type:ignore 
 from dotenv import load_dotenv # type: ignore //please ensure that you have python-dotenv installed (command is "pip install python-dotenv")
 import os
-import asyncio
 
 # Configuring logging into the terminal
 logging.basicConfig(level=logging.INFO, format='%(asctime)s:%(levelname)s:%(name)s: %(message)s')
@@ -56,11 +55,14 @@ class CatchView(View):
 # Part that holds the timer and the channel where the card spawns
 @tasks.loop(minutes=10)
 async def spawn_card():
-    channel = bot.get_channel(channel_id) # Channel ID, DON'T SHARE
-    if channel:
-        await channel.send("A wild card has appeared! Click the button below to catch it!", view=CatchView())
-    else:
-        print(f"Channel not found")
+    try:
+        channel = bot.get_channel(int(channel_id))
+        if channel:
+            await channel.send("A wild card has appeared! Click the button below to catch it!", view=CatchView())
+        else:
+            logging.error(f"Channel not found: {channel_id}")
+    except:
+        logging.error(f"An error occurred: {e}")
 
 # If error, he says why
 @bot.event
