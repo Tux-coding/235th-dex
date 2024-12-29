@@ -156,6 +156,10 @@ async def my_cards(ctx):
 # Ensures that it will only work when executed directly, and will log any errors to the terminal
 if __name__ == "__main__":
     try:
+        @bot.event
+        async def on_ready():
+            logging.info(f'Logged in as {bot.user.name}')
+            spawn_card.start()
         bot.run(token)
     except Exception as e:
         logging.error(f'Error: {e}')
