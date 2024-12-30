@@ -89,7 +89,7 @@ async def spawn_card():
         if channel:
             card = random.choice(cards)
             logging.info(f"Selected card: {card['name']}")
-            embed = discord.Embed(title=f"A wild {card['name']} has appeared!", description="Click the button below to catch it!")
+            embed = discord.Embed(title=f"A wild 235th clone appeared!", description="Click the button below to catch it!")
             embed.set_image(url=card['image_url'])
             await channel.send(embed=embed, view=CatchView(card['name']))
         else:
