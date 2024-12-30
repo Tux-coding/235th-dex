@@ -239,13 +239,16 @@ async def my_cards(ctx):
 # see_card command to see a specific card
 @bot.command(name='see_card')
 async def see_card(ctx):
-    user_id = ctx.author.id
+    user_id = str(ctx.author.id)  # Ensure user ID is a string
+    logging.info(f'User ID: {user_id}')
+    logging.info(f'Player cards: {player_cards}')
+    
     if user_id in player_cards and player_cards[user_id]:
         options = [discord.SelectOption(label=card, value=card) for card in player_cards[user_id]]
         select = Select(placeholder="Choose a card to see", options=options)
 
         async def select_callback(interaction):
-            if interaction.user.id != user_id:
+            if interaction.user.id != ctx.author.id:
                 await interaction.response.send_message("You can only view your own cards.", ephemeral=True)
                 return
             selected_card_name = select.values[0]
