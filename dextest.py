@@ -47,8 +47,10 @@ class CatchModal(Modal):
         self.message = message
         self.card_input = TextInput(label="Card Name", placeholder="Type the card name here")
         self.add_item(self.card_input)
+        self.interaction = None  # Store the interaction
 
     async def on_submit(self, interaction: discord.Interaction):
+        self.interaction = interaction  # Store the interaction
         user = interaction.user
         if self.card_input.value.lower() == self.card_name.lower():
             if user.id not in player_cards:
@@ -64,7 +66,7 @@ class CatchModal(Modal):
 
             # Close the modal for all other users
             for modal in self.view.modals:
-                if modal != self:
+                if modal != self and modal.interaction:
                     await modal.interaction.response.send_message("The card has already been claimed.", ephemeral=True)
                     await modal.interaction.message.delete()
         else:
