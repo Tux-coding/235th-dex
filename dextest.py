@@ -94,7 +94,7 @@ cards = [
     {
         "name": "Sentinel",
         "spawn_image_url": "https://media.discordapp.net/attachments/1322205679028670495/1322284693164523520/RobloxScreenShot20241227_202621517.png?ex=67724b55&is=6770f9d5&hm=79e9f8374ffa7b0138f938a11d7916b45ee79b2afdf1fc6c8197c27349b46684&=&format=webp&quality=lossless&width=377&height=350",
-        "card_image_url": "https://cdn.discordapp.com/attachments/1322202570529177642/1322289085183955004/CT-_1.png?ex=6773a0ec&is=67724f6c&hm=32aef299a210aadcc169dbe3867b9a44a64b1d23d44e7af430d47e3a8a2e583e&",
+        "card_image_url": "https://media.discordapp.net/attachments/1322202570529177642/1323317997414121665/Just_another_trooper_trying_to_stay_alive._He_doesnt_like_insurgents._His_left_arm_and_left_eye_are_gone_due_to_the_Gulag.png?ex=6774136c&is=6772c1ec&hm=f4d4550607203a12eaa72d7b6a0086efb64bf3d8c623650d713dbf7a96bc242d&=&format=webp&quality=lossless&width=479&height=671",
         "rarity": 23  
     },
     {
@@ -114,6 +114,12 @@ cards = [
         "spawn_image_url": "https://media.discordapp.net/attachments/1322205679028670495/1322977622778576976/artworks-OF3WFPHsapfnZrW8-lDiZAQ-t500x500.png?ex=67737f2d&is=67722dad&hm=1ec22c5b9af4c994af583de216afe05660c777e5437a738750577b9a49cbdf90&=&format=webp&quality=lossless",
         "card_image_url": "https://cdn.discordapp.com/attachments/1322202570529177642/1322977702105579591/Pipopro.png?ex=67737f3f&is=67722dbf&hm=2cc3c639f2e613963f78ec6dbfc274df6f6a74666d06461e4bfb60fdb5c3568d&",
         "rarity": 0.75 
+    },
+    {
+        "name": "Wilson",
+        "spawn_image_url": "https://media.discordapp.net/attachments/1322205679028670495/1323344360879689730/RobloxScreenShot20241230_161947936.png?ex=67742bfa&is=6772da7a&hm=14a472045ae47f536705b91cb91bdae7ea52674d1cde2799ad65835c0c85d8df&=&format=webp&quality=lossless&width=532&height=350",
+        "card_image_url": "https://media.discordapp.net/attachments/1322202570529177642/1323314295286665246/CC-.png?ex=67740ff9&is=6772be79&hm=54193da49212bd838fb47e993c16c2af1da3987a04373fc1a20def924f0744a6&=&format=webp&quality=lossless&width=479&height=671",
+        "rarity": 1 
     }
 ]
 
