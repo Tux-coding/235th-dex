@@ -260,7 +260,9 @@ def handle_shutdown_signal(signal, frame):
     loop = asyncio.get_event_loop()
     loop.create_task(bot.close())
 
+# Register signal handlers for graceful shutdown
 signal.signal(signal.SIGINT, handle_shutdown_signal)
+signal.signal(signal.SIGTERM, handle_shutdown_signal)
 
 # Ensures that it will only work when executed directly, and will log any errors to the terminal
 if __name__ == "__main__":
