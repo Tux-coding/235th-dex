@@ -2,6 +2,7 @@ import random
 import logging
 import os
 import asyncio
+import signal
 
 import discord # type: ignore
 from discord.ext import commands, tasks # type: ignore
@@ -220,14 +221,6 @@ async def see_card(ctx):
     else:
         await ctx.send("You haven't caught any cards yet.")
 
-# Ensures that it will only work when executed directly, and will log any errors to the terminal
-if __name__ == "__main__":
-    try:
-        bot.run(token)
-        logging.info(f'Logged in as {bot.user.name}')
-    except Exception as e:
-        logging.error(f'Error: {e}')
-
 # When the bot disconnects, it will send a message to the channel
 @bot.event
 async def on_disconnect():
@@ -235,3 +228,18 @@ async def on_disconnect():
     if channel:
         await channel.send("235th dex going offline")
     logging.info("235th dex going offline")
+
+# Handle shutdown signal
+def handle_shutdown_signal(signal, frame):
+    loop = asyncio.get_event_loop()
+    loop.create_task(bot.close())
+
+signal.signal(signal.SIGINT, handle_shutdown_signal)
+
+# Ensures that it will only work when executed directly, and will log any errors to the terminal
+if __name__ == "__main__":
+    try:
+        bot.run(token)
+        logging.info(f'Logged in as {bot.user.name}')
+    except Exception as e:
+        logging.error(f'Error: {e}')
