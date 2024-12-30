@@ -227,3 +227,11 @@ if __name__ == "__main__":
         logging.info(f'Logged in as {bot.user.name}')
     except Exception as e:
         logging.error(f'Error: {e}')
+
+# When the bot disconnects, it will send a message to the channel
+@bot.event
+async def on_disconnect():
+    channel = bot.get_channel(int(channel_id))
+    if channel:
+        await channel.send("235th dex going offline")
+    logging.info("235th dex going offline")
