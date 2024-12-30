@@ -85,18 +85,21 @@ class CatchModal(Modal):
             user_id = str(user.id)  # Ensure user ID is a string
             if user_id not in player_cards:
                 player_cards[user_id] = []
-            player_cards[user_id].append(self.card_name)
-            save_player_cards()  # Save player cards after catching a card
-            await interaction.response.send_message(f"{user.mention} caught the card: {self.card_name}!", ephemeral=False)
+            if self.card_name not in player_cards[user_id]:  # Check for duplicates
+                player_cards[user_id].append(self.card_name)
+                save_player_cards()  # Save player cards after catching a card
+                await interaction.response.send_message(f"{user.mention} caught the card: {self.card_name}!", ephemeral=False)
 
-            # Mark the card as claimed
-            self.view.card_claimed = True
+                # Mark the card as claimed
+                self.view.card_claimed = True
 
-            # Disable the button after it has been clicked
-            for item in self.view.children:
-                if isinstance(item, Button):
-                    item.disabled = True
-            await self.message.edit(view=self.view)
+                # Disable the button after it has been clicked
+                for item in self.view.children:
+                    if isinstance(item, Button):
+                        item.disabled = True
+                await self.message.edit(view=self.view)
+            else:
+                await interaction.response.send_message(f"{user.mention}, you already have this card.", ephemeral=True)
         else:
             await interaction.response.send_message(f"{user.mention}; Incorrect name.", ephemeral=False)
 
