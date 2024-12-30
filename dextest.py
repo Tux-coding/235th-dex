@@ -284,6 +284,27 @@ async def progress(ctx):
     else:
         await ctx.send(f"You haven't caught any cards yet. There are {total_cards} cards available.")
 
+# Command to spawn a certain card, restricted to a specific user
+@bot.command(name='spawn_card')
+async def spawn_card_command(ctx, card_name: str):
+    specific_user_id = 'YOUR_USER_ID'  # Replace with the specific user's ID
+    if str(ctx.author.id) != specific_user_id:
+        await ctx.send("You do not have permission to use this command.")
+        return
+
+    card = next((card for card in cards if card["name"].lower() == card_name.lower()), None)
+    if card:
+        channel = bot.get_channel(int(channel_id))
+        if channel:
+            embed = discord.Embed(title=f"A wild {card['name']} has appeared!", description="Click the button below to catch it!")
+            embed.set_image(url=card['spawn_image_url'])
+            await channel.send(embed=embed, view=CatchView(card['name']))
+            await ctx.send(f"{card['name']} has been spawned.")
+        else:
+            await ctx.send("Channel not found.")
+    else:
+        await ctx.send("Card not found.")
+
 # When the bot disconnects, it will send a message to the channel
 @bot.event
 async def on_disconnect():
