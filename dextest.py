@@ -60,7 +60,7 @@ class CatchModal(Modal):
                     item.disabled = True
             await interaction.message.edit(view=self.view)
         else:
-            await interaction.response.send_message(f"Incorrect name. The card {self.card_name} escaped!", ephemeral=False)
+            await interaction.response.send_message(f"Incorrect name.", ephemeral=False)
 
 class CatchButton(Button):
     def __init__(self, card_name):
