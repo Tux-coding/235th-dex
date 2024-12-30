@@ -5,7 +5,7 @@ import asyncio
 
 import discord # type: ignore
 from discord.ext import commands, tasks # type: ignore
-from discord.ui import Button, View, Select #type:ignore 
+from discord.ui import Button, View, Select, Modal, TextInput #type:ignore 
 from dotenv import load_dotenv # type: ignore //please ensure that you have python-dotenv installed (command is "pip install python-dotenv")
 
 
@@ -38,35 +38,38 @@ bot = commands.Bot(command_prefix='!', intents=intents)
 player_cards = {}
 
 # Button that hopefully does the button work
+class CatchModal(Modal):
+    def __init__(self, card_name):
+        super().__init__(title="Catch the Card")
+        self.card_name = card_name
+        self.card_input = TextInput(label="Card Name", placeholder="Type the card name here")
+        self.add_item(self.card_input)
+
+    async def on_submit(self, interaction: discord.Interaction):
+        user = interaction.user
+        if self.card_input.value.lower() == self.card_name.lower():
+            if user.id not in player_cards:
+                player_cards[user.id] = []
+            player_cards[user.id].append(self.card_name)
+            await interaction.response.send_message(f"{user.mention} caught the card: {self.card_name}!", ephemeral=False)
+
+            # Disable the button after it has been clicked
+            for item in self.children:
+                if isinstance(item, Button):
+                    item.disabled = True
+            await interaction.message.edit(view=self.view)
+        else:
+            await interaction.response.send_message(f"Incorrect name. The card {self.card_name} escaped!", ephemeral=False)
+
 class CatchButton(Button):
     def __init__(self, card_name):
         super().__init__(label="Catch the card", style=discord.ButtonStyle.primary)
         self.card_name = card_name
 
     async def callback(self, interaction: discord.Interaction):
-        user = interaction.user
+        modal = CatchModal(self.card_name)
+        await interaction.response.send_modal(modal)
 
-        def check(m):
-            return m.author == user and m.channel == interaction.channel
-        
-        await interaction.response.send_message(f"{user.mention}, type the name of the card to catch it:", ephemeral=True)
-        try:
-            msg = await bot.wait_for('message', check=check, timeout=30.0)
-            if msg.content.lower() == self.card_name.lower():
-                if user.id not in player_cards:
-                    player_cards[user.id] = []
-                player_cards[user.id].append(self.card_name)
-                await interaction.response.send_message(f"{user.mention} caught the card: {self.card_name}!", ephemeral=False)
-
-                # Disable the button after it has been clicked
-                self.disabled = True
-                await interaction.message.edit(view=self.view)
-            else:
-                await interaction.followup.send(f"Incorrect name. The card {self.card_name} escaped!", ephemeral=False)
-        except asyncio.TimeoutError:
-            await interaction.followup.send(f"Time's up! The card {self.card_name} escaped!", ephemeral=False)
-
-# Same as above
 class CatchView(View):
     def __init__(self, card_name):
         super().__init__(timeout=None)
