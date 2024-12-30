@@ -47,7 +47,7 @@ class CatchButton(Button):
         if user.id not in player_cards:
             player_cards[user.id] = []
         player_cards[user.id].append(self.card_name)
-        await interaction.response.send_message(f"{user.mention} caught the card: {self.card_name}!", ephemeral=True)
+        await interaction.response.send_message(f"{user.mention} caught the card: {self.card_name}!", ephemeral=False)
 
         # Disable the button after it has been clicked
         self.disabled = True
