@@ -44,14 +44,26 @@ class CatchButton(Button):
 
     async def callback(self, interaction: discord.Interaction):
         user = interaction.user
-        if user.id not in player_cards:
-            player_cards[user.id] = []
-        player_cards[user.id].append(self.card_name)
-        await interaction.response.send_message(f"{user.mention} caught the card: {self.card_name}!", ephemeral=False)
 
-        # Disable the button after it has been clicked
-        self.disabled = True
-        await interaction.message.edit(view=self.view)
+        def check(m):
+            return m.author == user and m.channel == interaction.channel
+        
+        await interaction.response.send_message(f"{user.mention}, type the name of the card to catch it:", ephemeral=True)
+        try:
+            msg = await bot.wait_for('message', check=check, timeout=30.0)
+            if msg.content.lower() == self.card_name.lower():
+                if user.id not in player_cards:
+                    player_cards[user.id] = []
+                player_cards[user.id].append(self.card_name)
+                await interaction.response.send_message(f"{user.mention} caught the card: {self.card_name}!", ephemeral=False)
+
+                # Disable the button after it has been clicked
+                self.disabled = True
+                await interaction.message.edit(view=self.view)
+            else:
+                await interaction.followup.send(f"Incorrect name. The card {self.card_name} escaped!", ephemeral=False)
+        except asyncio.TimeoutError:
+            await interaction.followup.send(f"Time's up! The card {self.card_name} escaped!", ephemeral=False)
 
 # Same as above
 class CatchView(View):
