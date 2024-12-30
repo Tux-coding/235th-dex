@@ -71,9 +71,12 @@ class CatchModal(Modal):
                         await modal.interaction.response.send_message("The card has already been claimed.", ephemeral=True)
                     except discord.errors.InteractionResponded:
                         pass
-                    await modal.interaction.message.delete()
+                    try:
+                        await modal.interaction.message.delete()
+                    except discord.errors.NotFound:
+                        pass
         else:
-            await interaction.response.send_message(f"Incorrect name.", ephemeral=False)
+            await interaction.response.send_message(f"{user.mention}; Incorrect name.", ephemeral=False)
 
 class CatchButton(Button):
     def __init__(self, card_name):
