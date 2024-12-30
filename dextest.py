@@ -264,6 +264,23 @@ async def see_card(ctx):
     else:
         await ctx.send("You haven't caught any cards yet.")
 
+# Command that shows the user's progress
+@bot.command(name='progress')
+async def progress(ctx):
+    user_id = str(ctx.author.id)  # Ensure user ID is a string
+    logging.info(f'User ID: {user_id}')
+    logging.info(f'Player cards: {player_cards}')
+    
+    total_cards = len(cards)
+    if user_id in player_cards:
+        user_cards = player_cards[user_id]
+        num_user_cards = len(user_cards)
+        percentage = (num_user_cards / total_cards) * 100
+        card_list = "\n".join(user_cards)
+        await ctx.send(f"You have caught {num_user_cards} out of {total_cards} cards ({percentage:.2f}%).\n\nYour cards:\n{card_list}")
+    else:
+        await ctx.send(f"You haven't caught any cards yet. There are {total_cards} cards available.")
+
 # When the bot disconnects, it will send a message to the channel
 @bot.event
 async def on_disconnect():
