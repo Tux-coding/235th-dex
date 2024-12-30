@@ -61,32 +61,38 @@ class CatchView(View):
 cards = [
     {
         "name": "Dicer",
-        "image_url": "https://media.discordapp.net/attachments/1322205679028670495/1322205863611600896/RobloxScreenShot20241227_145936188.png?ex=677201eb&is=6770b06b&hm=f74d9e756dd8ae25b0c65b6fbdfd169c1c08679912c956c068f75c50171e9b95&=&format=webp&quality=lossless",
+        "spawn_image_url": "https://media.discordapp.net/attachments/1322205679028670495/1322205863611600896/RobloxScreenShot20241227_145936188.png?ex=677201eb&is=6770b06b&hm=f74d9e756dd8ae25b0c65b6fbdfd169c1c08679912c956c068f75c50171e9b95&=&format=webp&quality=lossless",
+        "card_image url": "https://cdn.discordapp.com/attachments/1322202570529177642/1322205795957342228/CC-1947_2.png?ex=6773535b&is=677201db&hm=768dee2d6535855233f44910ff8dd7ca45485ca6ba81a6f36ec7f3a554bd3941&",
         "rarity": 5  # 5% chance of spawning
     },
     {
         "name": "Reyes",
-        "image_url": "https://media.discordapp.net/attachments/1322205679028670495/1322503928591548482/RobloxScreenShot20241228_105546001.png?ex=67726ec3&is=67711d43&hm=4978a7aa74371952a439ec75fd2ac459bb1f49af739b8ec7d0f6d145c54642d9&=&format=webp&quality=lossless",
+        "spawn_image_url": "https://media.discordapp.net/attachments/1322205679028670495/1322503928591548482/RobloxScreenShot20241228_105546001.png?ex=67726ec3&is=67711d43&hm=4978a7aa74371952a439ec75fd2ac459bb1f49af739b8ec7d0f6d145c54642d9&=&format=webp&quality=lossless",
+        "card_image_url":"https://cdn.discordapp.com/attachments/1322202570529177642/1322585956938944512/CC-1598_Reyes_is_the_Marshal_Commander_of_the_235th_Elite_Corps.png?ex=677363e8&is=67721268&hm=35ffd80d26b26c28e60db3da255a071919fa7f0e87c1d8e2aecdd75e65e5031b&",
         "rarity": 0.5
     },
     {
         "name": "Sentinel",
-        "image_url": "https://media.discordapp.net/attachments/1322205679028670495/1322284693164523520/RobloxScreenShot20241227_202621517.png?ex=67724b55&is=6770f9d5&hm=79e9f8374ffa7b0138f938a11d7916b45ee79b2afdf1fc6c8197c27349b46684&=&format=webp&quality=lossless&width=377&height=350",
+        "spawn_image_url": "https://media.discordapp.net/attachments/1322205679028670495/1322284693164523520/RobloxScreenShot20241227_202621517.png?ex=67724b55&is=6770f9d5&hm=79e9f8374ffa7b0138f938a11d7916b45ee79b2afdf1fc6c8197c27349b46684&=&format=webp&quality=lossless&width=377&height=350",
+        "card_image_url": "https://cdn.discordapp.com/attachments/1322202570529177642/1322289085183955004/CT-_1.png?ex=6773a0ec&is=67724f6c&hm=32aef299a210aadcc169dbe3867b9a44a64b1d23d44e7af430d47e3a8a2e583e&",
         "rarity": 23  
     },
     {
         "name": "Blau",
-        "image_url": "https://media.discordapp.net/attachments/1322205679028670495/1322289394404687957/RobloxScreenShot20241227_204520218.png?ex=67724fb6&is=6770fe36&hm=b3fc9388163dfb8f6d33ea520cccc373156a6ea8c5b558d370d388a8ec8ae7d8&=&format=webp&quality=lossless&width=396&height=350",
+        "spawn_image_url": "https://media.discordapp.net/attachments/1322205679028670495/1322289394404687957/RobloxScreenShot20241227_204520218.png?ex=67724fb6&is=6770fe36&hm=b3fc9388163dfb8f6d33ea520cccc373156a6ea8c5b558d370d388a8ec8ae7d8&=&format=webp&quality=lossless&width=396&height=350",
+        "card_image_url": "https://cdn.discordapp.com/attachments/1322202570529177642/1322289134630600724/CT-_Blau.png?ex=6773a0f8&is=67724f78&hm=29349d7e624fcb150f298c40b15d68575d5bee22dace451856ea9da23e43db58&",
         "rarity": 12.5 
     },
     {
         "name": "Hounder",
-        "image_url": "https://media.discordapp.net/attachments/1322205679028670495/1322295423360176218/RobloxScreenShot20241227_210852940.png?ex=67725553&is=677103d3&hm=c32cad3bc0dc2ebc26cbdfeba7e8fb5ea83b55e557eafbfc3a0358a760654d7e&=&format=webp&quality=lossless",
+        "spawn_image_url": "https://media.discordapp.net/attachments/1322205679028670495/1322295423360176218/RobloxScreenShot20241227_210852940.png?ex=67725553&is=677103d3&hm=c32cad3bc0dc2ebc26cbdfeba7e8fb5ea83b55e557eafbfc3a0358a760654d7e&=&format=webp&quality=lossless",
+        "card_image_url": "https://cdn.discordapp.com/attachments/1322202570529177642/1322293233815912498/CT-_Blau_1.png?ex=6773a4c9&is=67725349&hm=e37704c3fa30bc469f1b20c7bd7e18e25abe8c1d6bc06b1cbcd3b85d359d2c10&",
         "rarity": 9.5  
     },
     {
         "name": "Pipopro",
-        "image_url": "https://media.discordapp.net/attachments/1322205679028670495/1322977622778576976/artworks-OF3WFPHsapfnZrW8-lDiZAQ-t500x500.png?ex=67737f2d&is=67722dad&hm=1ec22c5b9af4c994af583de216afe05660c777e5437a738750577b9a49cbdf90&=&format=webp&quality=lossless",
+        "spawn_image_url": "https://media.discordapp.net/attachments/1322205679028670495/1322977622778576976/artworks-OF3WFPHsapfnZrW8-lDiZAQ-t500x500.png?ex=67737f2d&is=67722dad&hm=1ec22c5b9af4c994af583de216afe05660c777e5437a738750577b9a49cbdf90&=&format=webp&quality=lossless",
+        "card_image_url": "https://cdn.discordapp.com/attachments/1322202570529177642/1322977702105579591/Pipopro.png?ex=67737f3f&is=67722dbf&hm=2cc3c639f2e613963f78ec6dbfc274df6f6a74666d06461e4bfb60fdb5c3568d&",
         "rarity": 0.75 
     }
 ]
@@ -111,12 +117,19 @@ async def spawn_card():
             card = weighted_random_choice(cards)
             logging.info(f"Selected card: {card['name']}")
             embed = discord.Embed(title=f"A wild card has appeared!", description="Click the button below to catch it!")
-            embed.set_image(url=card['image_url'])
+            embed.set_image(url=card['spawn_image_url'])
             await channel.send(embed=embed, view=CatchView(card['name']))
         else:
             logging.error(f"Channel not found: {channel_id}")
     except Exception as e:
         logging.error(f"An error occurred: {e}")
+
+#@bot.command(name = "see_card") it does not work,
+#async def see_card(ctx):
+ #   embed = discord.Embed(title = "this is your card!")
+  #  embed.set_image(url=cards["card_image_url"])
+   # await ctx.send(embed=embed)
+
 
 # If error, he says why
 @bot.event
@@ -146,40 +159,6 @@ async def random_number(ctx):
 async def hello(ctx):
     await ctx.send('Hello! I am your Discord bot.')
 
-#Command: basicly coded for chances of getting cards. Horribly coded, FIRST THING TO CHANGE IF IT IS DONE!!!!! 
-@bot.command(name='spawn')
-async def spawn(ctx):
-    random_card = random.randint(1, 200) #chooses a random integer 
-    logging.info(f'Generated random card number: {random_card}') # prints the integer to the console for troubleshooting purposes
-    
-    user_id = ctx.author.id
-    if user_id not in player_cards:
-        player_cards[user_id] = []
-    
-    if  random_card <= 21:  # basicly the chance, in this instance if random choosen integer is lower than 21 then:
-        embed = discord.Embed(title = "Dicer", description ="Who is this?")      
-        embed.set_image(url="https://media.discordapp.net/attachments/1322205679028670495/1322205863611600896/RobloxScreenShot20241227_145936188.png?ex=6771592b&is=677007ab&hm=dce13f31e721d625b43ac537d5d17b8e3dc5158d67a9035f59b5d4971bfe8502&=&format=webp&quality=lossless&width=650&height=667")
-        await ctx.send(embed=embed)
-        
-        await ctx.send("You caught a wild Dicer!") # it sends a message that you caught the guy
-        
-        # along with the message it will send the picture
-        embed = discord.Embed(title="Dicer", description="Here's your catch!")
-        embed.set_image(url="https://media.discordapp.net/attachments/1322202570529177642/1322205795957342228/CC-1947_2.png?ex=6770079b&is=676eb61b&hm=1d292e779b29d2258042788a7f8e0783e881dccd821baf36d3668a9c58d6dd&=&format=webp&quality=lossless&width=479&height=671")
-        await ctx.send(embed=embed)
-
-        player_cards[user_id].append("Dicer") # adds the card to the player's collection
-
-    elif random_card == 200: # If the random number is 200:
-        await ctx.send("You caught a wild Reyes!") 
-
-        embed = discord.Embed(title="Reyes", description="Here's your catch!")
-        embed.set_image(url="https://media.discordapp.net/attachments/1321821231850328068/1322584515146678335/CC-1598_Reyes_is_the_Marshal_Commander_of_the_235th_Elite_Corps._He_has_led_the_Corps_since_the_very_beginning_although_the_highest_rank_was_Senior_Commander_back_in_the_day._Known_for_his_steady.png?ex=67716850&is=677016d0&hm=c9811709d3f40e4f08220a9e1f553eeac4e89b32608473a88df31e646b6450a5&=&format=webp&quality=lossless&width=479&height=671") 
-        await ctx.send(embed=embed)
-
-        player_cards[user_id].append("Reyes")
-    else:
-        await ctx.send("You didn't catch anything, poor you...")
 
 # Command that hopefully sees your cards
 @bot.command(name='mycards')
