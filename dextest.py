@@ -287,8 +287,8 @@ async def progress(ctx):
 # Command to spawn a certain card, restricted to a specific user
 @bot.command(name='spawn_card')
 async def spawn_card_command(ctx, card_name: str):
-    specific_user_id = ['573878397952851988', '1035607651985403965', '845973389415284746']
-    if str(ctx.author.id) != specific_user_id:
+    authorized_user_ids = ['573878397952851988', '1035607651985403965', '845973389415284746']  # Replace with the specific user IDs
+    if str(ctx.author.id) not in authorized_user_ids:
         await ctx.send("You do not have permission to use this command.")
         return
 
