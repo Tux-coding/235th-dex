@@ -220,8 +220,10 @@ async def my_cards(ctx):
     logging.info(f'Player cards: {player_cards}')
     if user_id in player_cards:
         cards = player_cards[user_id]
+        logging.info(f"User {user_id} has cards: {cards}")
         await ctx.send(f"You have caught: {', '.join(cards)}")
     else:
+        logging.info(f"User {user_id} has no cards.")
         await ctx.send("You haven't caught any cards yet.")
 
 # see_card command to see a specific card
