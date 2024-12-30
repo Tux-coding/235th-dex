@@ -66,8 +66,11 @@ class CatchModal(Modal):
 
             # Close the modal for all other users
             for modal in self.view.modals:
-                if modal != self and modal.interaction:
-                    await modal.interaction.response.send_message("The card has already been claimed.", ephemeral=True)
+                if modal != self and modal.interaction and not modal.interaction.response.is_done():
+                    try:
+                        await modal.interaction.response.send_message("The card has already been claimed.", ephemeral=True)
+                    except discord.errors.InteractionResponded:
+                        pass
                     await modal.interaction.message.delete()
         else:
             await interaction.response.send_message(f"Incorrect name.", ephemeral=False)
