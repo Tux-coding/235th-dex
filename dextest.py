@@ -39,9 +39,10 @@ player_cards = {}
 
 # Button that hopefully does the button work
 class CatchModal(Modal):
-    def __init__(self, card_name):
+    def __init__(self, card_name, view):
         super().__init__(title="Catch the Card")
         self.card_name = card_name
+        self.view = view
         self.card_input = TextInput(label="Card Name", placeholder="Type the card name here")
         self.add_item(self.card_input)
 
@@ -54,7 +55,7 @@ class CatchModal(Modal):
             await interaction.response.send_message(f"{user.mention} caught the card: {self.card_name}!", ephemeral=False)
 
             # Disable the button after it has been clicked
-            for item in self.children:
+            for item in self.view.children:
                 if isinstance(item, Button):
                     item.disabled = True
             await interaction.message.edit(view=self.view)
@@ -67,7 +68,7 @@ class CatchButton(Button):
         self.card_name = card_name
 
     async def callback(self, interaction: discord.Interaction):
-        modal = CatchModal(self.card_name)
+        modal = CatchModal(self.card_name, self.view)
         await interaction.response.send_modal(modal)
 
 class CatchView(View):
