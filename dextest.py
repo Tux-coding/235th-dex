@@ -43,14 +43,21 @@ player_cards = {}
 def load_player_cards():
     global player_cards
     try:
-        with open('player_cards.json', 'r') as f:
-            player_cards = json.load(f)
-        # Ensure all keys are strings
-        player_cards = {str(k): v for k, v in player_cards.items()}
-        logging.info(f"Loaded player cards: {player_cards}")
+        if os.path.getsize('player_cards.json') > 0:  # Check if the file is not empty
+            with open('player_cards.json', 'r') as f:
+                player_cards = json.load(f)
+            # Ensure all keys are strings
+            player_cards = {str(k): v for k, v in player_cards.items()}
+            logging.info(f"Loaded player cards: {player_cards}")
+        else:
+            player_cards = {}
+            logging.info("Player cards file is empty. Starting with an empty dictionary.")
     except FileNotFoundError:
         player_cards = {}
         logging.info("No player cards file found. Starting with an empty dictionary.")
+    except json.JSONDecodeError:
+        player_cards = {}
+        logging.error("Error decoding JSON from player cards file. Starting with an empty dictionary.")
 
 # Save player cards to a JSON file
 def save_player_cards():
