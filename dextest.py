@@ -61,6 +61,12 @@ class CatchModal(Modal):
                 if isinstance(item, Button):
                     item.disabled = True
             await self.message.edit(view=self.view)
+
+            # Close the modal for all other users
+            for modal in self.view.modals:
+                if modal != self:
+                    await modal.interaction.response.send_message("The card has already been claimed.", ephemeral=True)
+                    await modal.interaction.message.delete()
         else:
             await interaction.response.send_message(f"Incorrect name.", ephemeral=False)
 
@@ -75,11 +81,13 @@ class CatchButton(Button):
             await interaction.response.send_message("You already have this card!", ephemeral=True)
         else:
             modal = CatchModal(self.card_name, self.view, interaction.message)
+            self.view.modals.append(modal)
             await interaction.response.send_modal(modal)
 
 class CatchView(View):
     def __init__(self, card_name):
         super().__init__(timeout=None)
+        self.modals = []
         self.add_item(CatchButton(card_name))
 
 # List of cards with their names and image URLs
