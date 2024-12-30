@@ -45,13 +45,16 @@ def load_player_cards():
     try:
         with open('player_cards.json', 'r') as f:
             player_cards = json.load(f)
+        logging.info(f"Loaded player cards: {player_cards}")
     except FileNotFoundError:
         player_cards = {}
+        logging.info("No player cards file found. Starting with an empty dictionary.")
 
 # Save player cards to a JSON file
 def save_player_cards():
     with open('player_cards.json', 'w') as f:
         json.dump(player_cards, f)
+    logging.info(f"Saved player cards: {player_cards}")
 
 # Button that hopefully does the button work
 class CatchModal(Modal):
