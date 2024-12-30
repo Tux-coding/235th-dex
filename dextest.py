@@ -45,6 +45,8 @@ def load_player_cards():
     try:
         with open('player_cards.json', 'r') as f:
             player_cards = json.load(f)
+        # Ensure all keys are strings
+        player_cards = {str(k): v for k, v in player_cards.items()}
         logging.info(f"Loaded player cards: {player_cards}")
     except FileNotFoundError:
         player_cards = {}
@@ -73,10 +75,11 @@ class CatchModal(Modal):
             return
 
         if self.card_input.value.lower() == self.card_name.lower():
-            if user.id not in player_cards:
-                player_cards[user.id] = []
-            player_cards[user.id].append(self.card_name)
-            save_player_cards()
+            user_id = str(user.id)  # Ensure user ID is a string
+            if user_id not in player_cards:
+                player_cards[user_id] = []
+            player_cards[user_id].append(self.card_name)
+            save_player_cards()  # Save player cards after catching a card
             await interaction.response.send_message(f"{user.mention} caught the card: {self.card_name}!", ephemeral=False)
 
             # Mark the card as claimed
@@ -215,7 +218,7 @@ async def hello(ctx):
 # Command that hopefully sees your cards
 @bot.command(name='mycards')
 async def my_cards(ctx):
-    user_id = ctx.author.id
+    user_id = str(ctx.author.id)  # Ensure user ID is a string
     logging.info(f'User ID: {user_id}')
     logging.info(f'Player cards: {player_cards}')
     if user_id in player_cards:
