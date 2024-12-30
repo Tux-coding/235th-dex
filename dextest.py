@@ -69,8 +69,12 @@ class CatchButton(Button):
         self.card_name = card_name
 
     async def callback(self, interaction: discord.Interaction):
-        modal = CatchModal(self.card_name, self.view, interaction.message)
-        await interaction.response.send_modal(modal)
+        user = interaction.user
+        if user.id in player_cards and self.card_name in player_cards[user.id]:
+            await interaction.response.send_message("You already have this card!", ephemeral=True)
+        else:
+            modal = CatchModal(self.card_name, self.view, interaction.message)
+            await interaction.response.send_modal(modal)
 
 class CatchView(View):
     def __init__(self, card_name):
