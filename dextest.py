@@ -1,10 +1,12 @@
-import discord # type: ignore
 import random
 import logging
-from discord.ext import commands, tasks # type: ignore
-from discord.ui import Button, View #type:ignore 
-from dotenv import load_dotenv # type: ignore //please ensure that you have python-dotenv installed (command is "pip install python-dotenv")
 import os
+
+import discord # type: ignore
+from discord.ext import commands, tasks # type: ignore
+from discord.ui import Button, View, Select #type:ignore 
+from dotenv import load_dotenv # type: ignore //please ensure that you have python-dotenv installed (command is "pip install python-dotenv")
+
 
 # Configuring logging into the terminal
 logging.basicConfig(level=logging.INFO, format='%(asctime)s:%(levelname)s:%(name)s: %(message)s')
@@ -124,13 +126,6 @@ async def spawn_card():
     except Exception as e:
         logging.error(f"An error occurred: {e}")
 
-#@bot.command(name = "see_card") it does not work,
-#async def see_card(ctx):
- #   embed = discord.Embed(title = "this is your card!")
-  #  embed.set_image(url=cards["card_image_url"])
-   # await ctx.send(embed=embed)
-
-
 # If error, he says why
 @bot.event
 async def on_command_error(ctx, error):
@@ -169,6 +164,28 @@ async def my_cards(ctx):
     if user_id in player_cards:
         cards = player_cards[user_id]
         await ctx.send(f"You have caught: {', '.join(cards)}")
+    else:
+        await ctx.send("You haven't caught any cards yet.")
+
+# see_card command to see a specific card
+@bot.command(name='see_card')
+async def see_card(ctx):
+    user_id = ctx.author.id
+    if user_id in player_cards and player_cards[user_id]:
+        options = [discord.SelectOption(label=card, value=card) for card in player_cards[user_id]]
+        select = Select(placeholder="Choose a card to see", options=options)
+
+        async def select_callback(interaction):
+            selected_card_name = select.values[0]
+            selected_card = next(card for card in cards if card["name"] == selected_card_name)
+            embed = discord.Embed(title=f"Here's your {selected_card_name}", description="")
+            embed.set_image(url=selected_card["card_image_url"])
+            await interaction.response.send_message(embed=embed)
+
+        select.callback = select_callback
+        view = View()
+        view.add_item(select)
+        await ctx.send("Select a card to see", view=view)
     else:
         await ctx.send("You haven't caught any cards yet.")
 
