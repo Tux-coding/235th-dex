@@ -111,7 +111,7 @@ def weighted_random_choice(cards):
     return None
 
 # Part that holds the timer and the channel where the card spawns
-@tasks.loop(minutes=10)
+@tasks.loop(minutes=1)
 async def spawn_card():
     try:
         channel = bot.get_channel(int(channel_id)) # channel_id is the channel where the card will spawn
@@ -176,6 +176,9 @@ async def see_card(ctx):
         select = Select(placeholder="Choose a card to see", options=options)
 
         async def select_callback(interaction):
+            if interaction.user.id != user_id:
+                await interaction.response.send_message("You can only view your own cards.", ephemeral=True)
+                return
             selected_card_name = select.values[0]
             selected_card = next(card for card in cards if card["name"] == selected_card_name)
             embed = discord.Embed(title=f"Here's your {selected_card_name}", description="")
