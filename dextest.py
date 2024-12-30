@@ -3,6 +3,7 @@ import logging
 import os
 import asyncio
 import signal
+import json
 
 import discord # type: ignore
 from discord.ext import commands, tasks # type: ignore
@@ -38,6 +39,20 @@ bot = commands.Bot(command_prefix='!', intents=intents)
 # Player cards view starter
 player_cards = {}
 
+# Load player cards from a JSON file
+def load_player_cards():
+    global player_cards
+    try:
+        with open('player_cards.json', 'r') as f:
+            player_cards = json.load(f)
+    except FileNotFoundError:
+        player_cards = {}
+
+# Save player cards to a JSON file
+def save_player_cards():
+    with open('player_cards.json', 'w') as f:
+        json.dump(player_cards, f)
+
 # Button that hopefully does the button work
 class CatchModal(Modal):
     def __init__(self, card_name, view, message):
@@ -58,6 +73,7 @@ class CatchModal(Modal):
             if user.id not in player_cards:
                 player_cards[user.id] = []
             player_cards[user.id].append(self.card_name)
+            save_player_cards()
             await interaction.response.send_message(f"{user.mention} caught the card: {self.card_name}!", ephemeral=False)
 
             # Mark the card as claimed
@@ -176,6 +192,7 @@ async def on_command_error(ctx, error):
 # When the bot is ready, it prints to the console that it's online
 @bot.event
 async def on_ready():
+    load_player_cards()  # Load player cards when the bot starts
     print(f'We have logged in as {bot.user}')
     logging.info("Logging is configured correctly.")
     spawn_card.start()
@@ -239,6 +256,7 @@ async def on_disconnect():
 
 # Handle shutdown signal
 def handle_shutdown_signal(signal, frame):
+    save_player_cards()  # Save player cards on shutdown
     loop = asyncio.get_event_loop()
     loop.create_task(bot.close())
 
