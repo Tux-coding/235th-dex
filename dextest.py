@@ -47,34 +47,27 @@ class CatchModal(Modal):
         self.message = message
         self.card_input = TextInput(label="Card Name", placeholder="Type the card name here")
         self.add_item(self.card_input)
-        self.interaction = None  # Store the interaction
 
     async def on_submit(self, interaction: discord.Interaction):
-        self.interaction = interaction  # Store the interaction
         user = interaction.user
+        if self.view.card_claimed:
+            await interaction.response.send_message("The card has already been claimed.", ephemeral=True)
+            return
+
         if self.card_input.value.lower() == self.card_name.lower():
             if user.id not in player_cards:
                 player_cards[user.id] = []
             player_cards[user.id].append(self.card_name)
             await interaction.response.send_message(f"{user.mention} caught the card: {self.card_name}!", ephemeral=False)
 
+            # Mark the card as claimed
+            self.view.card_claimed = True
+
             # Disable the button after it has been clicked
             for item in self.view.children:
                 if isinstance(item, Button):
                     item.disabled = True
             await self.message.edit(view=self.view)
-
-            # Close the modal for all other users
-            for modal in self.view.modals:
-                if modal != self and modal.interaction and not modal.interaction.response.is_done():
-                    try:
-                        await modal.interaction.response.send_message("The card has already been claimed.", ephemeral=True)
-                    except discord.errors.InteractionResponded:
-                        pass
-                    try:
-                        await modal.interaction.message.delete()
-                    except discord.errors.NotFound:
-                        pass
         else:
             await interaction.response.send_message(f"{user.mention}; Incorrect name.", ephemeral=False)
 
@@ -89,13 +82,12 @@ class CatchButton(Button):
             await interaction.response.send_message("You already have this card!", ephemeral=True)
         else:
             modal = CatchModal(self.card_name, self.view, interaction.message)
-            self.view.modals.append(modal)
             await interaction.response.send_modal(modal)
 
 class CatchView(View):
     def __init__(self, card_name):
         super().__init__(timeout=None)
-        self.modals = []
+        self.card_claimed = False
         self.add_item(CatchButton(card_name))
 
 # List of cards with their names and image URLs
