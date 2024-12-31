@@ -138,8 +138,9 @@ class ProgressView(View):
         await self.update_message(interaction)
 
     async def on_quit(self, interaction: discord.Interaction):
-        await interaction.response.defer_update()
-        await interaction.delete_original_response()
+        for item in self.children:
+            item.disabled = True
+        await interaction.response.edit_message(view=self)
 
     async def update_message(self, interaction: discord.Interaction):
         start = self.page * self.items_per_page
