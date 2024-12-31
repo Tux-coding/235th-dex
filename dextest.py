@@ -206,7 +206,7 @@ async def spawn_card():
         
         for channel in channels:
             if channel:
-                await channel.send(embed=embed, view=CatchView(card['name']), delete_after=None, allowed_mentions=discord.AllowedMentions.none())
+                await channel.send(embed=embed, view=CatchView(card['name']), allowed_mentions=discord.AllowedMentions.none())
             else:
                 logging.error("Channel not found.")
     except Exception as e:
