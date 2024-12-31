@@ -382,15 +382,16 @@ async def spawn_card_command(ctx, card_name: str):
 @bot.event
 async def on_disconnect():
     channels = [bot.get_channel(int(channel_id)), bot.get_channel(int(test_channel_id))]
-    logging.info(f"Channel IDs: {channel_id}, {test_channel_id}")
+    logging.info(f"Attempting to send disconnect message to channels: {channel_id}, {test_channel_id}")
     for channel in channels:
         if channel:
             try:
                 await channel.send("235th dex going offline")
+                logging.info(f"Sent disconnect message to channel {channel.id}")
             except Exception as e:
                 logging.error(f"Failed to send message to channel {channel.id}: {e}")
         else:
-            logging.error(f"Channel {channel.id} not found.")
+            logging.error(f"Channel not found.")
     logging.info("235th dex going offline")
 
 # Handle shutdown signal
