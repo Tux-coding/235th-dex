@@ -165,6 +165,18 @@ cards = [
         "spawn_image_url": "https://media.discordapp.net/attachments/1322205679028670495/1323344360879689730/RobloxScreenShot20241230_161947936.png?ex=67742bfa&is=6772da7a&hm=14a472045ae47f536705b91cb91bdae7ea52674d1cde2799ad65835c0c85d8df&=&format=webp&quality=lossless&width=532&height=350",
         "card_image_url": "https://media.discordapp.net/attachments/1322202570529177642/1323314295286665246/CC-.png?ex=67740ff9&is=6772be79&hm=54193da49212bd838fb47e993c16c2af1da3987a04373fc1a20def924f0744a6&=&format=webp&quality=lossless&width=479&height=671",
         "rarity": 1 
+    },
+    {
+        "name": "Stinger",
+        "spawn_image_url": "https://media.discordapp.net/attachments/1322205679028670495/1323379787766698116/RobloxScreenShot20241230_205740938.png?ex=67744cf8&is=6772fb78&hm=ffe51d5793e02353736175578a9a6158e243b285a65649e695ba924a710c3c83&=&format=webp&quality=lossless&width=375&height=350",
+        "card_image_url": "https://media.discordapp.net/attachments/1322202570529177642/1323383213451640862/Just_another_trooper_trying_to_stay_alive._He_doesnt_like_insurgents._His_left_arm_and_left_eye_are_gone_due_to_the_Gulag_13.png?ex=67745029&is=6772fea9&hm=c08cafd74fea97dcd3c7c6847ab940b55249ed62f0585149ca03e05c13ed6ea7&=&format=webp&quality=lossless&width=479&height=671",
+        "rarity": 75 
+    },
+    {
+        "name": "Sandy",
+        "spawn_image_url": "https://media.discordapp.net/attachments/1322205679028670495/1323386530303053854/RobloxScreenShot20241230_211843002.png?ex=67745340&is=677301c0&hm=1679defda16cd577a0146f6dc1ce3e6e9bb08eac3934ecb6512a4a7711a34c09&=&format=webp&quality=lossless&width=522&height=350",
+        "card_image_url": "https://media.discordapp.net/attachments/1322202570529177642/1323386408550928404/Just_another_trooper_trying_to_stay_alive._He_doesnt_like_insurgents._His_left_arm_and_left_eye_are_gone_due_to_the_Gulag_14.png?ex=67745323&is=677301a3&hm=dd52bd5a4777cc90d0f8a6793251192ac14a526e55037f3d2d32bb0db691471c&=&format=webp&quality=lossless&width=479&height=671",
+        "rarity": 50 
     }
 ]
 
