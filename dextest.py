@@ -212,7 +212,7 @@ async def set_spawn_mode(ctx, mode: str):
 # Part that holds the timer and the channel where the card spawns
 last_spawned_card = None
 
-@tasks.loop(minutes=10)
+@tasks.loop(minutes=1)
 async def spawn_card():
     global last_spawned_card
     try:
@@ -269,10 +269,6 @@ async def on_ready():
     print(f'We have logged in as {bot.user}')
     logging.info("Logging is configured correctly.")
     spawn_card.start()
-
-
-
-
 
 # Command that hopefully sees your cards
 @bot.command(name='mycards')
@@ -379,9 +375,6 @@ async def random_number(ctx):
 @bot.command(name='info')
 async def info(ctx):
     await ctx.send('here are a list of all the commands: \n !hello \n !random_number \n !info \n !mycards \n !see_card \n !progress ')
-
-
-
 
 # Custom shutdown function
 async def shutdown_bot():
