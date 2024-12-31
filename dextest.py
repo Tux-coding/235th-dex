@@ -138,7 +138,6 @@ class ProgressView(View):
         await self.update_message(interaction)
 
     async def on_quit(self, interaction: discord.Interaction):
-        await interaction.response.send_message("Closing progress view...", delete_after=1)
         await interaction.message.delete()
 
     async def update_message(self, interaction: discord.Interaction):
