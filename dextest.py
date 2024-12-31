@@ -212,7 +212,7 @@ async def set_spawn_mode(ctx, mode: str):
 # Part that holds the timer and the channel where the card spawns
 last_spawned_card = None
 
-@tasks.loop(minutes=1)
+@tasks.loop(minutes=10)
 async def spawn_card():
     global last_spawned_card
     try:
@@ -270,16 +270,9 @@ async def on_ready():
     logging.info("Logging is configured correctly.")
     spawn_card.start()
 
-# Gives a random number between 0 and 10000000
-@bot.command(name='random_number')
-async def random_number(ctx):
-    random_number = random.randint(0, 10000000)
-    await ctx.send(f'Your random number is: {random_number}')
 
-# Respond to a simple message
-@bot.command(name='hello')
-async def hello(ctx):
-    await ctx.send('Hello! I am your Discord bot.')
+
+
 
 # Command that hopefully sees your cards
 @bot.command(name='mycards')
@@ -368,6 +361,27 @@ async def spawn_card_command(ctx, card_name: str):
             await ctx.send("Channel not found.")
     else:
         await ctx.send("Card not found.")
+
+#///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+#other commands not related to the card game
+
+# Respond to a simple message
+@bot.command(name='hello')
+async def hello(ctx):
+    await ctx.send('Hello! I am the 235th dex, at your service!')
+
+# Gives a random number between 0 and 10000000
+@bot.command(name='random_number')
+async def random_number(ctx):
+    random_number = random.randint(0, 10000000)
+    await ctx.send(f'Your random number is: {random_number}')
+
+@bot.command(name='info')
+async def info(ctx):
+    await ctx.send('here are a list of all the commands: \n !hello \n !random_number \n !info \n !mycards \n !see_card \n !progress ')
+
+
+
 
 # Custom shutdown function
 async def shutdown_bot():
