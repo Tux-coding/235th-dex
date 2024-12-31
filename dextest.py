@@ -129,8 +129,6 @@ class ProgressView(View):
         self.missing_cards = missing_cards
         self.page = 0
         self.items_per_page = 5
-        self.add_item(Button(label="Next", style=discord.ButtonStyle.primary, custom_id="next"))
-        self.add_item(Button(label="Quit", style=discord.ButtonStyle.danger, custom_id="quit"))
 
     async def interaction_check(self, interaction: discord.Interaction) -> bool:
         return interaction.user.id == self.user.id
