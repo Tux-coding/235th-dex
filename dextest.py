@@ -121,6 +121,41 @@ class CatchView(View):
         self.card_claimed = False
         self.add_item(CatchButton(card_name))
 
+class ProgressView(View):
+    def __init__(self, user_cards, missing_cards):
+        super().__init__(timeout=None)
+        self.user_cards = user_cards
+        self.missing_cards = missing_cards
+        self.page = 0
+        self.items_per_page = 5
+        self.add_item(Button(label="Next", style=discord.ButtonStyle.primary, custom_id="next"))
+        self.add_item(Button(label="Quit", style=discord.ButtonStyle.danger, custom_id="quit"))
+
+    async def interaction_check(self, interaction: discord.Interaction) -> bool:
+        return interaction.user.id == self.user.id
+
+    async def on_next(self, interaction: discord.Interaction):
+        self.page += 1
+        await self.update_message(interaction)
+
+    async def on_quit(self, interaction: discord.Interaction):
+        await interaction.message.delete()
+
+    async def update_message(self, interaction: discord.Interaction):
+        start = self.page * self.items_per_page
+        end = start + self.items_per_page
+        missing_cards_page = self.missing_cards[start:end]
+        embed = discord.Embed(title="Your Missing Cards", description="\n".join(missing_cards_page))
+        await interaction.response.edit_message(embed=embed, view=self)
+
+    @discord.ui.button(label="Next", style=discord.ButtonStyle.primary)
+    async def next_button(self, button: discord.ui.Button, interaction: discord.Interaction):
+        await self.on_next(interaction)
+
+    @discord.ui.button(label="Quit", style=discord.ButtonStyle.danger)
+    async def quit_button(self, button: discord.ui.Button, interaction: discord.Interaction):
+        await self.on_quit(interaction)
+
 # List of cards with their names and image URLs
 cards = [
     {
@@ -330,7 +365,10 @@ async def progress(ctx):
         num_user_cards = len(user_cards)
         percentage = (num_user_cards / total_cards) * 100
         card_list = "\n".join(user_cards)
-        await ctx.send(f"You have caught {num_user_cards} out of {total_cards} cards ({percentage:.2f}%).\n\nYour cards:\n{card_list}")
+        missing_cards = [card["name"] for card in cards if card["name"] not in user_cards]
+        embed = discord.Embed(title="Your Cards", description=f"You have caught {num_user_cards} out of {total_cards} cards ({percentage:.2f}%).\n\nYour cards:\n{card_list}")
+        view = ProgressView(user_cards, missing_cards)
+        await ctx.send(embed=embed, view=view)
     else:
         await ctx.send(f"You haven't caught any cards yet. There are {total_cards} cards available.")
 
