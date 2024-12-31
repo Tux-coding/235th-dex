@@ -198,6 +198,7 @@ def weighted_random_choice(cards):
 async def spawn_card():
     try:
         channels = [bot.get_channel(int(channel_id)), bot.get_channel(int(test_channel_id))]
+        logging.info(f"Channel IDs: {channel_id}, {test_channel_id}")
         card = weighted_random_choice(cards)
         logging.info(f"Selected card: {card['name']}")
         embed = discord.Embed(title=f"A wild card has appeared!", description="Click the button below to catch it!")
@@ -337,6 +338,7 @@ async def spawn_card_command(ctx, card_name: str):
 @bot.event
 async def on_disconnect():
     channels = [bot.get_channel(int(channel_id)), bot.get_channel(int(test_channel_id))]
+    logging.info(f"Channel IDs: {channel_id}, {test_channel_id}")
     for channel in channels:
         if channel:
             await channel.send("235th dex going offline")
