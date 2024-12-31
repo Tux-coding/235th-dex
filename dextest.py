@@ -41,6 +41,9 @@ bot = commands.Bot(command_prefix='!', intents=intents)
 # Player cards view starter
 player_cards = {}
 
+# Global variable to store pending trades
+pending_trades = {}
+
 # Load player cards from a JSON file
 def load_player_cards() -> None:
     global player_cards
@@ -121,6 +124,52 @@ class CatchView(View):
         self.card_claimed = False
         self.add_item(CatchButton(card_name))
 
+# Command to initiate a trade
+@bot.command(name='trade')
+async def trade(ctx, user: discord.User, card_name: str):
+    card_name = card_name.strip()
+    user_id = str(ctx.author.id)
+    target_user_id = str(user.id)
+
+    if user_id == target_user_id:
+        await ctx.send("You cannot trade with yourself.")
+        return
+
+    if not user_has_card(user_id, card_name):
+        await ctx.send("You do not have this card.")
+        return
+
+    pending_trades[target_user_id] = {
+        'from': user_id,
+        'card_name': card_name
+    }
+    await ctx.send(f"Trade request sent to {user.mention} for card {card_name}.")
+
+# Command to accept a trade
+@bot.command(name='accept_trade')
+async def accept_trade(ctx):
+    user_id = str(ctx.author.id)
+
+    if user_id not in pending_trades:
+        await ctx.send("You have no pending trade requests.")
+        return
+
+    trade = pending_trades.pop(user_id)
+    from_user_id = trade['from']
+    card_name = trade['card_name']
+
+    if not user_has_card(from_user_id, card_name):
+        await ctx.send("The user no longer has this card.")
+        return
+
+    # Perform the trade
+    player_cards[from_user_id].remove(card_name)
+    player_cards.setdefault(user_id, []).append(card_name)
+    save_player_cards()
+
+    await ctx.send(f"Trade accepted. You received {card_name} from <@{from_user_id}>.")
+    await bot.get_user(int(from_user_id)).send(f"Your trade has been accepted by {ctx.author.mention}.")
+
 # List of cards with their names and image URLs
 cards = [
     {
@@ -182,6 +231,24 @@ cards = [
         "spawn_image_url": "https://media.discordapp.net/attachments/1322205679028670495/1323561918878847047/RobloxScreenShot20241231_090056606.png?ex=6774f698&is=6773a518&hm=cffc47d9ab08a0b3d98df85ef86f7abf413be74c2b4f2ecc56ee520991ed5f7d&=&format=webp&quality=lossless",
         "card_image_url": "https://media.discordapp.net/attachments/1322202570529177642/1323563829925380166/Just_another_trooper_trying_to_stay_alive._He_doesnt_like_insurgents._His_left_arm_and_left_eye_are_gone_due_to_the_Gulag_15.png?ex=6774f85f&is=6773a6df&hm=d65e4c7ce98eb87dd896234a15a4a9d742d83fd44292fe1b0b392938a7bce01b&=&format=webp&quality=lossless&width=479&height=671",
         "rarity": 12.5 
+    },
+    {
+        "name": "Cooker",
+        "spawn_image_url": "https://media.discordapp.net/attachments/1322205679028670495/1323570324767379497/RobloxScreenShot20241231_093357795.png?ex=6774fe6c&is=6773acec&hm=c75865e285d3d39f4a6476d442a01c9e1dbe3611a0b06cbd862c8c43b770e956&=&format=webp&quality=lossless&width=468&height=350",
+        "card_image_url": "https://media.discordapp.net/attachments/1322202570529177642/1323573966652309504/Just_another_trooper_trying_to_stay_alive._He_doesnt_like_insurgents._His_left_arm_and_left_eye_are_gone_due_to_the_Gulag_17.png?ex=677501d0&is=6773b050&hm=8fe64e466f95254086fd222ad3698819eff00c38d7ab2333f132458ca25af856&=&format=webp&quality=lossless&width=479&height=671",
+        "rarity": 17.5 
+    },
+    {
+        "name": "Longshot",
+        "spawn_image_url": "https://media.discordapp.net/attachments/1322205679028670495/1323671916631949362/RobloxScreenShot20241231_161614848.png?ex=67755d09&is=67740b89&hm=cab4a3d1dba4eb57b42e592905780faaa24d5ffba9746ce3406325c7f520ef0d&=&format=webp&quality=lossless&width=480&height=350",
+        "card_image_url": "https://media.discordapp.net/attachments/1322202570529177642/1323671828111298584/Just_another_trooper_trying_to_stay_alive._He_doesnt_like_insurgents._His_left_arm_and_left_eye_are_gone_due_to_the_Gulag_19.png?ex=67755cf4&is=67740b74&hm=05d5e4c11313875aea75d4c7e227bf32546af435d3755ebac0e66d817c11d2f5&=&format=webp&quality=lossless&width=479&height=671",
+        "rarity": 70
+    },
+    {
+        "name": "Mertho",
+        "spawn_image_url": "https://media.discordapp.net/attachments/1322205679028670495/1323578208863649863/RobloxScreenShot20241231_100652348.png?ex=677505c3&is=6773b443&hm=e8aad1e00d28942444ea357afa5b4ce2d0d4cd1949ad84e29fb99aae522be1f8&=&format=webp&quality=lossless&width=384&height=350",
+        "card_image_url": "https://media.discordapp.net/attachments/1322202570529177642/1323672693647609937/Just_another_trooper_trying_to_stay_alive._He_doesnt_like_insurgents._His_left_arm_and_left_eye_are_gone_due_to_the_Gulag_21.png?ex=67755dc2&is=67740c42&hm=ddb0d3ac0879577f7497b50ccf367d6fe0afe12850451350bf7b79528dd56b49&=&format=webp&quality=lossless&width=479&height=671",
+        "rarity": 70
     }
 ]
 
