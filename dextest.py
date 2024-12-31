@@ -204,8 +204,11 @@ async def set_spawn_mode(ctx, mode: str):
         await ctx.send("Invalid mode. Please choose from 'both', 'test', or 'none'.")
 
 # Part that holds the timer and the channel where the card spawns
+last_spawned_card = None
+
 @tasks.loop(minutes=1)
 async def spawn_card():
+    global last_spawned_card
     try:
         channels = []
         if spawn_mode in ['both', 'test']:
@@ -227,6 +230,10 @@ async def spawn_card():
             return
 
         card = weighted_random_choice(cards)
+        while card == last_spawned_card:
+            card = weighted_random_choice(cards)
+        
+        last_spawned_card = card
         logging.info(f"Selected card: {card['name']}")
         embed = discord.Embed(title=f"A wild card has appeared!", description="Click the button below to catch it!")
         embed.set_image(url=card['spawn_image_url'])
