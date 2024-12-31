@@ -134,13 +134,11 @@ class ProgressView(View):
         return interaction.user.id == self.user.id
 
     async def on_next(self, interaction: discord.Interaction):
-        self.page += 1
-        await self.update_message(interaction)
-
-    async def on_quit(self, interaction: discord.Interaction):
-        for item in self.children:
-            item.disabled = True
-        await interaction.response.edit_message(view=self)
+        if self.page * self.items_per_page >= len(self.missing_cards):
+            await interaction.response.send_message("You already have all of the cards!", ephemeral=True)
+        else:
+            self.page += 1
+            await self.update_message(interaction)
 
     async def update_message(self, interaction: discord.Interaction):
         start = self.page * self.items_per_page
@@ -152,10 +150,6 @@ class ProgressView(View):
     @discord.ui.button(label="Next", style=discord.ButtonStyle.primary)
     async def next_button(self, button: discord.ui.Button, interaction: discord.Interaction):
         await self.on_next(interaction)
-
-    @discord.ui.button(label="Quit", style=discord.ButtonStyle.danger)
-    async def quit_button(self, button: discord.ui.Button, interaction: discord.Interaction):
-        await self.on_quit(interaction)
 
 # List of cards with their names and image URLs
 cards = [
