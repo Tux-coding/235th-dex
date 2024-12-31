@@ -21,11 +21,8 @@ channel_id = os.getenv('CHANNEL_ID')
 
 # Load authorized user IDS from .env
 authorized_user_ids = os.getenv('AUTHORIZED_USER_IDS', '').split(',')
-logging.info(f"Authorized user IDs: {authorized_user_ids}")
-
-# Debugging prints
-logging.info(f"DISCORD_TOKEN: {token}")
-logging.info(f"CHANNEL_ID: {channel_id}")
+authorized_user_ids = [user_id.strip() for user_id in authorized_user_ids if user_id.strip().isdigit()]
+logging.info(f"Authorized user IDs loaded.")
 
 if not token: # If it can't find the token, error message and exit will occur
     logging.error("DISCORD_TOKEN missing!") 
@@ -199,7 +196,7 @@ def weighted_random_choice(cards):
 @tasks.loop(minutes=1)
 async def spawn_card():
     try:
-        channel = bot.get_channel(int(channel_id)) # channel_id is the channel where the card will spawn
+        channel = bot.get_channel(int(channel_id))
         if channel:
             card = weighted_random_choice(cards)
             logging.info(f"Selected card: {card['name']}")
@@ -210,6 +207,7 @@ async def spawn_card():
             logging.error(f"Channel not found: {channel_id}")
     except Exception as e:
         logging.error(f"An error occurred: {e}")
+        await bot.get_channel(int(channel_id)).send("An error occurred while spawning a card.")
 
 # If error, he says why
 @bot.event
@@ -306,6 +304,9 @@ async def progress(ctx):
 @commands.has_permissions(administrator=True)
 async def spawn_card_command(ctx, card_name: str):
     card_name = card_name.strip().lower()
+    if not card_name.isalnum():
+        await ctx.send("Invalid card name.")
+        return
     user_id = str(ctx.author.id)
     logging.info(f"User ID: {user_id}")
     logging.info(f"Authorized user IDs: {authorized_user_ids}")
