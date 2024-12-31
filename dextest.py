@@ -372,9 +372,20 @@ async def random_number(ctx):
     random_number = random.randint(0, 10000000)
     await ctx.send(f'Your random number is: {random_number}')
 
+# Info command
+# Info command
 @bot.command(name='info')
 async def info(ctx):
-    await ctx.send('here are a list of all the commands: \n !hello \n !random_number \n !info \n !mycards \n !see_card \n !progress ')
+    commands_list = [
+        '!hello - Responds with a greeting message.',
+        '!random_number - Gives a random number between 0 and 10000000.',
+        '!info - Shows this list of commands.',
+        '!mycards - Shows the cards you have caught.',
+        '!see_card - Allows you to see a specific card you have caught.',
+        '!progress - Shows your progress in catching cards.'
+    ]
+    commands_description = '\n'.join(commands_list)
+    await ctx.send(f'Here are a list of all the commands you can use:\n{commands_description}')
 
 # Custom shutdown function
 async def shutdown_bot():
