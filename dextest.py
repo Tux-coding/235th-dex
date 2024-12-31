@@ -385,9 +385,12 @@ async def on_disconnect():
     logging.info(f"Channel IDs: {channel_id}, {test_channel_id}")
     for channel in channels:
         if channel:
-            await channel.send("235th dex going offline")
+            try:
+                await channel.send("235th dex going offline")
+            except Exception as e:
+                logging.error(f"Failed to send message to channel {channel.id}: {e}")
         else:
-            logging.error("Channel not found.")
+            logging.error(f"Channel {channel.id} not found.")
     logging.info("235th dex going offline")
 
 # Handle shutdown signal
