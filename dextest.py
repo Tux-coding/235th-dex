@@ -378,9 +378,8 @@ async def spawn_card_command(ctx, card_name: str):
     else:
         await ctx.send("Card not found.")
 
-# When the bot disconnects, it will send a message to the channel
-@bot.event
-async def on_disconnect():
+# Custom shutdown function
+async def shutdown_bot():
     channels = [bot.get_channel(int(channel_id)), bot.get_channel(int(test_channel_id))]
     logging.info(f"Attempting to send disconnect message to channels: {channel_id}, {test_channel_id}")
     for channel in channels:
@@ -393,12 +392,22 @@ async def on_disconnect():
         else:
             logging.error(f"Channel not found.")
     logging.info("235th dex going offline")
+    await bot.close()
+
+# Command to shut down the bot
+@bot.command(name='shutdown')
+@commands.has_permissions(administrator=True)
+async def shutdown(ctx):
+    await ctx.send("Shutting down the bot...")
+    logging.info(f"Shutdown command issued by {ctx.author}.")
+    save_player_cards()  # Save player cards on shutdown
+    await shutdown_bot()
 
 # Handle shutdown signal
 def handle_shutdown_signal(signal, frame):
     save_player_cards()  # Save player cards on shutdown
     loop = asyncio.get_event_loop()
-    loop.create_task(bot.close())
+    loop.create_task(shutdown_bot())
 
 # Register signal handlers for graceful shutdown
 signal.signal(signal.SIGINT, handle_shutdown_signal)
