@@ -331,7 +331,7 @@ async def progress(ctx):
     logging.info(f'Player cards: {player_cards}')
     
     total_cards = len(cards)
-    if user_id in player_cards:
+    if user_id in player_cards and player_cards[user_id]:
         user_cards = player_cards[user_id]
         num_user_cards = len(user_cards)
         percentage = (num_user_cards / total_cards) * 100
