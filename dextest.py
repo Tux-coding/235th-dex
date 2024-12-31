@@ -19,6 +19,7 @@ load_dotenv()
 token = os.getenv('DISCORD_TOKEN')
 channel_id = os.getenv('CHANNEL_ID')
 test_channel_id = os.getenv('TEST_CHANNEL_ID')
+spawn_mode = os.getenv('SPAWN_MODE', 'both').lower()
 
 # Load authorized user IDS from .env
 authorized_user_ids = os.getenv('AUTHORIZED_USER_IDS', '').split(',')
@@ -193,27 +194,53 @@ def weighted_random_choice(cards):
         upto += card['rarity']
     return None
 
+# Command to change the spawn mode
+@bot.command(name='set_spawn_mode')
+@commands.has_permissions(administrator=True)
+async def set_spawn_mode(ctx, mode: str):
+    global spawn_mode
+    mode = mode.lower()
+    if mode in ['both', 'test', 'none']:
+        spawn_mode = mode
+        await ctx.send(f"Spawn mode set to {spawn_mode}.")
+        logging.info(f"Spawn mode changed to {spawn_mode} by {ctx.author}.")
+    else:
+        await ctx.send("Invalid mode. Please choose from 'both', 'test', or 'none'.")
+
 # Part that holds the timer and the channel where the card spawns
 @tasks.loop(minutes=1)
 async def spawn_card():
     try:
-        channels = [bot.get_channel(int(channel_id)), bot.get_channel(int(test_channel_id))]
-        logging.info(f"Channel IDs: {channel_id}, {test_channel_id}")
+        channels = []
+        if spawn_mode in ['both', 'test']:
+            test_channel = bot.get_channel(int(test_channel_id))
+            if test_channel:
+                channels.append(test_channel)
+            else:
+                logging.error("Test channel not found.")
+        
+        if spawn_mode == 'both':
+            main_channel = bot.get_channel(int(channel_id))
+            if main_channel:
+                channels.append(main_channel)
+            else:
+                logging.error("Main channel not found.")
+        
+        if not channels:
+            logging.info("No channels configured for spawning cards.")
+            return
+
         card = weighted_random_choice(cards)
         logging.info(f"Selected card: {card['name']}")
         embed = discord.Embed(title=f"A wild card has appeared!", description="Click the button below to catch it!")
         embed.set_image(url=card['spawn_image_url'])
         
         for channel in channels:
-            if channel:
-                await channel.send(embed=embed, view=CatchView(card['name']), allowed_mentions=discord.AllowedMentions.none())
-            else:
-                logging.error("Channel not found.")
+            await channel.send(embed=embed, view=CatchView(card['name']), allowed_mentions=discord.AllowedMentions.none())
     except Exception as e:
         logging.error(f"An error occurred: {e}")
         for channel in channels:
-            if channel:
-                await channel.send("An error occurred while spawning a card.")
+            await channel.send("An error occurred while spawning a card.")
 
 # If error, he says why
 @bot.event
