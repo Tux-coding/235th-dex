@@ -138,7 +138,6 @@ class ProgressView(View):
         await self.update_message(interaction)
 
     async def on_quit(self, interaction: discord.Interaction):
-        await interaction.response.defer()
         await interaction.delete_original_response()
 
     async def update_message(self, interaction: discord.Interaction):
