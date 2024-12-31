@@ -10,7 +10,6 @@ from discord.ext import commands, tasks # type: ignore
 from discord.ui import Button, View, Select, Modal, TextInput #type:ignore 
 from dotenv import load_dotenv # type: ignore //please ensure that you have python-dotenv installed (command is "pip install python-dotenv")
 
-
 # Configuring logging into the terminal
 logging.basicConfig(level=logging.INFO, format='%(asctime)s:%(levelname)s:%(name)s: %(message)s')
 
@@ -43,7 +42,7 @@ bot = commands.Bot(command_prefix='!', intents=intents)
 player_cards = {}
 
 # Load player cards from a JSON file
-def load_player_cards():
+def load_player_cards() -> None:
     global player_cards
     try:
         if os.path.getsize('player_cards.json') > 0:  # Check if the file is not empty
@@ -63,10 +62,13 @@ def load_player_cards():
         logging.error("Error decoding JSON from player cards file. Starting with an empty dictionary.")
 
 # Save player cards to a JSON file
-def save_player_cards():
+def save_player_cards() -> None:
     with open('player_cards.json', 'w') as f:
         json.dump(player_cards, f)
     logging.info(f"Saved player cards: {player_cards}")
+
+def user_has_card(user_id: str, card_name: str) -> bool:
+    return user_id in player_cards and card_name in player_cards[user_id]
 
 # Button that hopefully does the button work
 class CatchModal(Modal):
@@ -85,18 +87,12 @@ class CatchModal(Modal):
             return
 
         if self.card_input.value.lower() == self.card_name.lower():
-            user_id = str(user.id)  # Ensure user ID is a string
-            if user_id not in player_cards:
-                player_cards[user_id] = []
-            if self.card_name not in player_cards[user_id]:  # Check for duplicates
-                player_cards[user_id].append(self.card_name)
-                save_player_cards()  # Save player cards after catching a card
+            user_id = str(user.id)
+            if not user_has_card(user_id, self.card_name):
+                player_cards.setdefault(user_id, []).append(self.card_name)
+                save_player_cards()
                 await interaction.response.send_message(f"{user.mention} caught the card: {self.card_name}!", ephemeral=False)
-
-                # Mark the card as claimed
                 self.view.card_claimed = True
-
-                # Disable the button after it has been clicked
                 for item in self.view.children:
                     if isinstance(item, Button):
                         item.disabled = True
@@ -113,7 +109,7 @@ class CatchButton(Button):
 
     async def callback(self, interaction: discord.Interaction):
         user = interaction.user
-        if user.id in player_cards and self.card_name in player_cards[user.id]:
+        if user_has_card(str(user.id), self.card_name):
             await interaction.response.send_message("You already have this card!", ephemeral=True)
         else:
             modal = CatchModal(self.card_name, self.view, interaction.message)
@@ -184,7 +180,7 @@ cards = [
 ]
 
 # Part that does rarity
-def weighted_random_choice(cards):
+def weighted_random_choice(cards: list[dict]) -> dict:
     total = sum(card['rarity'] for card in cards)
     r = random.uniform(0, total)
     upto = 0
