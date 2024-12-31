@@ -329,7 +329,8 @@ async def progress(ctx):
         user_cards = player_cards[user_id]
         num_user_cards = len(user_cards)
         percentage = (num_user_cards / total_cards) * 100
-        await ctx.send(f"You have caught {num_user_cards} out of {total_cards} cards ({percentage:.2f}%).")
+        user_cards_list = ', '.join(user_cards)
+        await ctx.send(f"You have caught {num_user_cards} out of {total_cards} cards ({percentage:.2f}%).\nYour cards: {user_cards_list}")
     else:
         await ctx.send(f"You haven't caught any cards yet. There are {total_cards} cards available.")
 
