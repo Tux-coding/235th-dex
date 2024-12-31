@@ -305,7 +305,11 @@ async def progress(ctx):
 @commands.has_permissions(administrator=True)
 async def spawn_card_command(ctx, card_name: str):
     card_name = card_name.strip().lower()
-    if str(ctx.author.id) not in authorized_user_ids:
+    user_id = str(ctx.author.id)
+    logging.info(f"User ID: {user_id}")
+    logging.info(f"Authorized user IDs: {authorized_user_ids}")
+
+    if user_id not in authorized_user_ids:
         await ctx.send("You do not have permission to use this command.")
         return
 
