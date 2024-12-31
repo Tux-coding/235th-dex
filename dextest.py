@@ -242,6 +242,21 @@ async def spawn_card():
         for channel in channels:
             await channel.send("An error occurred while spawning a card.")
 
+# Command to shut down the bot
+@bot.command(name='shutdown')
+@commands.has_permissions(administrator=True)
+async def shutdown(ctx):
+    await ctx.send("Shutting down the bot...")
+    logging.info(f"Shutdown command issued by {ctx.author}.")
+    save_player_cards()  # Save player cards on shutdown
+    channels = [bot.get_channel(int(channel_id)), bot.get_channel(int(test_channel_id))]
+    for channel in channels:
+        if channel:
+            await channel.send("235th dex going offline")
+        else:
+            logging.error("Channel not found.")
+    await bot.close()
+
 # If error, he says why
 @bot.event
 async def on_command_error(ctx, error):
@@ -271,7 +286,6 @@ async def random_number(ctx):
 @bot.command(name='hello')
 async def hello(ctx):
     await ctx.send('Hello! I am your Discord bot.')
-
 
 # Command that hopefully sees your cards
 @bot.command(name='mycards')
