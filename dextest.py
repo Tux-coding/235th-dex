@@ -18,7 +18,6 @@ logging.basicConfig(level=logging.INFO, format='%(asctime)s:%(levelname)s:%(name
 load_dotenv()
 token = os.getenv('DISCORD_TOKEN')
 channel_id = os.getenv('CHANNEL_ID')
-test_channel_id = os.getenv('TEST_CHANNEL_ID')
 
 # Load authorized user IDS from .env
 authorized_user_ids = os.getenv('AUTHORIZED_USER_IDS', '').split(',')
@@ -27,7 +26,6 @@ logging.info(f"Authorized user IDs: {authorized_user_ids}")
 # Debugging prints
 logging.info(f"DISCORD_TOKEN: {token}")
 logging.info(f"CHANNEL_ID: {channel_id}")
-logging.info(f"TEST_CHANNEL_ID: {test_channel_id}")
 
 if not token: # If it can't find the token, error message and exit will occur
     logging.error("DISCORD_TOKEN missing!") 
@@ -227,18 +225,10 @@ async def on_command_error(ctx, error):
 # When the bot is ready, it prints to the console that it's online
 @bot.event
 async def on_ready():
-    logging.info(f'Logged in as {bot.user.name}')
-    logging.info(f'Bot is connected to the following guilds:')
-    for guild in bot.guilds:
-        logging.info(f'{guild.name} (id: {guild.id})')
-
-    # Ensure the bot is connected to the correct channels
-    bot.dev_channel = bot.get_channel(int(channel_id))
-    bot.test_channel = bot.get_channel(int(test_channel_id))
-    if bot.dev_channel is None:
-        logging.error(f"Could not find development channel with ID {channel_id}")
-    if bot.test_channel is None:
-        logging.error(f"Could not find test channel with ID {test_channel_id}")
+    load_player_cards()  # Load player cards when the bot starts
+    print(f'We have logged in as {bot.user}')
+    logging.info("Logging is configured correctly.")
+    spawn_card.start()
 
 # Gives a random number between 0 and 10000000
 @bot.command(name='random_number')
