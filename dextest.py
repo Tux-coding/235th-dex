@@ -21,6 +21,7 @@ channel_id = os.getenv('CHANNEL_ID')
 
 # Load authorized user IDS from .env
 authorized_user_ids = os.getenv('AUTHORIZED_USER_IDS', '').split(',')
+logging.info(f"Authorized user IDs: {authorized_user_ids}")
 
 # Debugging prints
 logging.info(f"DISCORD_TOKEN: {token}")
