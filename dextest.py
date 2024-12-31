@@ -19,6 +19,9 @@ load_dotenv()
 token = os.getenv('DISCORD_TOKEN')
 channel_id = os.getenv('CHANNEL_ID')
 
+# Load authorized user IDS from .env
+authorized_user_ids = os.getenv('AUTHORIZED_USER_IDS', '').split(',')
+
 # Debugging prints
 logging.info(f"DISCORD_TOKEN: {token}")
 logging.info(f"CHANNEL_ID: {channel_id}")
@@ -215,6 +218,7 @@ async def on_command_error(ctx, error):
     elif isinstance(error, commands.MissingRequiredArgument):
         await ctx.send("Missing arguments.")
     else:
+        logging.error(f"An error occurred: {error}")
         await ctx.send("An error occurred.")
 
 # When the bot is ready, it prints to the console that it's online
@@ -298,8 +302,9 @@ async def progress(ctx):
 
 # Command to spawn a certain card, restricted to a specific user
 @bot.command(name='spawn_card')
+@commands.has_permissions(administrator=True)
 async def spawn_card_command(ctx, card_name: str):
-    authorized_user_ids = ['573878397952851988', '1035607651985403965', '845973389415284746']  # Replace with the specific user IDs
+    card_name = card_name.strip().lower()
     if str(ctx.author.id) not in authorized_user_ids:
         await ctx.send("You do not have permission to use this command.")
         return
