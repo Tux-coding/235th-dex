@@ -207,7 +207,7 @@ async def spawn_card():
             if channel:
                 await channel.send(embed=embed, view=CatchView(card['name']))
             else:
-                logging.error(f"Channel not found: {channel.id}")
+                logging.error("Channel not found.")
     except Exception as e:
         logging.error(f"An error occurred: {e}")
         for channel in channels:
@@ -340,6 +340,8 @@ async def on_disconnect():
     for channel in channels:
         if channel:
             await channel.send("235th dex going offline")
+        else:
+            logging.error("Channel not found.")
     logging.info("235th dex going offline")
 
 # Handle shutdown signal
