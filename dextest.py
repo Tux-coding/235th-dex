@@ -140,14 +140,14 @@ class ProgressView(View):
     async def on_quit(self, interaction: discord.Interaction):
         for item in self.children:
             item.disabled = True
-        await interaction.response.edit_message(view=self)
+        await interaction.edit_original_message(view=self)
 
     async def update_message(self, interaction: discord.Interaction):
         start = self.page * self.items_per_page
         end = start + self.items_per_page
         missing_cards_page = self.missing_cards[start:end]
         embed = discord.Embed(title="Your Missing Cards", description="\n".join(missing_cards_page))
-        await interaction.response.edit_message(embed=embed, view=self)
+        await interaction.edit_original_message(embed=embed, view=self)
 
     @discord.ui.button(label="Next", style=discord.ButtonStyle.primary)
     async def next_button(self, button: discord.ui.Button, interaction: discord.Interaction):
