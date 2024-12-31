@@ -122,8 +122,9 @@ class CatchView(View):
         self.add_item(CatchButton(card_name))
 
 class ProgressView(View):
-    def __init__(self, user_cards, missing_cards):
+    def __init__(self, user, user_cards, missing_cards):
         super().__init__(timeout=None)
+        self.user = user
         self.user_cards = user_cards
         self.missing_cards = missing_cards
         self.page = 0
@@ -367,7 +368,7 @@ async def progress(ctx):
         card_list = "\n".join(user_cards)
         missing_cards = [card["name"] for card in cards if card["name"] not in user_cards]
         embed = discord.Embed(title="Your Cards", description=f"You have caught {num_user_cards} out of {total_cards} cards ({percentage:.2f}%).\n\nYour cards:\n{card_list}")
-        view = ProgressView(user_cards, missing_cards)
+        view = ProgressView(ctx.author, user_cards, missing_cards)
         await ctx.send(embed=embed, view=view)
     else:
         await ctx.send(f"You haven't caught any cards yet. There are {total_cards} cards available.")
