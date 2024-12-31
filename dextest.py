@@ -180,8 +180,8 @@ cards = [
     {
         "name": "Rancor",
         "spawn_image_url": "https://media.discordapp.net/attachments/1322205679028670495/1323561918878847047/RobloxScreenShot20241231_090056606.png?ex=6774f698&is=6773a518&hm=cffc47d9ab08a0b3d98df85ef86f7abf413be74c2b4f2ecc56ee520991ed5f7d&=&format=webp&quality=lossless",
-        "card_image_url": "https://media.discordapp.net/attachments/1322202570529177642/1323386408550928404/Just_another_trooper_trying_to_stay_alive._He_doesnt_like_insurgents._His_left_arm_and_left_eye_are_gone_due_to_the_Gulag_14.png?ex=67745323&is=677301a3&hm=dd52bd5a4777cc90d0f8a6793251192ac14a526e55037f3d2d32bb0db691471c&=&format=webp&quality=lossless&width=479&height=671",
-        "rarity": 25 
+        "card_image_url": "https://media.discordapp.net/attachments/1322202570529177642/1323563829925380166/Just_another_trooper_trying_to_stay_alive._He_doesnt_like_insurgents._His_left_arm_and_left_eye_are_gone_due_to_the_Gulag_15.png?ex=6774f85f&is=6773a6df&hm=d65e4c7ce98eb87dd896234a15a4a9d742d83fd44292fe1b0b392938a7bce01b&=&format=webp&quality=lossless&width=479&height=671",
+        "rarity": 12.5 
     }
 ]
 
