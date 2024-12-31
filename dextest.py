@@ -18,6 +18,7 @@ logging.basicConfig(level=logging.INFO, format='%(asctime)s:%(levelname)s:%(name
 load_dotenv()
 token = os.getenv('DISCORD_TOKEN')
 channel_id = os.getenv('CHANNEL_ID')
+test_channel_id = os.getenv('TEST_CHANNEL_ID')
 
 # Load authorized user IDS from .env
 authorized_user_ids = os.getenv('AUTHORIZED_USER_IDS', '').split(',')
@@ -196,18 +197,22 @@ def weighted_random_choice(cards):
 @tasks.loop(minutes=1)
 async def spawn_card():
     try:
-        channel = bot.get_channel(int(channel_id))
-        if channel:
-            card = weighted_random_choice(cards)
-            logging.info(f"Selected card: {card['name']}")
-            embed = discord.Embed(title=f"A wild card has appeared!", description="Click the button below to catch it!")
-            embed.set_image(url=card['spawn_image_url'])
-            await channel.send(embed=embed, view=CatchView(card['name']))
-        else:
-            logging.error(f"Channel not found: {channel_id}")
+        channels = [bot.get_channel(int(channel_id)), bot.get_channel(int(test_channel_id))]
+        card = weighted_random_choice(cards)
+        logging.info(f"Selected card: {card['name']}")
+        embed = discord.Embed(title=f"A wild card has appeared!", description="Click the button below to catch it!")
+        embed.set_image(url=card['spawn_image_url'])
+        
+        for channel in channels:
+            if channel:
+                await channel.send(embed=embed, view=CatchView(card['name']))
+            else:
+                logging.error(f"Channel not found: {channel.id}")
     except Exception as e:
         logging.error(f"An error occurred: {e}")
-        await bot.get_channel(int(channel_id)).send("An error occurred while spawning a card.")
+        for channel in channels:
+            if channel:
+                await channel.send("An error occurred while spawning a card.")
 
 # If error, he says why
 @bot.event
@@ -331,9 +336,10 @@ async def spawn_card_command(ctx, card_name: str):
 # When the bot disconnects, it will send a message to the channel
 @bot.event
 async def on_disconnect():
-    channel = bot.get_channel(int(channel_id))
-    if channel:
-        await channel.send("235th dex going offline")
+    channels = [bot.get_channel(int(channel_id)), bot.get_channel(int(test_channel_id))]
+    for channel in channels:
+        if channel:
+            await channel.send("235th dex going offline")
     logging.info("235th dex going offline")
 
 # Handle shutdown signal
