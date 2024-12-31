@@ -176,6 +176,12 @@ cards = [
         "spawn_image_url": "https://media.discordapp.net/attachments/1322205679028670495/1323386530303053854/RobloxScreenShot20241230_211843002.png?ex=67745340&is=677301c0&hm=1679defda16cd577a0146f6dc1ce3e6e9bb08eac3934ecb6512a4a7711a34c09&=&format=webp&quality=lossless&width=522&height=350",
         "card_image_url": "https://media.discordapp.net/attachments/1322202570529177642/1323386408550928404/Just_another_trooper_trying_to_stay_alive._He_doesnt_like_insurgents._His_left_arm_and_left_eye_are_gone_due_to_the_Gulag_14.png?ex=67745323&is=677301a3&hm=dd52bd5a4777cc90d0f8a6793251192ac14a526e55037f3d2d32bb0db691471c&=&format=webp&quality=lossless&width=479&height=671",
         "rarity": 50 
+    },
+    {
+        "name": "Rancor",
+        "spawn_image_url": "https://media.discordapp.net/attachments/1322205679028670495/1323561918878847047/RobloxScreenShot20241231_090056606.png?ex=6774f698&is=6773a518&hm=cffc47d9ab08a0b3d98df85ef86f7abf413be74c2b4f2ecc56ee520991ed5f7d&=&format=webp&quality=lossless",
+        "card_image_url": "https://media.discordapp.net/attachments/1322202570529177642/1323386408550928404/Just_another_trooper_trying_to_stay_alive._He_doesnt_like_insurgents._His_left_arm_and_left_eye_are_gone_due_to_the_Gulag_14.png?ex=67745323&is=677301a3&hm=dd52bd5a4777cc90d0f8a6793251192ac14a526e55037f3d2d32bb0db691471c&=&format=webp&quality=lossless&width=479&height=671",
+        "rarity": 25 
     }
 ]
 
@@ -354,7 +360,7 @@ async def spawn_card_command(ctx, card_name: str):
     if card:
         channel = bot.get_channel(int(channel_id))
         if channel:
-            embed = discord.Embed(title=f"A wild {card['name']} has appeared!", description="Click the button below to catch it!")
+            embed = discord.Embed(title=f"A wild card has appeared!", description="Click the button below to catch it!")
             embed.set_image(url=card['spawn_image_url'])
             await channel.send(embed=embed, view=CatchView(card['name']))
             await ctx.send(f"{card['name']} has been spawned.")
