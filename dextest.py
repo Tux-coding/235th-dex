@@ -121,6 +121,9 @@ class CatchButton(Button):
             modal = CatchModal(self.card_name, self.view, interaction.message)
             await interaction.response.send_modal(modal)
 
+    def disable(self):
+        self.disabled = True
+
 class CatchView(View):
     def __init__(self, card_name):
         super().__init__(timeout=None)
@@ -422,6 +425,13 @@ async def on_ready():
     for channel in channels:
         if channel:
             try:
+                async for message in channel.history(limit=100):
+                    if message.author == bot.user and message.components:
+                        for component in message.components:
+                            for item in component.children:
+                                if isinstance(item, Button):
+                                    item.disabled = True
+                        await message.edit(view=message.components[0])
                 await channel.send("235th dex going online")
                 logging.info(f"Sent online message to channel {channel.id}")
             except Exception as e:
