@@ -438,8 +438,8 @@ def is_authorized(ctx):
 @commands.check(is_authorized)
 async def spawn_card_command(ctx, card_name: str):
     card_name = card_name.strip().lower()
-    if not all(c.isalnum() or c.isspace() for c in card_name):
-        await ctx.send("Invalid card name. Only alphanumeric characters and spaces are allowed.")
+    if not all(c.isalnum() or c.isspace() or c in ["'", "-"] for c in card_name):
+        await ctx.send("Invalid card name. Only alphanumeric characters, spaces, apostrophes, and hyphens are allowed.")
         return
 
     card = next((card for card in cards if card["name"].lower() == card_name.lower()), None)
