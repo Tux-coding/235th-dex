@@ -173,7 +173,7 @@ cards = [
         "name": "Pipopro",
         "spawn_image_url": "https://media.discordapp.net/attachments/1322205679028670495/1322977622778576976/artworks-OF3WFPHsapfnZrW8-lDiZAQ-t500x500.png?ex=67737f2d&is=67722dad&hm=1ec22c5b9af4c994af583de216afe05660c777e5437a738750577b9a49cbdf90&=&format=webp&quality=lossless",
         "card_image_url": "https://cdn.discordapp.com/attachments/1322202570529177642/1322977702105579591/Pipopro.png?ex=67737f3f&is=67722dbf&hm=2cc3c639f2e613963f78ec6dbfc274df6f6a74666d06461e4bfb60fdb5c3568d&",
-        "rarity": 0.75,
+        "rarity": 0.45,
         "health": 15000,
         "damage": 7500,
     },
@@ -304,7 +304,7 @@ async def set_spawn_mode(ctx, mode: str):
 last_spawned_card = None
 spawned_messages = []
 
-@tasks.loop(minutes=1)
+@tasks.loop(minutes=10)
 async def spawn_card():
     global last_spawned_card, spawned_messages
     channels = []
@@ -366,45 +366,45 @@ async def print_stats(ctx, *, card_name: str):
     else:
         await ctx.send("Card not found.")
 
-# Command to initiate a fight between two players
-@bot.command(name='fight')
-async def fight(ctx, opponent: discord.Member):
-    user_id = str(ctx.author.id)
-    opponent_id = str(opponent.id)
+# Command to initiate a fight between two playerS          | DISABLED FOR PLAYTEST 
+# @bot.command(name='fight')
+# async def fight(ctx, opponent: discord.Member):
+#     user_id = str(ctx.author.id)
+#     opponent_id = str(opponent.id)
 
-    if user_id not in player_cards or not player_cards[user_id]:
-        await ctx.send("You don't have any cards to fight with.")
-        return
+#     if user_id not in player_cards or not player_cards[user_id]:
+#         await ctx.send("You don't have any cards to fight with.")
+#         return
 
-    if opponent_id not in player_cards or not player_cards[opponent_id]:
-        await ctx.send(f"{opponent.mention} doesn't have any cards to fight with.")
-        return
+#     if opponent_id not in player_cards or not player_cards[opponent_id]:
+#         await ctx.send(f"{opponent.mention} doesn't have any cards to fight with.")
+#         return
 
-    user_card_name = random.choice(player_cards[user_id])
-    opponent_card_name = random.choice(player_cards[opponent_id])
+#     user_card_name = random.choice(player_cards[user_id])
+#     opponent_card_name = random.choice(player_cards[opponent_id])
 
-    user_card = next(card for card in cards if card["name"] == user_card_name)
-    opponent_card = next(card for card in cards if card["name"] == opponent_card_name)
+#     user_card = next(card for card in cards if card["name"] == user_card_name)
+#     opponent_card = next(card for card in cards if card["name"] == opponent_card_name)
 
-    user_health = user_card["health"]
-    opponent_health = opponent_card["health"]
+#     user_health = user_card["health"]
+#     opponent_health = opponent_card["health"]
 
-    battle_log = f"**{ctx.author.display_name}**'s **{user_card['name']}** vs **{opponent.display_name}**'s **{opponent_card['name']}**\n\n"
+#     battle_log = f"**{ctx.author.display_name}**'s **{user_card['name']}** vs **{opponent.display_name}**'s **{opponent_card['name']}**\n\n"
 
-    while user_health > 0 and opponent_health > 0:
-        opponent_health -= user_card["damage"]
-        battle_log += f"**{user_card['name']}** attacks **{opponent_card['name']}** for {user_card['damage']} damage. **{opponent_card['name']}** has {max(opponent_health, 0)} health left.\n"
-        if opponent_health <= 0:
-            battle_log += f"\n**{user_card['name']}** wins!"
-            break
+#     while user_health > 0 and opponent_health > 0:
+#         opponent_health -= user_card["damage"]
+#         battle_log += f"**{user_card['name']}** attacks **{opponent_card['name']}** for {user_card['damage']} damage. **{opponent_card['name']}** has {max(opponent_health, 0)} health left.\n"
+#         if opponent_health <= 0:
+#             battle_log += f"\n**{user_card['name']}** wins!"
+#             break
 
-        user_health -= opponent_card["damage"]
-        battle_log += f"**{opponent_card['name']}** attacks **{user_card['name']}** for {opponent_card['damage']} damage. **{user_card['name']}** has {max(user_health, 0)} health left.\n"
-        if user_health <= 0:
-            battle_log += f"\n**{opponent_card['name']}** wins!"
-            break
+#         user_health -= opponent_card["damage"]
+#         battle_log += f"**{opponent_card['name']}** attacks **{user_card['name']}** for {opponent_card['damage']} damage. **{user_card['name']}** has {max(user_health, 0)} health left.\n"
+#         if user_health <= 0:
+#             battle_log += f"\n**{opponent_card['name']}** wins!"
+#             break
 
-    await ctx.send(battle_log)
+#     await ctx.send(battle_log)
 
 
 # If error, he says why
@@ -434,7 +434,7 @@ async def on_ready():
     for channel in channels:
         if channel:
             try:
-                await channel.send("235th dex going online")
+                await channel.send("235th dex is online! Type !list_commands to see the available commands.")
                 logging.info(f"Sent online message to channel {channel.id}")
             except Exception as e:
                 logging.error(f"Failed to send message to channel {channel.id}: {e}")
@@ -525,6 +525,13 @@ async def spawn_card_command(ctx, card_name: str):
 #///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 #other commands not related to the card game
 
+#marnix this is neccecary for the bot to work, trust me bro.  | please just keep it in for the memes
+@bot.command(name='neccesary_function')
+async def neccesary_function(ctx):
+    embed = discord.Embed(title="best card in the game!", description="stats: \n health: 1000000 \n damage: 1000000 \n rarity: 0.0000001%")
+    embed.set_image(url="https://cdn.discordapp.com/attachments/1321202778378604546/1324097976901046414/IMG-20220210-WA0005.jpg?ex=6776e9d6&is=67759856&hm=1b49feafd77c202fb297bb58506da6887fa83a4bb1db8d5924e7ed5b11b947a9&")
+    await ctx.send(embed=embed)
+
 # Respond to a simple message
 @bot.command(name='hello')
 async def hello(ctx):
@@ -554,10 +561,10 @@ async def list_commands(ctx):
 #info, command to show the current release
 @bot.command(name='info')
 async def info(ctx):
-    await ctx.send('Current release: beta') #expand later when we actually released the bot to the public
+    await ctx.send('Current release: playtest') #expand later when we actually released the bot to the public
 
 # Command to play a certain GIF, restricted to authorized users
-@bot.command(name='play_gif')
+@bot.command(name='celebrate')
 @commands.check(is_authorized)
 async def play_gif(ctx):
     gif_url = "https://images-ext-1.discordapp.net/external/g2WvOwPwXD3KtaqKdjNQ-RWFBmwpS01Nc2f_NPURW7w/https/media.tenor.com/BDxIoo-dxPgAAAPo/missouri-tigers-truman-the-tiger.mp4"
