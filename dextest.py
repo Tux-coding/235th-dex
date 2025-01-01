@@ -374,20 +374,16 @@ async def progress(ctx):
     else:
         await ctx.send(f"You haven't caught any cards yet. There are {total_cards} cards available.")
 
+def is_authorized(ctx):
+    return str(ctx.author.id) in authorized_user_ids
+
 # Command to spawn a certain card, restricted to a specific user
 @bot.command(name='spawn_card')
-@commands.has_permissions(administrator=True)
+@commands.check(is_authorized)
 async def spawn_card_command(ctx, card_name: str):
     card_name = card_name.strip().lower()
     if not card_name.isalnum():
         await ctx.send("Invalid card name.")
-        return
-    user_id = str(ctx.author.id)
-    logging.info(f"User ID: {user_id}")
-    logging.info(f"Authorized user IDs: {authorized_user_ids}")
-
-    if user_id not in authorized_user_ids:
-        await ctx.send("You do not have permission to use this command.")
         return
 
     card = next((card for card in cards if card["name"].lower() == card_name.lower()), None)
@@ -462,7 +458,7 @@ async def shutdown_bot():
 
 # Command to shut down the bot
 @bot.command(name='shutdown')
-@commands.has_permissions(administrator=True)
+@commands.check(is_authorized)
 async def shutdown(ctx):
     await ctx.send("Shutting down the bot...")
     logging.info(f"Shutdown command issued by {ctx.author}.")
