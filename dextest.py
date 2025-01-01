@@ -311,7 +311,7 @@ async def spawn_card():
     try:
         # Disable buttons of previous cards
         for message in spawned_messages:
-            view = message.components[0]
+            view = View.from_message(message)
             for item in view.children:
                 if isinstance(item, Button):
                     item.disabled = True
