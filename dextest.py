@@ -41,9 +41,6 @@ bot = commands.Bot(command_prefix='!', intents=intents)
 # Player cards view starter
 player_cards = {}
 
-# Global variable to store pending trades
-pending_trades = {}
-
 # Load player cards from a JSON file
 def load_player_cards() -> None:
     global player_cards
@@ -123,52 +120,6 @@ class CatchView(View):
         super().__init__(timeout=None)
         self.card_claimed = False
         self.add_item(CatchButton(card_name))
-
-# Command to initiate a trade
-@bot.command(name='trade')
-async def trade(ctx, user: discord.User, card_name: str):
-    card_name = card_name.strip()
-    user_id = str(ctx.author.id)
-    target_user_id = str(user.id)
-
-    if user_id == target_user_id:
-        await ctx.send("You cannot trade with yourself.")
-        return
-
-    if not user_has_card(user_id, card_name):
-        await ctx.send("You do not have this card.")
-        return
-
-    pending_trades[target_user_id] = {
-        'from': user_id,
-        'card_name': card_name
-    }
-    await ctx.send(f"Trade request sent to {user.mention} for card {card_name}.")
-
-# Command to accept a trade
-@bot.command(name='accept_trade')
-async def accept_trade(ctx):
-    user_id = str(ctx.author.id)
-
-    if user_id not in pending_trades:
-        await ctx.send("You have no pending trade requests.")
-        return
-
-    trade = pending_trades.pop(user_id)
-    from_user_id = trade['from']
-    card_name = trade['card_name']
-
-    if not user_has_card(from_user_id, card_name):
-        await ctx.send("The user no longer has this card.")
-        return
-
-    # Perform the trade
-    player_cards[from_user_id].remove(card_name)
-    player_cards.setdefault(user_id, []).append(card_name)
-    save_player_cards()
-
-    await ctx.send(f"Trade accepted. You received {card_name} from <@{from_user_id}>.")
-    await bot.get_user(int(from_user_id)).send(f"Your trade has been accepted by {ctx.author.mention}.")
 
 # List of cards with their names and image URLs
 cards = [
