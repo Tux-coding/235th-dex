@@ -226,6 +226,46 @@ cards = [
         "rarity": 70,
         "health": 1700,
         "damage": 500,
+    },
+    {
+        "name": "Bricker",
+        "spawn_image_url": "https://media.discordapp.net/attachments/1322205679028670495/1323674207355404338/RobloxScreenShot20241231_162811051.png?ex=6776b0ab&is=67755f2b&hm=469701c4cfe846ba2a1d409054169e50e4a38f2be05edb25e02bdb1037701ae5&=&format=webp&quality=lossless&width=490&height=350",
+        "card_image_url": "https://media.discordapp.net/attachments/1322202570529177642/1323983294827597834/Just_another_trooper_trying_to_stay_alive._He_doesnt_like_insurgents._His_left_arm_and_left_eye_are_gone_due_to_the_Gulag_22.png?ex=67767f07&is=67752d87&hm=7d25ae8c7bbb0d950f02bc65458feec54d1c0d9587801257fc4d6f21f3ef920f&=&format=webp&quality=lossless&width=479&height=671",
+        "rarity": 85,
+        "health": 1550,
+        "damage": 450,
+    },
+    {
+        "name": "Sinner",
+        "spawn_image_url": "https://media.discordapp.net/attachments/1322205679028670495/1323982617527451708/RobloxScreenShot20250101_125340765.png?ex=67767e66&is=67752ce6&hm=57ff065a4ae55a28e1a67ea0dfe6a55959924dd8c7f6c7375c6acb204bfcfb1f&=&format=webp&quality=lossless&width=318&height=350",
+        "card_image_url": "https://media.discordapp.net/attachments/1322202570529177642/1323984903406354543/Just_another_trooper_trying_to_stay_alive._He_doesnt_like_insurgents._His_left_arm_and_left_eye_are_gone_due_to_the_Gulag_23.png?ex=67768087&is=67752f07&hm=c2a2e730930dc2aaa552e1aa40e0d4d01c7bc89aea1608b3c5c67319093fae68&=&format=webp&quality=lossless&width=479&height=671",
+        "rarity": 77,
+        "health": 2550,
+        "damage": 1755,
+    },
+    {
+        "name": "Voca",
+        "spawn_image_url": "https://media.discordapp.net/attachments/1322205679028670495/1323987029956235304/RobloxScreenShot20250101_131047926.png?ex=67768282&is=67753102&hm=ec5f28ea32edcadee43190286cc5cdbe0d9197d69142a99813f2bc1e9c8d336f&=&format=webp&quality=lossless",
+        "card_image_url": "https://media.discordapp.net/attachments/1322202570529177642/1323988014418104330/Just_another_trooper_trying_to_stay_alive._He_doesnt_like_insurgents._His_left_arm_and_left_eye_are_gone_due_to_the_Gulag_24.png?ex=6776836d&is=677531ed&hm=f57ab17956ed12fe5e9a1d4a326a09c83794975d06a5e305d386536a988b3c89&=&format=webp&quality=lossless&width=479&height=671",
+        "rarity": 45,
+        "health": 3750,
+        "damage": 2050,
+    },
+    {
+        "name": "Ren'dar Auron",
+        "spawn_image_url": "https://media.discordapp.net/attachments/1322205679028670495/1323993493432959006/RobloxScreenShot20250101_133639131.png?ex=67768887&is=67753707&hm=e2cea043c4cec15a1d0ae8e31b6b03ff8629da7db01ad4d73133d61d4baef63b&=&format=webp&quality=lossless",
+        "card_image_url": "https://media.discordapp.net/attachments/1322202570529177642/1323994036050071583/Just_another_trooper_trying_to_stay_alive._He_doesnt_like_insurgents._His_left_arm_and_left_eye_are_gone_due_to_the_Gulag_25.png?ex=67768908&is=67753788&hm=fd7bf7144407d5691bffc88739a40cdad0f19eb0a61bae6073dd563e9b94a77a&=&format=webp&quality=lossless&width=479&height=671",
+        "rarity": 25,
+        "health": 6500,
+        "damage": 2850,
+    },
+    {
+        "name": "Skye",
+        "spawn_image_url": "https://media.discordapp.net/attachments/1322205679028670495/1323995408648638475/RobloxScreenShot20250101_134436877.png?ex=67768a50&is=677538d0&hm=bd6dd80b06ef660f4659867b68c4333beb25d7d9a715287f768032dc79951f49&=&format=webp&quality=lossless&width=419&height=350",
+        "card_image_url": "https://media.discordapp.net/attachments/1322202570529177642/1323996389897797693/Just_another_trooper_trying_to_stay_alive._He_doesnt_like_insurgents._His_left_arm_and_left_eye_are_gone_due_to_the_Gulag_26.png?ex=67768b3a&is=677539ba&hm=c8013ba4445f32990c4f2e49e7aa7b346cfbaa78a0dac58d820d3acaf847b8b0&=&format=webp&quality=lossless&width=479&height=671",
+        "rarity": 61,
+        "health": 2700,
+        "damage": 1500,
     }
 ]
 
@@ -398,8 +438,8 @@ def is_authorized(ctx):
 @commands.check(is_authorized)
 async def spawn_card_command(ctx, card_name: str):
     card_name = card_name.strip().lower()
-    if not card_name.isalnum():
-        await ctx.send("Invalid card name.")
+    if not all(c.isalnum() or c.isspace() for c in card_name):
+        await ctx.send("Invalid card name. Only alphanumeric characters and spaces are allowed.")
         return
 
     card = next((card for card in cards if card["name"].lower() == card_name.lower()), None)
