@@ -327,7 +327,6 @@ async def on_ready():
     load_player_cards()  # Load player cards when the bot starts
     print(f'We have logged in as {bot.user}')
     logging.info("Logging is configured correctly.")
-    spawn_card.start()
     
     # Send online message to both channels
     channels = [bot.get_channel(int(channel_id)), bot.get_channel(int(test_channel_id))]
@@ -341,6 +340,8 @@ async def on_ready():
                 logging.error(f"Failed to send message to channel {channel.id}: {e}")
         else:
             logging.error(f"Channel not found.")
+    
+    spawn_card.start()
 
 # see_card command to see a specific card
 @bot.command(name='see_card')
