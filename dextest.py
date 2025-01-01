@@ -302,11 +302,21 @@ async def set_spawn_mode(ctx, mode: str):
 
 # Part that holds the timer and the channel where the card spawns
 last_spawned_card = None
+spawned_messages = []
 
-@tasks.loop(minutes=5)
+@tasks.loop(minutes=1)
 async def spawn_card():
-    global last_spawned_card
+    global last_spawned_card, spawned_messages
     try:
+        # Disable buttons of previous cards
+        for message in spawned_messages:
+            view = message.components[0]
+            for item in view.children:
+                if isinstance(item, Button):
+                    item.disabled = True
+            await message.edit(view=view)
+        spawned_messages = []
+
         channels = []
         if spawn_mode in ['both', 'test']:
             test_channel = bot.get_channel(int(test_channel_id))
@@ -336,7 +346,8 @@ async def spawn_card():
         embed.set_image(url=card['spawn_image_url'])
         
         for channel in channels:
-            await channel.send(embed=embed, view=CatchView(card['name']), allowed_mentions=discord.AllowedMentions.none())
+            msg = await channel.send(embed=embed, view=CatchView(card['name']), allowed_mentions=discord.AllowedMentions.none())
+            spawned_messages.append(msg)
     except Exception as e:
         logging.error(f"An error occurred: {e}")
         for channel in channels:
@@ -412,6 +423,7 @@ async def on_command_error(ctx, error):
 # When the bot is ready, it prints to the console that it's online
 @bot.event
 async def on_ready():
+    global spawned_messages
     load_player_cards()  # Load player cards when the bot starts
     print(f'We have logged in as {bot.user}')
     logging.info("Logging is configured correctly.")
@@ -429,6 +441,15 @@ async def on_ready():
         else:
             logging.error(f"Channel not found.")
     
+    # Disable buttons of previous cards on restart
+    for message in spawned_messages:
+        view = message.components[0]
+        for item in view.children:
+            if isinstance(item, Button):
+                item.disabled = True
+        await message.edit(view=view)
+    spawned_messages = []
+
     spawn_card.start()
 
 # see_card command to see a specific card
