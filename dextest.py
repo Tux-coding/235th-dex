@@ -317,6 +317,8 @@ async def on_command_error(ctx, error):
         await ctx.send("Command not found.")
     elif isinstance(error, commands.MissingRequiredArgument):
         await ctx.send("Missing arguments.")
+    elif isinstance(error, commands.CheckFailure):
+        await ctx.send("You do not have permission to use this command.")
     else:
         logging.error(f"An error occurred: {error}")
         await ctx.send("An error occurred.")
