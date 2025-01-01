@@ -433,7 +433,7 @@ async def on_ready():
                                 if isinstance(item, Button):
                                     item.disabled = True
                                     view.add_item(item)
-                        await message.edit(view=View.from_message(message))
+                        await message.edit(view=view)
                 await channel.send("235th dex going online")
                 logging.info(f"Sent online message to channel {channel.id}")
             except Exception as e:
