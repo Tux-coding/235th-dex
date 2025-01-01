@@ -584,12 +584,24 @@ def handle_shutdown_signal():
     loop.create_task(shutdown_bot())
 
 # Register signal handlers for graceful shutdown
-loop = asyncio.get_event_loop()
-loop.add_signal_handler(signal.SIGINT, handle_shutdown_signal)
-loop.add_signal_handler(signal.SIGTERM, handle_shutdown_signal)
+def register_signal_handlers():
+    try:
+        loop = asyncio.get_event_loop()
+        loop.add_signal_handler(signal.SIGINT, handle_shutdown_signal)
+        loop.add_signal_handler(signal.SIGTERM, handle_shutdown_signal)
+    except NotImplementedError:
+        logging.warning("Signal handlers are not implemented on this platform. Using alternative shutdown handling.")
+        import threading
+
+        def windows_shutdown_handler():
+            save_player_cards()  # Save player cards on shutdown
+            asyncio.run(shutdown_bot())
+
+        threading.Thread(target=windows_shutdown_handler).start()
 
 # Ensures that it will only work when executed directly, and will log any errors to the terminal
 if __name__ == "__main__":
+    register_signal_handlers()
     try:
         asyncio.run(bot.run(token))
         logging.info(f'Logged in as {bot.user.name}')
