@@ -603,7 +603,7 @@ signal.signal(signal.SIGTERM, handle_shutdown_signal)
 # Ensures that it will only work when executed directly, and will log any errors to the terminal
 if __name__ == "__main__":
     try:
-        asyncio.run(bot.run(token))
+        bot.run(token)
         logging.info(f'Logged in as {bot.user.name}')
     except Exception as e:
         logging.error(f'Error: {e}')
