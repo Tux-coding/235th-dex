@@ -68,7 +68,11 @@ def save_player_cards() -> None:
     logging.info(f"Saved player cards: {player_cards}")
 
 def user_has_card(user_id: str, card_name: str) -> bool:
-    return user_id in player_cards and card_name in player_cards[user_id]
+    card_name = card_name.lower()
+    for card in player_cards.get(user_id, []):
+        if card_name == card.lower() or card_name in [alias.lower() for alias in next(c['aliases'] for c in cards if c['name'].lower() == card.lower())]:
+            return True
+    return False
 
 # Button that hopefully does the button work
 class CatchModal(Modal):
@@ -86,7 +90,8 @@ class CatchModal(Modal):
             await interaction.response.send_message("The card has already been claimed.", ephemeral=True)
             return
 
-        if self.card_input.value.lower() == self.card_name.lower():
+        input_name = self.card_input.value.lower()
+        if input_name == self.card_name.lower() or input_name in [alias.lower() for alias in next(card['aliases'] for card in cards if card['name'].lower() == self.card_name.lower())]:
             user_id = str(user.id)
             if not user_has_card(user_id, self.card_name):
                 player_cards.setdefault(user_id, []).append(self.card_name)
@@ -253,6 +258,7 @@ cards = [
     },
     {
         "name": "Ren'dar Auron",
+        "aliases": ["Rendar", "GONK"],
         "spawn_image_url": "https://media.discordapp.net/attachments/1322205679028670495/1323993493432959006/RobloxScreenShot20250101_133639131.png?ex=67768887&is=67753707&hm=e2cea043c4cec15a1d0ae8e31b6b03ff8629da7db01ad4d73133d61d4baef63b&=&format=webp&quality=lossless",
         "card_image_url": "https://media.discordapp.net/attachments/1322202570529177642/1323994036050071583/Just_another_trooper_trying_to_stay_alive._He_doesnt_like_insurgents._His_left_arm_and_left_eye_are_gone_due_to_the_Gulag_25.png?ex=67768908&is=67753788&hm=fd7bf7144407d5691bffc88739a40cdad0f19eb0a61bae6073dd563e9b94a77a&=&format=webp&quality=lossless&width=479&height=671",
         "rarity": 25,
@@ -442,7 +448,7 @@ async def spawn_card_command(ctx, card_name: str):
         await ctx.send("Invalid card name. Only alphanumeric characters, spaces, apostrophes, and hyphens are allowed.")
         return
 
-    card = next((card for card in cards if card["name"].lower() == card_name.lower()), None)
+    card = next((card for card in cards if card_name == card["name"].lower() or card_name in [alias.lower() for alias in card.get("aliases", [])]), None)
     if card:
         channel = bot.get_channel(int(channel_id))
         if channel:
