@@ -578,14 +578,15 @@ async def shutdown(ctx):
     await shutdown_bot()
 
 # Handle shutdown signal
-def handle_shutdown_signal(signal, frame):
+def handle_shutdown_signal():
     save_player_cards()  # Save player cards on shutdown
     loop = asyncio.get_event_loop()
     loop.create_task(shutdown_bot())
 
 # Register signal handlers for graceful shutdown
-signal.signal(signal.SIGINT, handle_shutdown_signal)
-signal.signal(signal.SIGTERM, handle_shutdown_signal)
+loop = asyncio.get_event_loop()
+loop.add_signal_handler(signal.SIGINT, handle_shutdown_signal)
+loop.add_signal_handler(signal.SIGTERM, handle_shutdown_signal)
 
 # Ensures that it will only work when executed directly, and will log any errors to the terminal
 if __name__ == "__main__":
