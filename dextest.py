@@ -525,12 +525,7 @@ async def spawn_card_command(ctx, card_name: str):
 #///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 #other commands not related to the card game
 
-#marnix this is neccecary for the bot to work, trust me bro.  | please just keep it in for the memes
-@bot.command(name='neccesary_function')
-async def neccesary_function(ctx):
-    embed = discord.Embed(title="best card in the game!", description="stats: \n health: 1000000 \n damage: 1000000 \n rarity: 0.0000001%")
-    embed.set_image(url="https://cdn.discordapp.com/attachments/1321202778378604546/1324097976901046414/IMG-20220210-WA0005.jpg?ex=6776e9d6&is=67759856&hm=1b49feafd77c202fb297bb58506da6887fa83a4bb1db8d5924e7ed5b11b947a9&")
-    await ctx.send(embed=embed)
+
 
 # Respond to a simple message
 @bot.command(name='hello')
