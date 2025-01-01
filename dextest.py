@@ -121,9 +121,6 @@ class CatchButton(Button):
             modal = CatchModal(self.card_name, self.view, interaction.message)
             await interaction.response.send_modal(modal)
 
-    def disable(self):
-        self.disabled = True
-
 class CatchView(View):
     def __init__(self, card_name):
         super().__init__(timeout=None)
@@ -425,15 +422,6 @@ async def on_ready():
     for channel in channels:
         if channel:
             try:
-                async for message in channel.history(limit=100):
-                    if message.author == bot.user and message.components:
-                        view = View()
-                        for component in message.components:
-                            for item in component.children:
-                                if isinstance(item, Button):
-                                    item.disabled = True
-                                    view.add_item(item)
-                        await message.edit(view=view)
                 await channel.send("235th dex going online")
                 logging.info(f"Sent online message to channel {channel.id}")
             except Exception as e:
@@ -578,30 +566,16 @@ async def shutdown(ctx):
     await shutdown_bot()
 
 # Handle shutdown signal
-def handle_shutdown_signal():
+def handle_shutdown_signal(signal, frame):
     save_player_cards()  # Save player cards on shutdown
     loop = asyncio.get_event_loop()
     loop.create_task(shutdown_bot())
 
-# Register signal handlers for graceful shutdown
-def register_signal_handlers():
-    try:
-        loop = asyncio.get_event_loop()
-        loop.add_signal_handler(signal.SIGINT, handle_shutdown_signal)
-        loop.add_signal_handler(signal.SIGTERM, handle_shutdown_signal)
-    except NotImplementedError:
-        logging.warning("Signal handlers are not implemented on this platform. Using alternative shutdown handling.")
-        import threading
-
-        def windows_shutdown_handler():
-            save_player_cards()  # Save player cards on shutdown
-            asyncio.run(shutdown_bot())
-
-        threading.Thread(target=windows_shutdown_handler).start()
+signal.signal(signal.SIGINT, handle_shutdown_signal)
+signal.signal(signal.SIGTERM, handle_shutdown_signal)
 
 # Ensures that it will only work when executed directly, and will log any errors to the terminal
 if __name__ == "__main__":
-    register_signal_handlers()
     try:
         asyncio.run(bot.run(token))
         logging.info(f'Logged in as {bot.user.name}')
