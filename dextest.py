@@ -70,7 +70,8 @@ def save_player_cards() -> None:
 def user_has_card(user_id: str, card_name: str) -> bool:
     card_name = card_name.lower()
     for card in player_cards.get(user_id, []):
-        if card_name == card.lower() or card_name in [alias.lower() for alias in next(c['aliases'] for c in cards if c['name'].lower() == card.lower())]:
+        card_aliases = next((c['aliases'] for c in cards if c['name'].lower() == card.lower()), [])
+        if card_name == card.lower() or card_name in [alias.lower() for alias in card_aliases]:
             return True
     return False
 
