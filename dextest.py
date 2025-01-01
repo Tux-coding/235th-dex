@@ -546,7 +546,7 @@ async def list_commands(ctx):
         '!info - Shows the current release ',
         '!see_card - View a card you have caught.',
         '!progress - Shows your progress in catching cards.',
-        '!print-stats - Shows the stats of a certain card.',
+        '!print_stats - Shows the stats of a certain card.',
     ]
     commands_description = '\n'.join(commands_list)
     await ctx.send(f'Here is a list of all the commands you can use:\n{commands_description}')
