@@ -427,11 +427,13 @@ async def on_ready():
             try:
                 async for message in channel.history(limit=100):
                     if message.author == bot.user and message.components:
+                        view = View()
                         for component in message.components:
                             for item in component.children:
                                 if isinstance(item, Button):
                                     item.disabled = True
-                        await message.edit(view=message.components[0])
+                                    view.add_item(item)
+                        await message.edit(view=View.from_message(message))
                 await channel.send("235th dex going online")
                 logging.info(f"Sent online message to channel {channel.id}")
             except Exception as e:
