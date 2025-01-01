@@ -329,21 +329,6 @@ async def on_ready():
     logging.info("Logging is configured correctly.")
     spawn_card.start()
 
-
-# Command that hopefully sees your cards
-@bot.command(name='mycards')
-async def my_cards(ctx):
-    user_id = str(ctx.author.id)  # Ensure user ID is a string
-    logging.info(f'User ID: {user_id}')
-    logging.info(f'Player cards: {player_cards}')
-    if user_id in player_cards:
-        cards = player_cards[user_id]
-        logging.info(f"User {user_id} has cards: {cards}")
-        await ctx.send(f"You have caught: {', '.join(cards)}")
-    else:
-        logging.info(f"User {user_id} has no cards.")
-        await ctx.send("You haven't caught any cards yet.")
-
 # see_card command to see a specific card
 @bot.command(name='see_card')
 async def see_card(ctx):
@@ -424,7 +409,7 @@ async def spawn_card_command(ctx, card_name: str):
 # Respond to a simple message
 @bot.command(name='hello')
 async def hello(ctx):
-    await ctx.send('Hello! I am the 235th dex, at your service!')
+    await ctx.send('Hello! I am the 235th dex!')
 
 # Gives a random number between 0 and 10000000
 @bot.command(name='random_number')
@@ -439,11 +424,10 @@ async def list_commands(ctx):
     commands_list = [
         '!hello - Responds with a greeting message.',
         '!random_number - Gives a random number',
-        '!info - shows the current release ',
-        '!mycards - Shows the cards you have caught.',
+        '!info - Shows the current release ',
         '!see_card - View a card you have caught.',
         '!progress - Shows your progress in catching cards.',
-        '!commands - Shows a list of all the commands you can use.',   
+        '!print_stats - Shows the stats of a certain card.',
     ]
     commands_description = '\n'.join(commands_list)
     await ctx.send(f'Here is a list of all the commands you can use:\n{commands_description}')
