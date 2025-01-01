@@ -307,6 +307,7 @@ spawned_messages = []
 @tasks.loop(minutes=1)
 async def spawn_card():
     global last_spawned_card, spawned_messages
+    channels = []
     try:
         # Disable buttons of previous cards
         for message in spawned_messages:
@@ -317,7 +318,6 @@ async def spawn_card():
             await message.edit(view=view)
         spawned_messages = []
 
-        channels = []
         if spawn_mode in ['both', 'test']:
             test_channel = bot.get_channel(int(test_channel_id))
             if test_channel:
