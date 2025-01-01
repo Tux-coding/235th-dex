@@ -55,11 +55,11 @@ def load_player_cards() -> None:
             player_cards = {}
             logging.info("Player cards file is empty. Starting with an empty dictionary.")
     except FileNotFoundError:
-        player_cards = {}
-        logging.info("No player cards file found. Starting with an empty dictionary.")
+        logging.error("No player cards file found. Aborting.")
+        exit(1)
     except json.JSONDecodeError:
-        player_cards = {}
-        logging.error("Error decoding JSON from player cards file. Starting with an empty dictionary.")
+        logging.error("Error decoding JSON from player cards file. Aborting.")
+        exit(1)
 
 # Save player cards to a JSON file
 def save_player_cards() -> None:
@@ -556,7 +556,12 @@ async def list_commands(ctx):
 async def info(ctx):
     await ctx.send('Current release: beta') #expand later when we actually released the bot to the public
 
-
+# Command to play a certain GIF, restricted to authorized users
+@bot.command(name='play_gif')
+@commands.check(is_authorized)
+async def play_gif(ctx):
+    gif_url = "https://images-ext-1.discordapp.net/external/g2WvOwPwXD3KtaqKdjNQ-RWFBmwpS01Nc2f_NPURW7w/https/media.tenor.com/BDxIoo-dxPgAAAPo/missouri-tigers-truman-the-tiger.mp4"
+    await ctx.send(gif_url)
 
 
 #///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
