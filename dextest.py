@@ -344,9 +344,8 @@ async def spawn_card():
 
 # Command to print the stats of a card
 @bot.command(name='print_stats')
-async def print_stats(ctx, card_name: str):
-    card_name = card_name.strip().lower()
-    card = next((card for card in cards if card["name"].lower() == card_name), None)
+async def print_stats(ctx, *, card_name: str):
+    card = next((card for card in cards if card_name.lower() == card["name"].lower()), None)
     if card:
         embed = discord.Embed(title=f"Stats for {card['name']}", description="")
         embed.add_field(name="Health", value=card["health"], inline=True)
@@ -355,6 +354,49 @@ async def print_stats(ctx, card_name: str):
         await ctx.send(embed=embed)
     else:
         await ctx.send("Card not found.")
+
+
+
+
+# Command to initiate a fight between two players
+@bot.command(name='fight')
+async def fight(ctx, opponent: discord.Member):
+    user_id = str(ctx.author.id)
+    opponent_id = str(opponent.id)
+
+    if user_id not in player_cards or not player_cards[user_id]:
+        await ctx.send("You don't have any cards to fight with.")
+        return
+
+    if opponent_id not in player_cards or not player_cards[opponent_id]:
+        await ctx.send(f"{opponent.mention} doesn't have any cards to fight with.")
+        return
+
+    user_card_name = random.choice(player_cards[user_id])
+    opponent_card_name = random.choice(player_cards[opponent_id])
+
+    user_card = next(card for card in cards if card["name"] == user_card_name)
+    opponent_card = next(card for card in cards if card["name"] == opponent_card_name)
+
+    user_health = user_card["health"]
+    opponent_health = opponent_card["health"]
+
+    battle_log = f"**{ctx.author.display_name}**'s **{user_card['name']}** vs **{opponent.display_name}**'s **{opponent_card['name']}**\n\n"
+
+    while user_health > 0 and opponent_health > 0:
+        opponent_health -= user_card["damage"]
+        battle_log += f"**{user_card['name']}** attacks **{opponent_card['name']}** for {user_card['damage']} damage. **{opponent_card['name']}** has {max(opponent_health, 0)} health left.\n"
+        if opponent_health <= 0:
+            battle_log += f"\n**{user_card['name']}** wins!"
+            break
+
+        user_health -= opponent_card["damage"]
+        battle_log += f"**{opponent_card['name']}** attacks **{user_card['name']}** for {opponent_card['damage']} damage. **{user_card['name']}** has {max(user_health, 0)} health left.\n"
+        if user_health <= 0:
+            battle_log += f"\n**{opponent_card['name']}** wins!"
+            break
+
+    await ctx.send(battle_log)
 
 
 # If error, he says why
@@ -383,7 +425,7 @@ async def on_ready():
     for channel in channels:
         if channel:
             try:
-                await channel.send("235th bot going online")
+                await channel.send("235th dex going online")
                 logging.info(f"Sent online message to channel {channel.id}")
             except Exception as e:
                 logging.error(f"Failed to send message to channel {channel.id}: {e}")
@@ -486,7 +528,7 @@ async def list_commands(ctx):
         '!info - Shows the current release ',
         '!see_card - View a card you have caught.',
         '!progress - Shows your progress in catching cards.',
-        '!print_stats - Shows the stats of a certain card.',
+        '!print-stats - Shows the stats of a certain card.',
     ]
     commands_description = '\n'.join(commands_list)
     await ctx.send(f'Here is a list of all the commands you can use:\n{commands_description}')
@@ -495,8 +537,6 @@ async def list_commands(ctx):
 @bot.command(name='info')
 async def info(ctx):
     await ctx.send('Current release: beta') #expand later when we actually released the bot to the public
-
-
 
 
 
