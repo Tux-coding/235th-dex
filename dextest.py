@@ -328,6 +328,19 @@ async def on_ready():
     print(f'We have logged in as {bot.user}')
     logging.info("Logging is configured correctly.")
     spawn_card.start()
+    
+    # Send online message to both channels
+    channels = [bot.get_channel(int(channel_id)), bot.get_channel(int(test_channel_id))]
+    logging.info(f"Attempting to send online message to channels: {channel_id}, {test_channel_id}")
+    for channel in channels:
+        if channel:
+            try:
+                await channel.send("235th bot going online")
+                logging.info(f"Sent online message to channel {channel.id}")
+            except Exception as e:
+                logging.error(f"Failed to send message to channel {channel.id}: {e}")
+        else:
+            logging.error(f"Channel not found.")
 
 # see_card command to see a specific card
 @bot.command(name='see_card')
