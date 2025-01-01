@@ -282,9 +282,9 @@ def weighted_random_choice(cards: list[dict]) -> dict:
     r = random.uniform(0, total)
     upto = 0
     for card in cards:
-        if upto + card['rarity'] >= r:
-            return card
         upto += card['rarity']
+        if upto >= r:
+            return card
     return None
 
 # Command to change the spawn mode
@@ -354,9 +354,6 @@ async def print_stats(ctx, *, card_name: str):
         await ctx.send(embed=embed)
     else:
         await ctx.send("Card not found.")
-
-
-
 
 # Command to initiate a fight between two players
 @bot.command(name='fight')
@@ -581,7 +578,7 @@ signal.signal(signal.SIGTERM, handle_shutdown_signal)
 # Ensures that it will only work when executed directly, and will log any errors to the terminal
 if __name__ == "__main__":
     try:
-        bot.run(token)
+        asyncio.run(bot.run(token))
         logging.info(f'Logged in as {bot.user.name}')
     except Exception as e:
         logging.error(f'Error: {e}')
