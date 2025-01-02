@@ -287,6 +287,9 @@ def weighted_random_choice(cards: list[dict]) -> dict:
             return card
     return None
 
+def is_authorized(ctx):
+    return str(ctx.author.id) in authorized_user_ids
+
 # Command to change the spawn mode
 @bot.command(name='set_spawn_mode')
 @commands.check(is_authorized)
@@ -496,9 +499,6 @@ async def progress(ctx):
         await ctx.send(f"You have caught {num_user_cards} out of {total_cards} cards ({percentage:.2f}%).\n\nYour cards:\n{user_cards_list}")
     else:
         await ctx.send(f"You haven't caught any cards yet. There are {total_cards} cards available.")
-
-def is_authorized(ctx):
-    return str(ctx.author.id) in authorized_user_ids
 
 # Command to spawn a certain card, restricted to a specific user
 @bot.command(name='spawn_card')
