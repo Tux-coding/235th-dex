@@ -304,7 +304,7 @@ async def set_spawn_mode(ctx, mode: str):
 last_spawned_card = None
 spawned_messages = []
 
-@tasks.loop(minutes=3)
+@tasks.loop(minutes=5)
 async def spawn_card():
     global last_spawned_card, spawned_messages
     channels = []
