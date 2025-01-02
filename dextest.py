@@ -289,7 +289,7 @@ def weighted_random_choice(cards: list[dict]) -> dict:
 
 # Command to change the spawn mode
 @bot.command(name='set_spawn_mode')
-@commands.has_permissions(administrator=True)
+@commands.check(is_authorized)
 async def set_spawn_mode(ctx, mode: str):
     global spawn_mode
     mode = mode.lower()
