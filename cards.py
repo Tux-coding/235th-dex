@@ -44,7 +44,7 @@ cards = [
         "name": "Pipopro",
         "spawn_image_url": "https://media.discordapp.net/attachments/1322205679028670495/1322977622778576976/artworks-OF3WFPHsapfnZrW8-lDiZAQ-t500x500.png?ex=67737f2d&is=67722dad&hm=1ec22c5b9af4c994af583de216afe05660c777e5437a738750577b9a49cbdf90&=&format=webp&quality=lossless",
         "card_image_url": "https://cdn.discordapp.com/attachments/1322202570529177642/1322977702105579591/Pipopro.png?ex=67737f3f&is=67722dbf&hm=2cc3c639f2e613963f78ec6dbfc274df6f6a74666d06461e4bfb60fdb5c3568d&",
-        "rarity": 0.45,
+        "rarity": 0.75,
         "health": 15000,
         "damage": 7500,
     },
