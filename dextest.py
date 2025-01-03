@@ -44,6 +44,13 @@ bot = commands.Bot(command_prefix='!', intents=intents)
 # Player cards view starter
 player_cards = {}
 
+def auto_save(func):
+    def wrapper(*args, **kwargs):
+        result = func(*args, **kwargs)
+        save_player_cards()
+        return result
+    return wrapper
+
 # Load player cards from a JSON file
 def load_player_cards() -> None:
     global player_cards
@@ -78,6 +85,17 @@ def user_has_card(user_id: str, card_name: str) -> bool:
             return True
     return False
 
+@auto_save
+def add_card_to_user(user_id: str, card_name: str) -> None:
+    player_cards.setdefault(user_id, []).append(card_name)
+
+@auto_save
+def remove_card_from_user(user_id: str, card_name: str) -> None:
+    if user_id in player_cards:
+        player_cards[user_id] = [card for card in player_cards[user_id] if card != card_name]
+        if not player_cards[user_id]:
+            del player_cards[user_id]
+
 # Button that hopefully does the button work
 class CatchModal(Modal):
     def __init__(self, card_name, view, message):
@@ -98,8 +116,7 @@ class CatchModal(Modal):
         if input_name == self.card_name.lower() or input_name in [alias.lower() for alias in next(card['aliases'] for card in cards if card['name'].lower() == self.card_name.lower())]:
             user_id = str(user.id)
             if not user_has_card(user_id, self.card_name):
-                player_cards.setdefault(user_id, []).append(self.card_name)
-                save_player_cards()
+                add_card_to_user(user_id, self.card_name)
                 await interaction.response.send_message(f"{user.mention} caught the card: {self.card_name}!", ephemeral=False)
                 self.view.card_claimed = True
                 for item in self.view.children:
