@@ -309,6 +309,7 @@ async def on_ready():
 
     spawn_card.start()
 
+
 # see_card command to see a specific card
 @bot.command(name='see_card')
 async def see_card(ctx):
