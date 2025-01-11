@@ -3,8 +3,8 @@ cards = [
     {
         "name": "Dicer",
         "spawn_image_url": "https://media.discordapp.net/attachments/1322205679028670495/1322205863611600896/RobloxScreenShot20241227_145936188.png?ex=677201eb&is=6770b06b&hm=f74d9e756dd8ae25b0c65b6fbdfd169c1c08679912c956c068f75c50171e9b95&=&format=webp&quality=lossless",
-        "card_image_url": "https://cdn.discordapp.com/attachments/1322202570529177642/1322205795957342228/CC-1947_2.png?ex=6773535b&is=677201db&hm=768dee2d6535855233f44910ff8dd7ca45485ca6ba81a6f36ec7f3a554bd3941&",
-        "rarity": 5,  # 5% chance of spawning
+        "card_image_url": "https://cdn.discordapp.com/attachments/1322202570529177642/1327714526178709534/CC-_2.png?ex=67841202&is=6782c082&hm=ee15c735f5229b39a6d5c954496ed88912ed2e45af32e76f03c39250aa480a04&",
+        "rarity": 8.5,  
         "health": 6500,
         "damage": 3500,
     },
@@ -27,7 +27,7 @@ cards = [
     {
         "name": "Blau",
         "spawn_image_url": "https://media.discordapp.net/attachments/1322205679028670495/1322289394404687957/RobloxScreenShot20241227_204520218.png?ex=67724fb6&is=6770fe36&hm=b3fc9388163dfb8f6d33ea520cccc373156a6ea8c5b558d370d388a8ec8ae7d8&=&format=webp&quality=lossless&width=396&height=350",
-        "card_image_url": "https://cdn.discordapp.com/attachments/1322202570529177642/1322289134630600724/CT-_Blau.png?ex=6773a0f8&is=67724f78&hm=29349d7e624fcb150f298c40b15d68575d5bee22dace451856ea9da23e43db58&",
+        "card_image_url": "https://cdn.discordapp.com/attachments/1322202570529177642/1327715434799169536/CC-_3.png?ex=678412db&is=6782c15b&hm=f45c6310e66b243171a68c5c9128bf2be7046ec45659ee3ddb7bf742855cee5f&",
         "rarity": 12.5,
         "health": 6050,
         "damage": 2250,
@@ -35,7 +35,7 @@ cards = [
     {
         "name": "Hounder",
         "spawn_image_url": "https://media.discordapp.net/attachments/1322205679028670495/1322295423360176218/RobloxScreenShot20241227_210852940.png?ex=67725553&is=677103d3&hm=c32cad3bc0dc2ebc26cbdfeba7e8fb5ea83b55e557eafbfc3a0358a760654d7e&=&format=webp&quality=lossless",
-        "card_image_url": "https://cdn.discordapp.com/attachments/1322202570529177642/1322293233815912498/CT-_Blau_1.png?ex=6773a4c9&is=67725349&hm=e37704c3fa30bc469f1b20c7bd7e18e25abe8c1d6bc06b1cbcd3b85d359d2c10&",
+        "card_image_url": "https://cdn.discordapp.com/attachments/1322202570529177642/1327717504570622106/CC-_4.png?ex=678414c8&is=6782c348&hm=1bae24ba790ed2221442f0fea0f118141d22b513dfae442192d5eddf6c9b9689&",
         "rarity": 9.5,
         "health": 9250,
         "damage": 4500,
@@ -51,7 +51,7 @@ cards = [
     {
         "name": "Wilson",
         "spawn_image_url": "https://media.discordapp.net/attachments/1322205679028670495/1323344360879689730/RobloxScreenShot20241230_161947936.png?ex=67742bfa&is=6772da7a&hm=14a472045ae47f536705b91cb91bdae7ea52674d1cde2799ad65835c0c85d8df&=&format=webp&quality=lossless&width=532&height=350",
-        "card_image_url": "https://media.discordapp.net/attachments/1322202570529177642/1323314295286665246/CC-.png?ex=67740ff9&is=6772be79&hm=54193da49212bd838fb47e993c16c2af1da3987a04373fc1a20def924f0744a6&=&format=webp&quality=lossless&width=479&height=671",
+        "card_image_url": "https://media.discordapp.net/attachments/1322202570529177642/1327718322648911984/CC-_5.png?ex=6784158b&is=6782c40b&hm=9f341222aedc8de0679fb89116c2efb8027ae7a9324504af3d0d204edb7359a0&=&format=webp&quality=lossless&width=275&height=385",
         "rarity": 1,
         "health": 9550,
         "damage": 4670,
@@ -144,5 +144,35 @@ cards = [
         "rarity": 61,
         "health": 2700,
         "damage": 1500,
-    }
-]
+    },
+    {
+        "name": "Je'keshi Vale",
+        "aliases": ["Jekeshi", "Vale", "Smurf"],
+        "spawn_image_url": "https://cdn.discordapp.com/attachments/1322205679028670495/1327722115100835933/RobloxScreenShot20250111_202353810.png?ex=67841914&is=6782c794&hm=7bf5d91914998c58b51b630f24bc248cff0a42389bad4bf3b9d71a4aaf9498a1&",
+        "card_image_url": "https://cdn.discordapp.com/attachments/1322202570529177642/1327730759452201031/CC-_12.png?ex=67842121&is=6782cfa1&hm=052958065501727e5bc27b03ad171c8617ca998d70a7baecdfa91cebc1562042&",
+        "rarity": 7.5,
+        "health": 9250,
+        "damage": 5500
+    },
+    {
+        "name": "Stars",
+        "aliases": ["twinkletoes" ], #dont ask why, what, how, where or when
+        "spawn_image_url": "https://cdn.discordapp.com/attachments/1322205679028670495/1327722697647456336/RobloxScreenShot20250111_203536461.png?ex=6784199f&is=6782c81f&hm=ce4fbdf5b8cf708d7fbec195863fdff44e799a322aeaaab456135d17a3a3d078&",
+        "card_image_url": "https://cdn.discordapp.com/attachments/1322202570529177642/1327723966873210950/CC-_8.png?ex=67841acd&is=6782c94d&hm=139ff0e1661f647c03b15892c4834a8d8e6c8ebcd76b30688df4397366d3279f&", 
+        "rarity": 8.5,
+        "health": 6250,
+        "damage": 3250   
+    },
+    {
+        "name": "Ringo",
+        "aliases": ["Rhino"],
+        "spawn_image_url":"https://cdn.discordapp.com/attachments/1322205679028670495/1327727582355001415/RobloxScreenShot20250111_205428565.png?ex=67841e2b&is=6782ccab&hm=023f2e1e782f8fb00cbdfa6b3603ec2b4d669777d5b2068d1884ad48f65f7b26&",
+        "card_image_url": "https://cdn.discordapp.com/attachments/1322202570529177642/1327729546556084244/CC-_11.png?ex=67841fff&is=6782ce7f&hm=bed1ee961a06e1bd8803e8af6e8cb753e23990c71e7a8fdcab93e09aa6f4c039&",
+        "rarity": 68,
+        "health": 1750,
+        "damage": 900,
+    }   
+
+    
+        
+]   

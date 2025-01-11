@@ -312,29 +312,40 @@ async def on_ready():
 
 # see_card command to see a specific card
 @bot.command(name='see_card')
-async def see_card(ctx):
+async def see_card(ctx, *, card_name: str = None):
     user_id = str(ctx.author.id)  # Ensure user ID is a string
     logging.info(f'User ID: {user_id}')
     logging.info(f'Player cards: {player_cards}')
     
     if user_id in player_cards and player_cards[user_id]:
-        options = [discord.SelectOption(label=card, value=card) for card in player_cards[user_id]]
-        select = Select(placeholder="Choose a card to see", options=options)
+        if card_name:
+            card_name = card_name.strip().lower()
+            user_card = next((card for card in player_cards[user_id] if card.lower() == card_name), None)
+            if user_card:
+                selected_card = next(card for card in cards if card["name"].lower() == card_name)
+                embed = discord.Embed(title=f"Here's your {selected_card['name']}", description="")
+                embed.set_image(url=selected_card["card_image_url"])
+                await ctx.send(embed=embed)
+            else:
+                await ctx.send("You don't have this card.")
+        else:
+            options = [discord.SelectOption(label=card, value=card) for card in player_cards[user_id]]
+            select = Select(placeholder="Choose a card to see", options=options)
 
-        async def select_callback(interaction):
-            if interaction.user.id != ctx.author.id:
-                await interaction.response.send_message("You can only view your own cards.", ephemeral=True)
-                return
-            selected_card_name = select.values[0]
-            selected_card = next(card for card in cards if card["name"] == selected_card_name)
-            embed = discord.Embed(title=f"Here's your {selected_card_name}", description="")
-            embed.set_image(url=selected_card["card_image_url"])
-            await interaction.response.send_message(embed=embed)
+            async def select_callback(interaction):
+                if interaction.user.id != ctx.author.id:
+                    await interaction.response.send_message("You can only view your own cards.", ephemeral=True)
+                    return
+                selected_card_name = select.values[0]
+                selected_card = next(card for card in cards if card["name"] == selected_card_name)
+                embed = discord.Embed(title=f"Here's your {selected_card_name}", description="")
+                embed.set_image(url=selected_card["card_image_url"])
+                await interaction.response.send_message(embed=embed)
 
-        select.callback = select_callback
-        view = View()
-        view.add_item(select)
-        await ctx.send("Select a card to see", view=view)
+            select.callback = select_callback
+            view = View()
+            view.add_item(select)
+            await ctx.send("Select a card to see", view=view)
     else:
         await ctx.send("You haven't caught any cards yet.")
 
