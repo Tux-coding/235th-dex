@@ -130,7 +130,7 @@ cards = [
     },
     {
         "name": "Ren'dar Auron",
-        "aliases": ["Rendar", "GONK"],
+        "aliases": ["Rendar", "Auron", "GONK"],
         "spawn_image_url": "https://media.discordapp.net/attachments/1322205679028670495/1323993493432959006/RobloxScreenShot20250101_133639131.png?ex=67768887&is=67753707&hm=e2cea043c4cec15a1d0ae8e31b6b03ff8629da7db01ad4d73133d61d4baef63b&=&format=webp&quality=lossless",
         "card_image_url": "https://media.discordapp.net/attachments/1322202570529177642/1323994036050071583/Just_another_trooper_trying_to_stay_alive._He_doesnt_like_insurgents._His_left_arm_and_left_eye_are_gone_due_to_the_Gulag_25.png?ex=67768908&is=67753788&hm=fd7bf7144407d5691bffc88739a40cdad0f19eb0a61bae6073dd563e9b94a77a&=&format=webp&quality=lossless&width=479&height=671",
         "rarity": 25,

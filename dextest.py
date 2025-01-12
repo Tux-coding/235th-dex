@@ -223,47 +223,6 @@ async def print_stats(ctx, *, card_name: str):
     else:
         await ctx.send("Card not found.")
 
-# Command to initiate a fight between two playerS          | DISABLED FOR PLAYTEST 
-# @bot.command(name='fight')
-# async def fight(ctx, opponent: discord.Member):
-#     user_id = str(ctx.author.id)
-#     opponent_id = str(opponent.id)
-
-#     if user_id not in player_cards or not player_cards[user_id]:
-#         await ctx.send("You don't have any cards to fight with.")
-#         return
-
-#     if opponent_id not in player_cards or not player_cards[opponent_id]:
-#         await ctx.send(f"{opponent.mention} doesn't have any cards to fight with.")
-#         return
-
-#     user_card_name = random.choice(player_cards[user_id])
-#     opponent_card_name = random.choice(player_cards[opponent_id])
-
-#     user_card = next(card for card in cards if card["name"] == user_card_name)
-#     opponent_card = next(card for card in cards if card["name"] == opponent_card_name)
-
-#     user_health = user_card["health"]
-#     opponent_health = opponent_card["health"]
-
-#     battle_log = f"**{ctx.author.display_name}**'s **{user_card['name']}** vs **{opponent.display_name}**'s **{opponent_card['name']}**\n\n"
-
-#     while user_health > 0 and opponent_health > 0:
-#         opponent_health -= user_card["damage"]
-#         battle_log += f"**{user_card['name']}** attacks **{opponent_card['name']}** for {user_card['damage']} damage. **{opponent_card['name']}** has {max(opponent_health, 0)} health left.\n"
-#         if opponent_health <= 0:
-#             battle_log += f"\n**{user_card['name']}** wins!"
-#             break
-
-#         user_health -= opponent_card["damage"]
-#         battle_log += f"**{opponent_card['name']}** attacks **{user_card['name']}** for {opponent_card['damage']} damage. **{user_card['name']}** has {max(user_health, 0)} health left.\n"
-#         if user_health <= 0:
-#             battle_log += f"\n**{opponent_card['name']}** wins!"
-#             break
-
-#     await ctx.send(battle_log)
-
-
 # If error, he says why
 @bot.event
 async def on_command_error(ctx, error):
@@ -320,9 +279,9 @@ async def see_card(ctx, *, card_name: str = None):
     if user_id in player_cards and player_cards[user_id]:
         if card_name:
             card_name = card_name.strip().lower()
-            user_card = next((card for card in player_cards[user_id] if card.lower() == card_name), None)
+            user_card = next((card for card in player_cards[user_id] if card.lower() == card_name or card_name in [alias.lower() for alias in next(c.get('aliases', []) for c in cards if c['name'].lower() == card.lower())]), None)
             if user_card:
-                selected_card = next(card for card in cards if card["name"].lower() == card_name)
+                selected_card = next(card for card in cards if card["name"].lower() == card_name or card_name in [alias.lower() for alias in card.get("aliases", [])])
                 embed = discord.Embed(title=f"Here's your {selected_card['name']}", description="")
                 embed.set_image(url=selected_card["card_image_url"])
                 await ctx.send(embed=embed)
