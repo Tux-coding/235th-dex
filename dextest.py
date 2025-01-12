@@ -213,7 +213,7 @@ async def spawn_card():
 # Command to print the stats of a card
 @bot.command(name='print_stats')
 async def print_stats(ctx, *, card_name: str):
-    card = next((card for card in cards if card_name.lower() == card["name"].lower()), None)
+    card = next((card for card in cards if card_name.lower() == card["name"].lower() or card_name in [alias.lower() for alias in card.get("aliases", [])]), None)
     if card:
         embed = discord.Embed(title=f"Stats for {card['name']}", description="")
         embed.add_field(name="Health", value=card["health"], inline=True)
@@ -349,13 +349,12 @@ async def spawn_card_command(ctx, card_name: str):
 
 #///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 #other commands not related to the card game
-
-
+#///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 # Respond to a simple message
 @bot.command(name='hello')
 async def hello(ctx):
-    await ctx.send('Hello! I am the 235th dex!')
+    await ctx.send('Hello! I am the 235th dex! At your service!')
 
 # Gives a random number between 0 and 10000000
 @bot.command(name='random_number')
