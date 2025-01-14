@@ -171,8 +171,30 @@ cards = [
         "rarity": 68,
         "health": 1750,
         "damage": 900,
-    }   
-
-    
-        
+    },
+    {
+        "name": "Rush",
+        "spawn_image_url":"https://media.discordapp.net/attachments/1322205679028670495/1328442857547235368/RobloxScreenShot20250113_201710741.png?ex=67876112&is=67860f92&hm=8f4fcde3e4deda60ddc8e3e2d95c2a4a418fd7b540556e6ca6c67681cc9138b1&=&format=webp&quality=lossless",
+        "card_image_url": "https://media.discordapp.net/attachments/1322202570529177642/1328443617282494615/Kopie_van_Just_another_trooper_trying_to_stay_alive._He_doesnt_like_insurgents._His_left_arm_and_left_eye_are_gone_due_to_the_Gulag.png?ex=678761c7&is=67861047&hm=24861f0d3535e56d30d6fafa7a6aed0f5f9c9abd1fcae16742072ce550c8563d&=&format=webp&quality=lossless&width=479&height=671",
+        "rarity": 82,
+        "health": 1500,
+        "damage": 450,
+    },
+    {
+        "name": "Breaker",
+        "aliases": ["Hawk"],
+        "spawn_image_url":"https://media.discordapp.net/attachments/1322205679028670495/1328445706154803231/RobloxScreenShot20250113_202833195.png?ex=678763b9&is=67861239&hm=665929510234995d9d4de2c0ec421619b207d7dcc560376cf34e36caa268c835&=&format=webp&quality=lossless&width=448&height=350",
+        "card_image_url": "https://media.discordapp.net/attachments/1322202570529177642/1328445432933781525/Kopie_van_Just_another_trooper_trying_to_stay_alive._He_doesnt_like_insurgents._His_left_arm_and_left_eye_are_gone_due_to_the_Gulag_1.png?ex=67876378&is=678611f8&hm=48b5fd84fcbbda4ea8caec9be1c1840bdda674a8acace2a0e4f869f549b2321f&=&format=webp&quality=lossless&width=479&height=671",
+        "rarity": 40,
+        "health": 6000,
+        "damage": 3000,
+    },
+    {
+        "name": "Micro",
+        "spawn_image_url":"https://media.discordapp.net/attachments/1322205679028670495/1328436322905620510/RobloxScreenShot20250113_195110065.png?ex=678803bc&is=6786b23c&hm=893e4062e2ff369eea65b1db416f3adeadf14894776774b44b3ee3e41e0a4a8a&=&format=webp&quality=lossless&width=525&height=350",
+        "card_image_url": "https://media.discordapp.net/attachments/1322202570529177642/1328446048921976922/CC-.png?ex=6787640b&is=6786128b&hm=68d9429e31af06d9e8d0459864ca1aed71174aa23391c565d1859aa9368500b6&=&format=webp&quality=lossless&width=479&height=671",
+        "rarity": 30,
+        "health": 6100,
+        "damage": 3500,
+    }
 ]   
