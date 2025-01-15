@@ -380,7 +380,7 @@ async def list_commands(ctx):
 #info, command to show the current release
 @bot.command(name='info')
 async def info(ctx):
-    await ctx.send('Current release: playtest') #expand later when we actually released the bot to the public
+    await ctx.send('Current release: v.1.0.0') #expand later when we actually released the bot to the public
 
 # Command to play a certain GIF, restricted to authorized users
 @bot.command(name='celebrate')

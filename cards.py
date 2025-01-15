@@ -66,8 +66,8 @@ cards = [
     },
     {
         "name": "Sandy",
-        "spawn_image_url": "https://media.discordapp.net/attachments/1322205679028670495/1323386530303053854/RobloxScreenShot20241230_211843002.png?ex=67745340&is=677301c0&hm=1679defda16cd577a0146f6dc1ce3e6e9bb08eac3934ecb6512a4a7711a34c09&=&format=webp&quality=lossless&width=522&height=350",
-        "card_image_url": "https://media.discordapp.net/attachments/1322202570529177642/1323386408550928404/Just_another_trooper_trying_to_stay_alive._He_doesnt_like_insurgents._His_left_arm_and_left_eye_are_gone_due_to_the_Gulag_14.png?ex=67745323&is=677301a3&hm=dd52bd5a4777cc90d0f8a6793251192ac14a526e55037f3d2d32bb0db691471c&=&format=webp&quality=lossless&width=479&height=671",
+        "spawn_image_url": "https://media.discordapp.net/attachments/1322205679028670495/1328809463808786484/RobloxScreenShot20250114_202141022.png?ex=6788b680&is=67876500&hm=f88665db11b61879168dc16a335b20bf08e4ef4dbbeb160f34032bde5141ae58&=&format=webp&quality=lossless&width=435&height=385",
+        "card_image_url": "https://media.discordapp.net/attachments/1322202570529177642/1328809380963024958/Kopie_van_Just_another_trooper_trying_to_stay_alive._He_doesnt_like_insurgents._His_left_arm_and_left_eye_are_gone_due_to_the_Gulag_3.png?ex=6788b66c&is=678764ec&hm=9ca081637314761fd9498e200160838cfad472a388628ad4154cec6bc5cceae2&=&format=webp&quality=lossless&width=479&height=671",
         "rarity": 50,
         "health": 3000,
         "damage": 1950,
@@ -196,5 +196,13 @@ cards = [
         "rarity": 30,
         "health": 6100,
         "damage": 3500,
+    },
+    {
+        "name":"Zak",
+        "spawn_image_url":"https://media.discordapp.net/attachments/1322205679028670495/1328809061914771537/RobloxScreenShot20250114_201810217.png?ex=6788b620&is=678764a0&hm=ba8a71770b21d6c902c44b2733e9296e029b88fae72a27d1205189b068123681&=&format=webp&quality=lossless&width=425&height=385",
+        "card_image_url":"https://cdn.discordapp.com/attachments/1322202570529177642/1328808412540047370/Kopie_van_Just_another_trooper_trying_to_stay_alive._He_doesnt_like_insurgents._His_left_arm_and_left_eye_are_gone_due_to_the_Gulag_2.png?ex=6788b585&is=67876405&hm=85d4507f20ecb0ec90be7842616cf049fadcc8784d87da71fd6c5e5ea03bcb36&",
+        "rarity": 50,
+        "health": 3000,
+        "damage": 1950,
     }
 ]   
