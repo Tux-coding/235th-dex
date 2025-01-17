@@ -255,6 +255,7 @@ async def on_ready():
             except Exception as e:
                 logging.error(f"Failed to send message to channel {channel.id}: {e}")
         else:
+            
             logging.error(f"Channel not found.")
     
     # Disable buttons of previous cards on restart
