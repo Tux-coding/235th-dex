@@ -2,6 +2,7 @@
 cards = [
     {
         "name": "Dicer",
+        "aliases": ["Gamester"],
         "spawn_image_url": "https://media.discordapp.net/attachments/1322205679028670495/1322205863611600896/RobloxScreenShot20241227_145936188.png?ex=677201eb&is=6770b06b&hm=f74d9e756dd8ae25b0c65b6fbdfd169c1c08679912c956c068f75c50171e9b95&=&format=webp&quality=lossless",
         "card_image_url": "https://cdn.discordapp.com/attachments/1322202570529177642/1327714526178709534/CC-_2.png?ex=67841202&is=6782c082&hm=ee15c735f5229b39a6d5c954496ed88912ed2e45af32e76f03c39250aa480a04&",
         "rarity": 8.5,  
@@ -10,14 +11,16 @@ cards = [
     },
     {
         "name": "Reyes",
+        "aliases": ["Kings"],
         "spawn_image_url": "https://media.discordapp.net/attachments/1322205679028670495/1322503928591548482/RobloxScreenShot20241228_105546001.png?ex=67726ec3&is=67711d43&hm=4978a7aa74371952a439ec75fd2ac459bb1f49af739b8ec7d0f6d145c54642d9&=&format=webp&quality=lossless",
-        "card_image_url":"https://cdn.discordapp.com/attachments/1322202570529177642/1322585956938944512/CC-1598_Reyes_is_the_Marshal_Commander_of_the_235th_Elite_Corps.png?ex=677363e8&is=67721268&hm=35ffd80d26b26c28e60db3da255a071919fa7f0e87c1d8e2aecdd75e65e5031b&",
+        "card_image_url": "https://cdn.discordapp.com/attachments/1322202570529177642/1322585956938944512/CC-1598_Reyes_is_the_Marshal_Commander_of_the_235th_Elite_Corps.png?ex=677363e8&is=67721268&hm=35ffd80d26b26c28e60db3da255a071919fa7f0e87c1d8e2aecdd75e65e5031b&",
         "rarity": 0.5,
         "health": 10000,
         "damage": 5000,
     },
     {
         "name": "Sentinel",
+        "aliases": ["Senti"],
         "spawn_image_url": "https://media.discordapp.net/attachments/1322205679028670495/1322284693164523520/RobloxScreenShot20241227_202621517.png?ex=67724b55&is=6770f9d5&hm=79e9f8374ffa7b0138f938a11d7916b45ee79b2afdf1fc6c8197c27349b46684&=&format=webp&quality=lossless&width=377&height=350",
         "card_image_url": "https://media.discordapp.net/attachments/1322202570529177642/1323317997414121665/Just_another_trooper_trying_to_stay_alive._He_doesnt_like_insurgents._His_left_arm_and_left_eye_are_gone_due_to_the_Gulag.png?ex=6774136c&is=6772c1ec&hm=f4d4550607203a12eaa72d7b6a0086efb64bf3d8c623650d713dbf7a96bc242d&=&format=webp&quality=lossless&width=479&height=671",
         "rarity": 23,
@@ -26,6 +29,7 @@ cards = [
     },
     {
         "name": "Blau",
+        "aliases": ["Blue"],
         "spawn_image_url": "https://media.discordapp.net/attachments/1322205679028670495/1322289394404687957/RobloxScreenShot20241227_204520218.png?ex=67724fb6&is=6770fe36&hm=b3fc9388163dfb8f6d33ea520cccc373156a6ea8c5b558d370d388a8ec8ae7d8&=&format=webp&quality=lossless&width=396&height=350",
         "card_image_url": "https://cdn.discordapp.com/attachments/1322202570529177642/1327715434799169536/CC-_3.png?ex=678412db&is=6782c15b&hm=f45c6310e66b243171a68c5c9128bf2be7046ec45659ee3ddb7bf742855cee5f&",
         "rarity": 12.5,
@@ -34,6 +38,7 @@ cards = [
     },
     {
         "name": "Hounder",
+        "aliases": ["Dogger", "Balls"],
         "spawn_image_url": "https://media.discordapp.net/attachments/1322205679028670495/1322295423360176218/RobloxScreenShot20241227_210852940.png?ex=67725553&is=677103d3&hm=c32cad3bc0dc2ebc26cbdfeba7e8fb5ea83b55e557eafbfc3a0358a760654d7e&=&format=webp&quality=lossless",
         "card_image_url": "https://cdn.discordapp.com/attachments/1322202570529177642/1327717504570622106/CC-_4.png?ex=678414c8&is=6782c348&hm=1bae24ba790ed2221442f0fea0f118141d22b513dfae442192d5eddf6c9b9689&",
         "rarity": 9.5,
@@ -42,6 +47,7 @@ cards = [
     },
     {
         "name": "Pipopro",
+        "aliases": ["Tux"],
         "spawn_image_url": "https://media.discordapp.net/attachments/1322205679028670495/1322977622778576976/artworks-OF3WFPHsapfnZrW8-lDiZAQ-t500x500.png?ex=67737f2d&is=67722dad&hm=1ec22c5b9af4c994af583de216afe05660c777e5437a738750577b9a49cbdf90&=&format=webp&quality=lossless",
         "card_image_url": "https://cdn.discordapp.com/attachments/1322202570529177642/1322977702105579591/Pipopro.png?ex=67737f3f&is=67722dbf&hm=2cc3c639f2e613963f78ec6dbfc274df6f6a74666d06461e4bfb60fdb5c3568d&",
         "rarity": 0.75,
@@ -50,6 +56,7 @@ cards = [
     },
     {
         "name": "Wilson",
+        "aliases": ["French"],
         "spawn_image_url": "https://media.discordapp.net/attachments/1322205679028670495/1323344360879689730/RobloxScreenShot20241230_161947936.png?ex=67742bfa&is=6772da7a&hm=14a472045ae47f536705b91cb91bdae7ea52674d1cde2799ad65835c0c85d8df&=&format=webp&quality=lossless&width=532&height=350",
         "card_image_url": "https://media.discordapp.net/attachments/1322202570529177642/1327718322648911984/CC-_5.png?ex=6784158b&is=6782c40b&hm=9f341222aedc8de0679fb89116c2efb8027ae7a9324504af3d0d204edb7359a0&=&format=webp&quality=lossless&width=275&height=385",
         "rarity": 1,
@@ -58,6 +65,7 @@ cards = [
     },
     {
         "name": "Stinger",
+        "aliases": ["Pricker", "Ironhide"],
         "spawn_image_url": "https://media.discordapp.net/attachments/1322205679028670495/1323379787766698116/RobloxScreenShot20241230_205740938.png?ex=67744cf8&is=6772fb78&hm=ffe51d5793e02353736175578a9a6158e243b285a65649e695ba924a710c3c83&=&format=webp&quality=lossless&width=375&height=350",
         "card_image_url": "https://media.discordapp.net/attachments/1322202570529177642/1323383213451640862/Just_another_trooper_trying_to_stay_alive._He_doesnt_like_insurgents._His_left_arm_and_left_eye_are_gone_due_to_the_Gulag_13.png?ex=67745029&is=6772fea9&hm=c08cafd74fea97dcd3c7c6847ab940b55249ed62f0585149ca03e05c13ed6ea7&=&format=webp&quality=lossless&width=479&height=671",
         "rarity": 75,
@@ -66,6 +74,7 @@ cards = [
     },
     {
         "name": "Sandy",
+        "aliases": ["Granular"],
         "spawn_image_url": "https://media.discordapp.net/attachments/1322205679028670495/1328809463808786484/RobloxScreenShot20250114_202141022.png?ex=6788b680&is=67876500&hm=f88665db11b61879168dc16a335b20bf08e4ef4dbbeb160f34032bde5141ae58&=&format=webp&quality=lossless&width=435&height=385",
         "card_image_url": "https://media.discordapp.net/attachments/1322202570529177642/1328809380963024958/Kopie_van_Just_another_trooper_trying_to_stay_alive._He_doesnt_like_insurgents._His_left_arm_and_left_eye_are_gone_due_to_the_Gulag_3.png?ex=6788b66c&is=678764ec&hm=9ca081637314761fd9498e200160838cfad472a388628ad4154cec6bc5cceae2&=&format=webp&quality=lossless&width=479&height=671",
         "rarity": 50,
@@ -74,6 +83,7 @@ cards = [
     },
     {
         "name": "Rancor",
+        "aliases": ["Rancour"],
         "spawn_image_url": "https://media.discordapp.net/attachments/1322205679028670495/1323561918878847047/RobloxScreenShot20241231_090056606.png?ex=6774f698&is=6773a518&hm=cffc47d9ab08a0b3d98df85ef86f7abf413be74c2b4f2ecc56ee520991ed5f7d&=&format=webp&quality=lossless",
         "card_image_url": "https://media.discordapp.net/attachments/1322202570529177642/1323569282088697866/Just_another_trooper_trying_to_stay_alive._He_doesnt_like_insurgents._His_left_arm_and_left_eye_are_gone_due_to_the_Gulag_16.png?ex=6778f1f3&is=6777a073&hm=b3f539a1b286d529d971c78244b9028dee29ad4495c95222cc75af175a075bb0&=&format=webp&quality=lossless&width=250&height=350",
         "rarity": 12.5,
@@ -82,6 +92,7 @@ cards = [
     },
     {
         "name": "Cooker",
+        "aliases": ["Boiler"],
         "spawn_image_url": "https://media.discordapp.net/attachments/1322205679028670495/1323570324767379497/RobloxScreenShot20241231_093357795.png?ex=6774fe6c&is=6773acec&hm=c75865e285d3d39f4a6476d442a01c9e1dbe3611a0b06cbd862c8c43b770e956&=&format=webp&quality=lossless&width=468&height=350",
         "card_image_url": "https://media.discordapp.net/attachments/1322202570529177642/1323573966652309504/Just_another_trooper_trying_to_stay_alive._He_doesnt_like_insurgents._His_left_arm_and_left_eye_are_gone_due_to_the_Gulag_17.png?ex=677501d0&is=6773b050&hm=8fe64e466f95254086fd222ad3698819eff00c38d7ab2333f132458ca25af856&=&format=webp&quality=lossless&width=479&height=671",
         "rarity": 17.5,
@@ -90,6 +101,7 @@ cards = [
     },
     {
         "name": "Longshot",
+        "aliases": ["Shortshot"],
         "spawn_image_url": "https://media.discordapp.net/attachments/1322205679028670495/1323671916631949362/RobloxScreenShot20241231_161614848.png?ex=67755d09&is=67740b89&hm=cab4a3d1dba4eb57b42e592905780faaa24d5ffba9746ce3406325c7f520ef0d&=&format=webp&quality=lossless&width=480&height=350",
         "card_image_url": "https://media.discordapp.net/attachments/1322202570529177642/1323671828111298584/Just_another_trooper_trying_to_stay_alive._He_doesnt_like_insurgents._His_left_arm_and_left_eye_are_gone_due_to_the_Gulag_19.png?ex=67755cf4&is=67740b74&hm=05d5e4c11313875aea75d4c7e227bf32546af435d3755ebac0e66d817c11d2f5&=&format=webp&quality=lossless&width=479&height=671",
         "rarity": 70,
@@ -98,6 +110,7 @@ cards = [
     },
     {
         "name": "Mertho",
+        "aliases": ["Merthod"],
         "spawn_image_url": "https://media.discordapp.net/attachments/1322205679028670495/1323578208863649863/RobloxScreenShot20241231_100652348.png?ex=677505c3&is=6773b443&hm=e8aad1e00d28942444ea357afa5b4ce2d0d4cd1949ad84e29fb99aae522be1f8&=&format=webp&quality=lossless&width=384&height=350",
         "card_image_url": "https://media.discordapp.net/attachments/1322202570529177642/1323672693647609937/Just_another_trooper_trying_to_stay_alive._He_doesnt_like_insurgents._His_left_arm_and_left_eye_are_gone_due_to_the_Gulag_21.png?ex=67755dc2&is=67740c42&hm=ddb0d3ac0879577f7497b50ccf367d6fe0afe12850451350bf7b79528dd56b49&=&format=webp&quality=lossless&width=479&height=671",
         "rarity": 70,
@@ -106,6 +119,7 @@ cards = [
     },
     {
         "name": "Bricker",
+        "aliases": ["Legoman"],
         "spawn_image_url": "https://media.discordapp.net/attachments/1322205679028670495/1323674207355404338/RobloxScreenShot20241231_162811051.png?ex=6776b0ab&is=67755f2b&hm=469701c4cfe846ba2a1d409054169e50e4a38f2be05edb25e02bdb1037701ae5&=&format=webp&quality=lossless&width=490&height=350",
         "card_image_url": "https://media.discordapp.net/attachments/1322202570529177642/1323983294827597834/Just_another_trooper_trying_to_stay_alive._He_doesnt_like_insurgents._His_left_arm_and_left_eye_are_gone_due_to_the_Gulag_22.png?ex=67767f07&is=67752d87&hm=7d25ae8c7bbb0d950f02bc65458feec54d1c0d9587801257fc4d6f21f3ef920f&=&format=webp&quality=lossless&width=479&height=671",
         "rarity": 85,
@@ -114,6 +128,7 @@ cards = [
     },
     {
         "name": "Sinner",
+        "aliases": ["Repenter"],
         "spawn_image_url": "https://media.discordapp.net/attachments/1322205679028670495/1323982617527451708/RobloxScreenShot20250101_125340765.png?ex=67767e66&is=67752ce6&hm=57ff065a4ae55a28e1a67ea0dfe6a55959924dd8c7f6c7375c6acb204bfcfb1f&=&format=webp&quality=lossless&width=318&height=350",
         "card_image_url": "https://media.discordapp.net/attachments/1322202570529177642/1323984903406354543/Just_another_trooper_trying_to_stay_alive._He_doesnt_like_insurgents._His_left_arm_and_left_eye_are_gone_due_to_the_Gulag_23.png?ex=67768087&is=67752f07&hm=c2a2e730930dc2aaa552e1aa40e0d4d01c7bc89aea1608b3c5c67319093fae68&=&format=webp&quality=lossless&width=479&height=671",
         "rarity": 77,
@@ -122,6 +137,7 @@ cards = [
     },
     {
         "name": "Voca",
+        "aliases": ["Vocabulary"],
         "spawn_image_url": "https://media.discordapp.net/attachments/1322205679028670495/1323987029956235304/RobloxScreenShot20250101_131047926.png?ex=67768282&is=67753102&hm=ec5f28ea32edcadee43190286cc5cdbe0d9197d69142a99813f2bc1e9c8d336f&=&format=webp&quality=lossless",
         "card_image_url": "https://media.discordapp.net/attachments/1322202570529177642/1323988014418104330/Just_another_trooper_trying_to_stay_alive._He_doesnt_like_insurgents._His_left_arm_and_left_eye_are_gone_due_to_the_Gulag_24.png?ex=6776836d&is=677531ed&hm=f57ab17956ed12fe5e9a1d4a326a09c83794975d06a5e305d386536a988b3c89&=&format=webp&quality=lossless&width=479&height=671",
         "rarity": 45,
@@ -139,6 +155,7 @@ cards = [
     },
     {
         "name": "Skye",
+        "aliases": ["Sky"],
         "spawn_image_url": "https://media.discordapp.net/attachments/1322205679028670495/1323995408648638475/RobloxScreenShot20250101_134436877.png?ex=67768a50&is=677538d0&hm=bd6dd80b06ef660f4659867b68c4333beb25d7d9a715287f768032dc79951f49&=&format=webp&quality=lossless&width=419&height=350",
         "card_image_url": "https://media.discordapp.net/attachments/1322202570529177642/1323996389897797693/Just_another_trooper_trying_to_stay_alive._He_doesnt_like_insurgents._His_left_arm_and_left_eye_are_gone_due_to_the_Gulag_26.png?ex=67768b3a&is=677539ba&hm=c8013ba4445f32990c4f2e49e7aa7b346cfbaa78a0dac58d820d3acaf847b8b0&=&format=webp&quality=lossless&width=479&height=671",
         "rarity": 61,
@@ -166,7 +183,7 @@ cards = [
     {
         "name": "Ringo",
         "aliases": ["Rhino"],
-        "spawn_image_url":"https://cdn.discordapp.com/attachments/1322205679028670495/1327727582355001415/RobloxScreenShot20250111_205428565.png?ex=67841e2b&is=6782ccab&hm=023f2e1e782f8fb00cbdfa6b3603ec2b4d669777d5b2068d1884ad48f65f7b26&",
+        "spawn_image_url": "https://cdn.discordapp.com/attachments/1322205679028670495/1327727582355001415/RobloxScreenShot20250111_205428565.png?ex=67841e2b&is=6782ccab&hm=023f2e1e782f8fb00cbdfa6b3603ec2b4d669777d5b2068d1884ad48f65f7b26&",
         "card_image_url": "https://cdn.discordapp.com/attachments/1322202570529177642/1327729546556084244/CC-_11.png?ex=67841fff&is=6782ce7f&hm=bed1ee961a06e1bd8803e8af6e8cb753e23990c71e7a8fdcab93e09aa6f4c039&",
         "rarity": 68,
         "health": 1750,
@@ -174,7 +191,8 @@ cards = [
     },
     {
         "name": "Rush",
-        "spawn_image_url":"https://media.discordapp.net/attachments/1322205679028670495/1328442857547235368/RobloxScreenShot20250113_201710741.png?ex=67876112&is=67860f92&hm=8f4fcde3e4deda60ddc8e3e2d95c2a4a418fd7b540556e6ca6c67681cc9138b1&=&format=webp&quality=lossless",
+        "aliases": ["Hurry"],
+        "spawn_image_url": "https://media.discordapp.net/attachments/1322205679028670495/1328442857547235368/RobloxScreenShot20250113_201710741.png?ex=67876112&is=67860f92&hm=8f4fcde3e4deda60ddc8e3e2d95c2a4a418fd7b540556e6ca6c67681cc9138b1&=&format=webp&quality=lossless",
         "card_image_url": "https://media.discordapp.net/attachments/1322202570529177642/1328443617282494615/Kopie_van_Just_another_trooper_trying_to_stay_alive._He_doesnt_like_insurgents._His_left_arm_and_left_eye_are_gone_due_to_the_Gulag.png?ex=678761c7&is=67861047&hm=24861f0d3535e56d30d6fafa7a6aed0f5f9c9abd1fcae16742072ce550c8563d&=&format=webp&quality=lossless&width=479&height=671",
         "rarity": 82,
         "health": 1500,
@@ -183,7 +201,7 @@ cards = [
     {
         "name": "Breaker",
         "aliases": ["Hawk"],
-        "spawn_image_url":"https://media.discordapp.net/attachments/1322205679028670495/1328445706154803231/RobloxScreenShot20250113_202833195.png?ex=678763b9&is=67861239&hm=665929510234995d9d4de2c0ec421619b207d7dcc560376cf34e36caa268c835&=&format=webp&quality=lossless&width=448&height=350",
+        "spawn_image_url": "https://media.discordapp.net/attachments/1322205679028670495/1328445706154803231/RobloxScreenShot20250113_202833195.png?ex=678763b9&is=67861239&hm=665929510234995d9d4de2c0ec421619b207d7dcc560376cf34e36caa268c835&=&format=webp&quality=lossless&width=448&height=350",
         "card_image_url": "https://media.discordapp.net/attachments/1322202570529177642/1328445432933781525/Kopie_van_Just_another_trooper_trying_to_stay_alive._He_doesnt_like_insurgents._His_left_arm_and_left_eye_are_gone_due_to_the_Gulag_1.png?ex=67876378&is=678611f8&hm=48b5fd84fcbbda4ea8caec9be1c1840bdda674a8acace2a0e4f869f549b2321f&=&format=webp&quality=lossless&width=479&height=671",
         "rarity": 40,
         "health": 6000,
@@ -191,16 +209,18 @@ cards = [
     },
     {
         "name": "Micro",
-        "spawn_image_url":"https://media.discordapp.net/attachments/1322205679028670495/1328436322905620510/RobloxScreenShot20250113_195110065.png?ex=678803bc&is=6786b23c&hm=893e4062e2ff369eea65b1db416f3adeadf14894776774b44b3ee3e41e0a4a8a&=&format=webp&quality=lossless&width=525&height=350",
+        "aliases": ["Macro"],
+        "spawn_image_url": "https://media.discordapp.net/attachments/1322205679028670495/1328436322905620510/RobloxScreenShot20250113_195110065.png?ex=678803bc&is=6786b23c&hm=893e4062e2ff369eea65b1db416f3adeadf14894776774b44b3ee3e41e0a4a8a&=&format=webp&quality=lossless&width=525&height=350",
         "card_image_url": "https://media.discordapp.net/attachments/1322202570529177642/1328446048921976922/CC-.png?ex=6787640b&is=6786128b&hm=68d9429e31af06d9e8d0459864ca1aed71174aa23391c565d1859aa9368500b6&=&format=webp&quality=lossless&width=479&height=671",
         "rarity": 30,
         "health": 6100,
         "damage": 3500,
     },
     {
-        "name":"Zak",
-        "spawn_image_url":"https://media.discordapp.net/attachments/1322205679028670495/1328809061914771537/RobloxScreenShot20250114_201810217.png?ex=6788b620&is=678764a0&hm=ba8a71770b21d6c902c44b2733e9296e029b88fae72a27d1205189b068123681&=&format=webp&quality=lossless&width=425&height=385",
-        "card_image_url":"https://cdn.discordapp.com/attachments/1322202570529177642/1328808412540047370/Kopie_van_Just_another_trooper_trying_to_stay_alive._He_doesnt_like_insurgents._His_left_arm_and_left_eye_are_gone_due_to_the_Gulag_2.png?ex=6788b585&is=67876405&hm=85d4507f20ecb0ec90be7842616cf049fadcc8784d87da71fd6c5e5ea03bcb36&",
+        "name": "Zak",
+        "aliases": ["Tas"],
+        "spawn_image_url": "https://media.discordapp.net/attachments/1322205679028670495/1328809061914771537/RobloxScreenShot20250114_201810217.png?ex=6788b620&is=678764a0&hm=ba8a71770b21d6c902c44b2733e9296e029b88fae72a27d1205189b068123681&=&format=webp&quality=lossless&width=425&height=385",
+        "card_image_url": "https://cdn.discordapp.com/attachments/1322202570529177642/1328808412540047370/Kopie_van_Just_another_trooper_trying_to_stay_alive._He_doesnt_like_insurgents._His_left_arm_and_left_eye_are_gone_due_to_the_Gulag_2.png?ex=6788b585&is=67876405&hm=85d4507f20ecb0ec90be7842616cf049fadcc8784d87da71fd6c5e5ea03bcb36&",
         "rarity": 50,
         "health": 3000,
         "damage": 1950,
