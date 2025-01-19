@@ -224,5 +224,32 @@ cards = [
         "rarity": 50,
         "health": 3000,
         "damage": 1950,
+    },
+    {
+        "name": "Hollow",
+        "aliases": ["Gollow"],
+        "spawn_image_url": "https://media.discordapp.net/attachments/1322205679028670495/1324449804008296453/RobloxScreenShot20250102_195006907.png?ex=678df240&is=678ca0c0&hm=bad958251fad83f01cbb88f66e122ac143410c38c8355c88b5acadcffb5314e4&=&format=webp&quality=lossless&width=470&height=350",
+        "card_image_url": "https://media.discordapp.net/attachments/1322202570529177642/1324451870688804874/Just_another_trooper_trying_to_stay_alive._He_doesnt_like_insurgents._His_left_arm_and_left_eye_are_gone_due_to_the_Gulag_29.png?ex=678df42d&is=678ca2ad&hm=80f5e71b4642955de3ec209b8f66bf0a394d64bcfe54d643ab7d7e66bdf4eeef&=&format=webp&quality=lossless&width=479&height=671",
+        "rarity": 59,
+        "health": 6000,
+        "damage": 3150,
+    },
+    {
+        "name": "Vic",
+        "aliases": ["Victory"],
+        "spawn_image_url": "https://media.discordapp.net/attachments/1322205679028670495/1324445639840501820/RobloxScreenShot20250102_193103800.png?ex=678dee5f&is=678c9cdf&hm=ee4ac8eaef170ba6a8ff6f7f249c2d3363e7a0049cbe525284cb6a74885a3762&=&format=webp&quality=lossless&width=467&height=350",
+        "card_image_url": "https://media.discordapp.net/attachments/1322202570529177642/1324446784390696960/Just_another_trooper_trying_to_stay_alive._He_doesnt_like_insurgents._His_left_arm_and_left_eye_are_gone_due_to_the_Gulag_27.png?ex=678def70&is=678c9df0&hm=27558b2cd751b612ab68f27ea4e6f55432e71264a88fe7e97739a03c132ae780&=&format=webp&quality=lossless&width=479&height=671",
+        "rarity": 65,
+        "health": 2150,
+        "damage": 1100,
+    },
+    {
+        "name": "Apok",
+        "aliases": ["Apuk"],
+        "spawn_image_url": "https://media.discordapp.net/attachments/1322205679028670495/1324655419330793472/RobloxScreenShot20250103_092524172.png?ex=678e08fe&is=678cb77e&hm=732e157dba57b0b80bdcadb61d986b35dc1b783eda259e7316e06df8c85d5ce8&=&format=webp&quality=lossless",
+        "card_image_url": "https://media.discordapp.net/attachments/1322202570529177642/1324666151695028296/Kopie_van_Just_another_trooper_trying_to_stay_alive._He_doesnt_like_insurgents._His_left_arm_and_left_eye_are_gone_due_to_the_Gulag_1.png?ex=678e12fd&is=678cc17d&hm=920544f07533267627011830f7226059473d0e1ab85032c892d61d5535447b3f&=&format=webp&quality=lossless&width=250&height=350",
+        "rarity": 46,
+        "health": 3200,
+        "damage": 2150,
     }
-]   
+]    
