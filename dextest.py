@@ -71,7 +71,6 @@ def load_player_cards() -> None:
 def save_player_cards() -> None:
     with open('player_cards.json', 'w') as f:
         json.dump(player_cards, f)
-    logging.info(f"Saved player cards: {player_cards}")
 
 def user_has_card(user_id: str, card_name: str) -> bool:
     card_name = card_name.lower()
