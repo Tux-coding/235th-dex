@@ -41,6 +41,10 @@ intents = discord.Intents.default()
 intents.message_content = True
 bot = commands.Bot(command_prefix='!', intents=intents)
 
+# 3 authorised user id's, this checks for them
+def is_authorized(ctx):
+    return str(ctx.author.id) in authorized_user_ids
+
 # Player cards view starter
 player_cards = {}
 
@@ -214,9 +218,6 @@ def weighted_random_choice(cards: list[dict]) -> dict:
         if upto >= r:
             return card
     return None
-
-def is_authorized(ctx):
-    return str(ctx.author.id) in authorized_user_ids
 
 # Command to change the spawn mode
 @bot.command(name='set_spawn_mode')
