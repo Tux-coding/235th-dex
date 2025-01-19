@@ -44,6 +44,9 @@ bot = commands.Bot(command_prefix='!', intents=intents)
 # Player cards view starter
 player_cards = {}
 
+# Lock to ensure only one user can submit at a time
+modal_lock = asyncio.Lock()
+
 # Load player cards from a JSON file
 def load_player_cards() -> None:
     global player_cards
@@ -89,27 +92,35 @@ class CatchModal(Modal):
         self.add_item(self.card_input)
 
     async def on_submit(self, interaction: discord.Interaction):
+        global modal_lock
         user = interaction.user
-        if self.view.card_claimed:
-            await interaction.response.send_message("The card has already been claimed.", ephemeral=True)
-            return
 
-        input_name = self.card_input.value.lower()
-        if input_name == self.card_name.lower() or input_name in [alias.lower() for alias in next(card['aliases'] for card in cards if card['name'].lower() == self.card_name.lower())]:
-            user_id = str(user.id)
-            if not user_has_card(user_id, self.card_name):
-                player_cards.setdefault(user_id, []).append(self.card_name)
-                save_player_cards()
-                await interaction.response.send_message(f"{user.mention} caught the card: {self.card_name}!", ephemeral=False)
-                self.view.card_claimed = True
-                for item in self.view.children:
-                    if isinstance(item, Button):
-                        item.disabled = True
-                await self.message.edit(view=self.view)
+        # Attempt to acquire the lock
+        if modal_lock.locked():
+            await interaction.response.send_message("The card is currently being claimed by another user. Please wait.", ephemeral=True)
+            return
+        
+        async with modal_lock:
+            if self.view.card_claimed:
+                await interaction.response.send_message("The card has already been claimed.", ephemeral=True)
+                return
+
+            input_name = self.card_input.value.lower()
+            if input_name == self.card_name.lower() or input_name in [alias.lower() for alias in next(card['aliases'] for card in cards if card['name'].lower() == self.card_name.lower())]:
+                user_id = str(user.id)
+                if not user_has_card(user_id, self.card_name):
+                    player_cards.setdefault(user_id, []).append(self.card_name)
+                    save_player_cards()
+                    await interaction.response.send_message(f"{user.mention} caught the card: {self.card_name}!", ephemeral=False)
+                    self.view.card_claimed = True
+                    for item in self.view.children:
+                        if isinstance(item, Button):
+                            item.disabled = True
+                    await self.message.edit(view=self.view)
+                else:
+                    await interaction.response.send_message(f"{user.mention}, you already have this card.", ephemeral=True)
             else:
-                await interaction.response.send_message(f"{user.mention}, you already have this card.", ephemeral=True)
-        else:
-            await interaction.response.send_message(f"{user.mention}; Incorrect name.", ephemeral=False)
+                await interaction.response.send_message(f"{user.mention}; Incorrect name.", ephemeral=False)
 
 class CatchButton(Button):
     def __init__(self, card_name):
