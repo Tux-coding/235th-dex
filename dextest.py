@@ -140,6 +140,70 @@ class CatchView(View):
         self.card_claimed = False
         self.add_item(CatchButton(card_name))
 
+# File to store blacklisted user IDs
+blacklist_file = "blacklist.json"
+
+# Load the blacklist from the file
+def load_blacklist() -> list[str]:
+    try:
+        with open(blacklist_file, "r") as f:
+            return json.load(f)
+    except (FileNotFoundError, json.JSONDecodeError):
+        return []
+
+# Save the blacklist to the file
+def save_blacklist(blacklist: list[str]) -> None:
+    with open(blacklist_file, "w") as f:
+        json.dump(blacklist, f)
+
+# Check if a user is blacklisted
+def is_blacklisted(user_id: str) -> bool:
+    blacklist = load_blacklist()
+    return user_id in blacklist
+
+# Add a user to the blacklist
+@bot.command(name="blacklist")
+@commands.check(is_authorized)
+async def blacklist_user(ctx, user_id: int):
+    blacklist = load_blacklist()
+    if str(user_id) in blacklist:
+        await ctx.send(f"User with ID {user_id} is already blacklisted.")
+    else:
+        blacklist.append(str(user_id))
+        save_blacklist(blacklist)
+        await ctx.send(f"User with ID {user_id} has been blacklisted.")
+
+# Remove a user from the blacklist
+@bot.command(name="unblacklist")
+@commands.check(is_authorized)
+async def unblacklist_user(ctx, user_id: int):
+    blacklist = load_blacklist()
+    if str(user_id) in blacklist:
+        blacklist.remove(str(user_id))
+        save_blacklist(blacklist)
+        await ctx.send(f"User with ID {user_id} has been removed from the blacklist.")
+    else:
+        await ctx.send(f"User with ID {user_id} is not in the blacklist.")
+
+# Prevent blacklisted users from using commands
+@bot.before_invoke
+async def check_blacklist(ctx):
+    if is_blacklisted(str(ctx.author.id)):
+        await ctx.send("You are blacklisted and cannot use this bot.")
+        raise commands.CheckFailure("User is blacklisted.")
+    
+# List of allowed server IDs
+allowed_guilds = [int(channel_id), int(test_channel_id)]
+
+@bot.event
+async def on_guild_join(guild):
+    if guild.id not in allowed_guilds:
+        logging.warning(f"Unauthorized guild joined: {guild.name} (ID: {guild.id}). Leaving the server.")
+        await guild.system_channel.send("This bot is restricted to specific servers. Leaving now.")
+        await guild.leave()
+    else:
+        logging.info(f"Joined authorized guild: {guild.name} (ID: {guild.id}).")
+
 # Part that does rarity
 def weighted_random_choice(cards: list[dict]) -> dict:
     total = sum(card['rarity'] for card in cards)
