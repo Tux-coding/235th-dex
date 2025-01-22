@@ -251,5 +251,14 @@ cards = [
         "rarity": 46,
         "health": 3200,
         "damage": 2150,
+    },
+    {
+        "name": "Sharpeye",
+        "aliases": ["Sharpie", "triggerboy"],
+        "spawn_image_url": "https://i.imgur.com/EKCz1Ly.png",
+        "card_image_url": "https://i.imgur.com/mjEypbU.png",
+        "rarity": 89,
+        "health": 1200,
+        "damage": 550,
     }
 ]    
