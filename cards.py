@@ -4,7 +4,7 @@ cards = [
         "name": "Dicer",
         "aliases": ["Gamester"],
         "spawn_image_url": "https://media.discordapp.net/attachments/1322205679028670495/1322205863611600896/RobloxScreenShot20241227_145936188.png?ex=677201eb&is=6770b06b&hm=f74d9e756dd8ae25b0c65b6fbdfd169c1c08679912c956c068f75c50171e9b95&=&format=webp&quality=lossless",
-        "card_image_url": "https://cdn.discordapp.com/attachments/1322202570529177642/1327714526178709534/CC-_2.png?ex=67841202&is=6782c082&hm=ee15c735f5229b39a6d5c954496ed88912ed2e45af32e76f03c39250aa480a04&",
+        "card_image_url": "https://i.imgur.com/HkUXPJ7.png",
         "rarity": 8.5,  
         "health": 6500,
         "damage": 3500,
