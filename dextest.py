@@ -126,7 +126,7 @@ def load_player_cards() -> None:
 # Save player cards to a JSON file
 def save_player_cards() -> None:
     with open('player_cards.json', 'w') as f:
-        json.dump(player_cards, f)
+        json.dump(player_cards, f, indent = 4)
 
 def user_has_card(user_id: str, card_name: str) -> bool:
     card_name = card_name.lower()
@@ -236,7 +236,7 @@ async def set_spawn_mode(ctx, mode: str):
 last_spawned_card = None
 spawned_messages = []
 
-@tasks.loop(minutes=2)
+@tasks.loop(minutes=20)
 async def spawn_card():
     global last_spawned_card, spawned_messages
     channels = []
@@ -286,7 +286,7 @@ async def spawn_card():
             await channel.send("An error occurred while spawning a card.")
 
 # Command to print the stats of a card
-@bot.command(name='print_stats')
+@bot.command(name='stats')
 async def print_stats(ctx, *, card_name: str):
     card = next((card for card in cards if card_name.lower() == card["name"].lower() or card_name in [alias.lower() for alias in card.get("aliases", [])]), None)
     if card:
@@ -440,23 +440,23 @@ async def random_number(ctx):
 
 
 # command to show the current commands that users can use
-@bot.command(name='list_commands')
+@bot.command(name='commands_dex')
 async def list_commands(ctx):
     commands_list = [
         '!hello - Responds with a greeting message.',
         '!random_number - Gives a random number',
-        '!info - Shows the current release ',
+        '!info_dex - Shows the current release ',
         '!see_card - View a card you have caught.',
         '!progress - Shows your progress in catching cards.',
-        '!print_stats - Shows the stats of a certain card.',
+        '!stats - Shows the stats of a certain card.',
     ]
     commands_description = '\n'.join(commands_list)
     await ctx.send(f'Here is a list of all the commands you can use:\n{commands_description}')
 
 #info, command to show the current release
-@bot.command(name='info')
+@bot.command(name='info_dex')
 async def info(ctx):
-    await ctx.send('Current release: v.1.0.0') #expand later when we actually released the bot to the public
+    await ctx.send('Current release: v.1.0.3') #expand later when we actually released the bot to the public
 
 # Command to play a certain GIF, restricted to authorized users
 @bot.command(name='celebrate')

@@ -218,12 +218,12 @@ cards = [
     },
     {
         "name": "Zak",
-        "aliases": ["Tas"],
-        "spawn_image_url": "https://media.discordapp.net/attachments/1322205679028670495/1328809061914771537/RobloxScreenShot20250114_201810217.png?ex=6788b620&is=678764a0&hm=ba8a71770b21d6c902c44b2733e9296e029b88fae72a27d1205189b068123681&=&format=webp&quality=lossless&width=425&height=385",
+        "aliases": ["Tas", "gekolonieseerd"],
+        "spawn_image_url": "https://i.imgur.com/qEPznfk.png",
         "card_image_url": "https://cdn.discordapp.com/attachments/1322202570529177642/1328808412540047370/Kopie_van_Just_another_trooper_trying_to_stay_alive._He_doesnt_like_insurgents._His_left_arm_and_left_eye_are_gone_due_to_the_Gulag_2.png?ex=6788b585&is=67876405&hm=85d4507f20ecb0ec90be7842616cf049fadcc8784d87da71fd6c5e5ea03bcb36&",
-        "rarity": 50,
-        "health": 3000,
-        "damage": 1950,
+        "rarity": 15,
+        "health": 6000,
+        "damage": 3000,
     },
     {
         "name": "Hollow",
@@ -260,5 +260,23 @@ cards = [
         "rarity": 89,
         "health": 1200,
         "damage": 550,
+    },
+    {
+        "name": "Sparrow",
+        "aliases": ["Bird", "flappy bird"],
+        "spawn_image_url": "https://i.imgur.com/XOMm3Hk.png",
+        "card_image_url": "https://i.imgur.com/SKzXcaz.png",
+        "rarity": 60,
+        "health": 2600,
+        "damage": 1700,
+    },
+    {
+        "name": "Worst",
+        "aliases": ["rookworst", ],
+        "spawn_image_url": "https://i.imgur.com/hGmZJFv.png",
+        "card_image_url": "https://i.imgur.com/5uvUBdW.png",
+        "rarity": 86,
+        "health": 1500,
+        "damage": 750,
     }
 ]    
