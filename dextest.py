@@ -401,6 +401,26 @@ async def progress(ctx):
     else:
         await ctx.send(f"You haven't caught any cards yet. There are {total_cards} cards available.")
 
+@bot.command(name='give')
+async def give_card(ctx, card: str, receiving_user: discord.Member):
+    # Check if the card exists in the sender's inventory
+    sender_id = str(ctx.author.id)
+    receiver_id = str(receiving_user.id)
+
+    if sender_id not in player_cards or card not in player_cards[sender_id]:
+        await ctx.send(f"You don't own the card `{card}`.")
+        return
+    
+    # Remove the card from the sender's inventory
+    player_cards[sender_id].remove(card)
+
+    # Add the card to the receiver's inventory
+    if receiver_id not in player_cards:
+        player_cards[receiver_id] = []
+    player_cards[receiver_id].append(card)
+
+    await ctx.send(f"{ctx.author.mention} has given `{card}` to {receiving_user.mention}.")
+
 # Command to spawn a certain card, restricted to a specific user
 @bot.command(name='spawn_card')
 @commands.check(is_authorized)
