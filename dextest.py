@@ -421,7 +421,7 @@ async def give_card(ctx, card: str, receiving_user: discord.Member):
 
     await ctx.send(f"{ctx.author.mention} has given `{card}` to {receiving_user.mention}.")
 
-# Command to spawn a certain card, restricted to a specific user
+# Command to spawn a certain card
 @bot.command(name='spawn_card')
 @commands.check(is_authorized)
 async def spawn_card_command(ctx, card_name: str):
