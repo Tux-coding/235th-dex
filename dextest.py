@@ -325,7 +325,7 @@ async def on_ready():
     for channel in channels:
         if channel:
             try:
-                await channel.send("235th dex is online! Type !list_commands to see the available commands.")
+                await channel.send("235th dex is online! Type !commands_dex to see the available commands.")
                 logging.info(f"Sent online message to channel {channel.id}")
             except Exception as e:
                 logging.error(f"Failed to send message to channel {channel.id}: {e}")
@@ -469,6 +469,8 @@ async def list_commands(ctx):
         '!see_card - View a card you have caught.',
         '!progress - Shows your progress in catching cards.',
         '!stats - Shows the stats of a certain card.',
+        '!give - Give a card to another user.',
+        'If you have any questions about the bot or commands, please go to https://discordapp.com/channels/1103817592889679892/1323370905874989100'
     ]
     commands_description = '\n'.join(commands_list)
     await ctx.send(f'Here is a list of all the commands you can use:\n{commands_description}')
@@ -476,7 +478,7 @@ async def list_commands(ctx):
 #info, command to show the current release
 @bot.command(name='info_dex')
 async def info(ctx):
-    await ctx.send('Current release: v.1.0.3') #expand later when we actually released the bot to the public
+    await ctx.send('Current release: v.1.1.3, "The trade update"') #expand later when we actually released the bot to the public
 
 # Command to play a certain GIF, restricted to authorized users
 @bot.command(name='celebrate')
