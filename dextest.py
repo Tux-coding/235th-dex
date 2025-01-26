@@ -403,23 +403,30 @@ async def progress(ctx):
 
 @bot.command(name='give')
 async def give_card(ctx, card: str, receiving_user: discord.Member):
+    # Convert card name to lowercase for comparison
+    card_lower = card.lower()
+    
     # Check if the card exists in the sender's inventory
     sender_id = str(ctx.author.id)
     receiver_id = str(receiving_user.id)
 
-    if sender_id not in player_cards or card not in player_cards[sender_id]:
+    if sender_id not in player_cards or card_lower not in [c.lower() for c in player_cards[sender_id]]:
         await ctx.send(f"You don't own the card `{card}`.")
         return
     
+    # Find the actual card name in the sender's inventory
+    actual_card_name = next(c for c in player_cards[sender_id] if c.lower() == card_lower)
+
     # Remove the card from the sender's inventory
-    player_cards[sender_id].remove(card)
+    player_cards[sender_id] = [c for c in player_cards[sender_id] if c.lower() != card_lower]
 
     # Add the card to the receiver's inventory
     if receiver_id not in player_cards:
         player_cards[receiver_id] = []
-    player_cards[receiver_id].append(card)
+    player_cards[receiver_id].append(actual_card_name)
 
-    await ctx.send(f"{ctx.author.mention} has given `{card}` to {receiving_user.mention}.")
+    save_player_cards()  # Save the updated player cards
+    await ctx.send(f"{ctx.author.mention} has given `{actual_card_name}` to {receiving_user.mention}.")
 
 # Command to spawn a certain card
 @bot.command(name='spawn_card')
