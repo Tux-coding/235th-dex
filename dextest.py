@@ -4,6 +4,7 @@ import os
 import asyncio
 import signal
 import json
+from typing import List
 
 import discord # type: ignore
 from discord.ext import commands, tasks # type: ignore
@@ -50,48 +51,63 @@ is_test_mode = spawn_mode == 'test'
 # File to store blacklisted user IDs
 blacklist_file = "blacklist.json"
 
-# Load the blacklist from the file
-def load_blacklist() -> list[str]:
-    try:
-        with open(blacklist_file, "r") as f:
-            return json.load(f)
-    except (FileNotFoundError, json.JSONDecodeError) as e:
-        logging.error(f"Error loading blacklist: {e}")
-        return []
+class BlacklistManager:
+    @staticmethod
+    def load_blacklist() -> List[str]:
+        try:
+            with open(blacklist_file, "r") as f:
+                return json.load(f)
+        except (FileNotFoundError, json.JSONDecodeError) as e:
+            logging.error(f"Error loading blacklist: {e}")
+            return []
 
-# Save the blacklist to the file
-def save_blacklist(blacklist: list[str]) -> None:
-    try:
-        with open(blacklist_file, "w") as f:
-            json.dump(blacklist, f)
-    except Exception as e:
-        logging.error(f"Error saving blacklist: {e}")
+    @staticmethod
+    def save_blacklist(blacklist: List[str]) -> None:
+        try:
+            with open(blacklist_file, "w") as f:
+                json.dump(blacklist, f)
+        except Exception as e:
+            logging.error(f"Error saving blacklist: {e}")
 
-# Check if a user is blacklisted
-def is_blacklisted(user_id: str) -> bool:
-    blacklist = load_blacklist()
-    return user_id in blacklist
+    @staticmethod
+    def is_blacklisted(user_id: str) -> bool:
+        blacklist = BlacklistManager.load_blacklist()
+        return user_id in blacklist
+    
+    @staticmethod
+    def add_to_blacklist(user_id: str) -> bool:
+        blacklist = BlacklistManager.load_blacklist()
+        if user_id in blacklist:
+            return False
+        blacklist.append(user_id)
+        BlacklistManager.save_blacklist(blacklist)
+        return True
+    
+    @staticmethod
+    def remove_from_blacklist(user_id: str) -> bool:
+        blacklist = BlacklistManager.load_blacklist()
+        if user_id not in blacklist:
+            return False
+        blacklist.remove(user_id)
+        BlacklistManager.save_blacklist(blacklist)
+        return True
 
 # Add a user to the blacklist
 @bot.command(name="blacklist")
 @commands.check(is_authorized)
 async def blacklist_user(ctx, user_id: int):
-    blacklist = load_blacklist()
-    if str(user_id) in blacklist:
-        await ctx.send(f"User with ID {user_id} is already blacklisted.")
-    else:
-        blacklist.append(str(user_id))
-        save_blacklist(blacklist)
+    user_id_str = str(user_id)
+    if BlacklistManager.add_to_blacklist(user_id_str):
         await ctx.send(f"User with ID {user_id} has been blacklisted.")
+    else:
+        await ctx.send(f"User with ID {user_id} is already blacklisted.")
 
 # Remove a user from the blacklist
 @bot.command(name="unblacklist")
 @commands.check(is_authorized)
 async def unblacklist_user(ctx, user_id: int):
-    blacklist = load_blacklist()
-    if str(user_id) in blacklist:
-        blacklist.remove(str(user_id))
-        save_blacklist(blacklist)
+    user_id_str = str(user_id)
+    if BlacklistManager.remove_from_blacklist(user_id_str):
         await ctx.send(f"User with ID {user_id} has been removed from the blacklist.")
     else:
         await ctx.send(f"User with ID {user_id} is not in the blacklist.")
@@ -187,7 +203,7 @@ class CatchButton(Button):
         if is_test_mode and str(interaction.user.id) not in authorized_user_ids:
             await interaction.response.send_message("We are currently updating the bot, please wait until we are finished.", ephemeral=True)
             return
-        if is_blacklisted(str(interaction.user.id)):
+        if BlacklistManager.is_blacklisted(str(interaction.user.id)):
             await interaction.response.send_message("You are blacklisted and cannot use this bot.", ephemeral=True)
             return
         user = interaction.user
@@ -558,7 +574,7 @@ async def check_conditions(ctx):
     if is_test_mode and str(ctx.author.id) not in authorized_user_ids and not ctx.command.name == 'set_spawn_mode':
         await ctx.send("We are currently updating the bot, please wait until we are finished.")
         raise commands.CheckFailure("Bot is in test mode.")
-    if is_blacklisted(str(ctx.author.id)):
+    if BlacklistManager.is_blacklisted(str(ctx.author.id)):
         await ctx.send("You are blacklisted and cannot use this bot.")
         raise commands.CheckFailure("User is blacklisted.")
 
