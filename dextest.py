@@ -280,7 +280,8 @@ allowed_guilds = [int(channel_id), int(test_channel_id)]
 async def on_guild_join(guild):
     if guild.id not in allowed_guilds:
         logging.warning(f"Unauthorized guild joined: {guild.name} (ID: {guild.id}). Leaving the server.")
-        await guild.system_channel.send("This bot is restricted to specific servers. Leaving now.")
+        if guild.system_channel:
+            await guild.system_channel.send("This bot is restricted to specific servers. Leaving now.")
         await guild.leave()
     else:
         logging.info(f"Joined authorized guild: {guild.name} (ID: {guild.id}).")
@@ -423,7 +424,6 @@ async def on_ready():
 
     spawn_card.start()
 
-
 # see_card command to see a specific card
 @bot.command(name='see_card')
 async def see_card(ctx, *, card_name: str = None):
@@ -474,27 +474,22 @@ async def progress(ctx):
 
 @bot.command(name='give')
 async def give_card(ctx, card: str, receiving_user: discord.Member):
-    # Convert card name to lowercase for comparison
-    card_lower = card.lower()
-    
-    # Check if the card exists in the sender's inventory
     sender_id = str(ctx.author.id)
     receiver_id = str(receiving_user.id)
-
-    if sender_id not in player_cards or card_lower not in [c.lower() for c in player_cards[sender_id]]:
+    card_lower = card.lower()
+    
+    sender_cards = player_cards.get(sender_id, [])
+    if sender_id not in map(str.lower, sender_cards):
         await ctx.send(f"You don't own the card `{card}`.")
         return
     
-    # Find the actual card name in the sender's inventory
-    actual_card_name = next(c for c in player_cards[sender_id] if c.lower() == card_lower)
-
     # Remove the card from the sender's inventory
-    player_cards[sender_id] = [c for c in player_cards[sender_id] if c.lower() != card_lower]
+    actual_card_name = next(c for c in sender_cards if c.lower() == card_lower)
+    sender_cards.remove(actual_card_name)
 
     # Add the card to the receiver's inventory
-    if receiver_id not in player_cards:
-        player_cards[receiver_id] = []
-    player_cards[receiver_id].append(actual_card_name)
+    receiver_cards = player_cards.setdefault(receiver_id, [])
+    receiver_cards.append(actual_card_name)
 
     save_player_cards()  # Save the updated player cards
     await ctx.send(f"{ctx.author.mention} has given `{actual_card_name}` to {receiving_user.mention}.")
