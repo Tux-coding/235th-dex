@@ -98,21 +98,26 @@ class BlacklistManager:
 # Add a user to the blacklist
 @bot.command(name="blacklist")
 @commands.check(is_authorized)
-async def blacklist_user(ctx, user_id: int):
-    try:
-        user_id_str = str(user_id)
-        if BlacklistManager.add_to_blacklist(user_id_str):
-            await ctx.send(f"User with ID {user_id} has been blacklisted.")
-        else:
-            await ctx.send(f"User with ID {user_id} is already blacklisted.")
-    except ValueError:
+async def blacklist_user(ctx, user_id: str):
+    if not user_id.isdigit():
         await ctx.send("Invalid user ID. Please provide a valid integer.")
+        return
+
+    user_id_str = user_id
+    if BlacklistManager.add_to_blacklist(user_id_str):
+        await ctx.send(f"User with ID {user_id} has been blacklisted.")
+    else:
+        await ctx.send(f"User with ID {user_id} is already blacklisted.")
 
 # Remove a user from the blacklist
 @bot.command(name="unblacklist")
 @commands.check(is_authorized)
-async def unblacklist_user(ctx, user_id: int):
-    user_id_str = str(user_id)
+async def unblacklist_user(ctx, user_id: str):
+    if not user_id.isdigit():
+        await ctx.send("Invalid user ID. Please provide a valid integer.")
+        return
+
+    user_id_str = user_id
     if BlacklistManager.remove_from_blacklist(user_id_str):
         await ctx.send(f"User with ID {user_id} has been removed from the blacklist.")
     else:
