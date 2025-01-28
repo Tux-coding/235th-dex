@@ -198,38 +198,38 @@ class CatchView(View):
 
 # The embed for the !progress command
 class ProgressView(View):
-    def __init__(self, user_cards, missing_cards):
+    def __init__(self, user_cards, missing_cards, user):
         super().__init__(timeout=None)
         self.user_cards = user_cards
         self.missing_cards = missing_cards
+        self.user = user
         self.current_page = 0
         self.max_page = (len(user_cards) + 9) // 10  # 10 cards per page
-
         self.update_buttons()
 
     def update_buttons(self):
         self.clear_items()
         if self.current_page > 0:
-            self.add_item(Button(label="Previous", style=discord.ButtonStyle.primary, custom_id="prev"))
+            prev_button = Button(label="Previous", style=discord.ButtonStyle.primary)
+            prev_button.callback = self.previous_page
+            self.add_item(prev_button)
         if self.current_page < self.max_page - 1:
-            self.add_item(Button(label="Next", style=discord.ButtonStyle.primary, custom_id="next"))
+            next_button = Button(label="Next", style=discord.ButtonStyle.primary)
+            next_button.callback = self.next_page
+            self.add_item(next_button)
 
-    async def interaction_check(self, interaction: discord.Interaction) -> bool:
-        return interaction.user == self.user
-
-    async def on_timeout(self):
-        for item in self.children:
-            item.disabled = True
-        await self.message.edit(view=self)
-
-    @discord.ui.button(label="Previous", style=discord.ButtonStyle.primary, custom_id="prev")
-    async def previous_page(self, button: Button, interaction: discord.Interaction):
+    async def previous_page(self, interaction: discord.Interaction):
+        if interaction.user != self.user:
+            await interaction.response.send_message("You can't control this menu, sorry!", ephemeral=True)
+            return
         self.current_page -= 1
         self.update_buttons()
         await interaction.response.edit_message(embed=self.create_embed(), view=self)
 
-    @discord.ui.button(label="Next", style=discord.ButtonStyle.primary, custom_id="next")
-    async def next_page(self, button: Button, interaction: discord.Interaction):
+    async def next_page(self, interaction: discord.Interaction):
+        if interaction.user != self.user:
+            await interaction.response.send_message("You can't control this menu, sorry!", ephemeral=True)
+            return
         self.current_page += 1
         self.update_buttons()
         await interaction.response.edit_message(embed=self.create_embed(), view=self)
@@ -446,8 +446,7 @@ async def progress(ctx):
     user_cards = player_cards.get(user_id, [])
     missing_cards = [card['name'] for card in cards if card['name'] not in user_cards]
 
-    view = ProgressView(user_cards, missing_cards)
-    view.user = ctx.author
+    view = ProgressView(user_cards, missing_cards, ctx.author)
     view.message = await ctx.send(embed=view.create_embed(), view=view)
 
 @bot.command(name='give')
