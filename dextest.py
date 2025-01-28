@@ -45,6 +45,8 @@ bot = commands.Bot(command_prefix='!', intents=intents)
 def is_authorized(ctx):
     return str(ctx.author.id) in authorized_user_ids
 
+is_test_mode = spawn_mode == 'test'
+
 # File to store blacklisted user IDs
 blacklist_file = "blacklist.json"
 
@@ -90,13 +92,6 @@ async def unblacklist_user(ctx, user_id: int):
     else:
         await ctx.send(f"User with ID {user_id} is not in the blacklist.")
 
-# Prevent blacklisted users from using commands
-@bot.before_invoke
-async def check_blacklist(ctx):
-    if is_blacklisted(str(ctx.author.id)):
-        await ctx.send("You are blacklisted and cannot use this bot.")
-        raise commands.CheckFailure("User is blacklisted.")
-
 # Player cards view starter
 player_cards = {}
 
@@ -112,7 +107,6 @@ def load_player_cards() -> None:
                 player_cards = json.load(f)
             # Ensure all keys are strings
             player_cards = {str(k): v for k, v in player_cards.items()}
-            logging.info(f"Loaded player cards: {player_cards}")
         else:
             player_cards = {}
             logging.info("Player cards file is empty. Starting with an empty dictionary.")
@@ -183,6 +177,12 @@ class CatchButton(Button):
         self.card_name = card_name
 
     async def callback(self, interaction: discord.Interaction):
+        if is_test_mode and str(interaction.user.id) not in authorized_user_ids:
+            await interaction.response.send_message("We are currently updating the bot, please wait until we are finished.", ephemeral=True)
+            return
+        if is_blacklisted(str(interaction.user.id)):
+            await interaction.response.send_message("You are blacklisted and cannot use this bot.", ephemeral=True)
+            return
         user = interaction.user
         if user_has_card(str(user.id), self.card_name):
             await interaction.response.send_message("You already have this card!", ephemeral=True)
@@ -195,7 +195,61 @@ class CatchView(View):
         super().__init__(timeout=None)
         self.card_claimed = False
         self.add_item(CatchButton(card_name))
-    
+
+# The embed for the !progress command
+class ProgressView(View):
+    def __init__(self, user_cards, missing_cards):
+        super().__init__(timeout=None)
+        self.user_cards = user_cards
+        self.missing_cards = missing_cards
+        self.current_page = 0
+        self.max_page = (len(user_cards) + 9) // 10  # 10 cards per page
+
+        self.update_buttons()
+
+    def update_buttons(self):
+        self.clear_items()
+        if self.current_page > 0:
+            self.add_item(Button(label="Previous", style=discord.ButtonStyle.primary, custom_id="prev"))
+        if self.current_page < self.max_page - 1:
+            self.add_item(Button(label="Next", style=discord.ButtonStyle.primary, custom_id="next"))
+
+    async def interaction_check(self, interaction: discord.Interaction) -> bool:
+        return interaction.user == self.user
+
+    async def on_timeout(self):
+        for item in self.children:
+            item.disabled = True
+        await self.message.edit(view=self)
+
+    @discord.ui.button(label="Previous", style=discord.ButtonStyle.primary, custom_id="prev")
+    async def previous_page(self, button: Button, interaction: discord.Interaction):
+        self.current_page -= 1
+        self.update_buttons()
+        await interaction.response.edit_message(embed=self.create_embed(), view=self)
+
+    @discord.ui.button(label="Next", style=discord.ButtonStyle.primary, custom_id="next")
+    async def next_page(self, button: Button, interaction: discord.Interaction):
+        self.current_page += 1
+        self.update_buttons()
+        await interaction.response.edit_message(embed=self.create_embed(), view=self)
+
+    def create_embed(self):
+        embed = discord.Embed(title="Card Collection Progress")
+        start = self.current_page * 10
+        end = start + 10
+
+        owned_cards = "\n".join(self.user_cards[start:end])
+        embed.add_field(name="Owned Cards", value=owned_cards or "None", inline=False)
+
+        if end >= len(self.user_cards):
+            missing_start = max(0, start - len(self.user_cards))
+            missing_end = max(0, end - len(self.user_cards))
+            missing_cards = "\n".join(self.missing_cards[missing_start:missing_end])
+            embed.add_field(name="Missing Cards", value=missing_cards or "None", inline=False)
+
+        return embed
+
 # List of allowed server IDs
 allowed_guilds = [int(channel_id), int(test_channel_id)]
 
@@ -223,10 +277,11 @@ def weighted_random_choice(cards: list[dict]) -> dict:
 @bot.command(name='set_spawn_mode')
 @commands.check(is_authorized)
 async def set_spawn_mode(ctx, mode: str):
-    global spawn_mode
+    global spawn_mode, is_test_mode
     mode = mode.lower()
     if mode in ['both', 'test', 'none']:
         spawn_mode = mode
+        is_test_mode = spawn_mode == 'test'
         await ctx.send(f"Spawn mode set to {spawn_mode}.")
         logging.info(f"Spawn mode changed to {spawn_mode} by {ctx.author}.")
     else:
@@ -306,7 +361,8 @@ async def on_command_error(ctx, error):
     elif isinstance(error, commands.MissingRequiredArgument):
         await ctx.send("Missing arguments.")
     elif isinstance(error, commands.CheckFailure):
-        await ctx.send("You do not have permission to use this command.")
+        if not (is_test_mode and str(ctx.author.id) not in authorized_user_ids):
+            await ctx.send("You do not have permission to use this command.")
     else:
         logging.error(f"An error occurred: {error}")
         await ctx.send("An error occurred.")
@@ -349,8 +405,6 @@ async def on_ready():
 @bot.command(name='see_card')
 async def see_card(ctx, *, card_name: str = None):
     user_id = str(ctx.author.id)  # Ensure user ID is a string
-    logging.info(f'User ID: {user_id}')
-    logging.info(f'Player cards: {player_cards}')
     
     if user_id in player_cards and player_cards[user_id]:
         if card_name:
@@ -387,19 +441,14 @@ async def see_card(ctx, *, card_name: str = None):
 # Command that shows the user's progress
 @bot.command(name='progress')
 async def progress(ctx):
-    user_id = str(ctx.author.id)  # Ensure user ID is a string
-    logging.info(f'User ID: {user_id}')
-    logging.info(f'Player cards: {player_cards}')
-    
+    user_id = str(ctx.author.id)
     total_cards = len(cards)
-    if user_id in player_cards and player_cards[user_id]:
-        user_cards = player_cards[user_id]
-        num_user_cards = len(user_cards)
-        percentage = (num_user_cards / total_cards) * 100
-        user_cards_list = '\n'.join(sorted(user_cards))
-        await ctx.send(f"You have caught {num_user_cards} out of {total_cards} cards ({percentage:.2f}%).\n\nYour cards:\n{user_cards_list}")
-    else:
-        await ctx.send(f"You haven't caught any cards yet. There are {total_cards} cards available.")
+    user_cards = player_cards.get(user_id, [])
+    missing_cards = [card['name'] for card in cards if card['name'] not in user_cards]
+
+    view = ProgressView(user_cards, missing_cards)
+    view.user = ctx.author
+    view.message = await ctx.send(embed=view.create_embed(), view=view)
 
 @bot.command(name='give')
 async def give_card(ctx, card: str, receiving_user: discord.Member):
@@ -497,6 +546,16 @@ async def play_gif(ctx):
 
 #///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 #other cool things for shutdown and signal handling
+
+@bot.before_invoke
+async def check_conditions(ctx):
+    if is_test_mode and str(ctx.author.id) not in authorized_user_ids and not ctx.command.name == 'set_spawn_mode':
+        await ctx.send("We are currently updating the bot, please wait until we are finished.")
+        raise commands.CheckFailure("Bot is in test mode.")
+    if is_blacklisted(str(ctx.author.id)):
+        await ctx.send("You are blacklisted and cannot use this bot.")
+        raise commands.CheckFailure("User is blacklisted.")
+
 # Custom shutdown function
 async def shutdown_bot():
     channels = [bot.get_channel(int(channel_id)), bot.get_channel(int(test_channel_id))]
