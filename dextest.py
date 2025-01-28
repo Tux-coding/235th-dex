@@ -55,13 +55,17 @@ def load_blacklist() -> list[str]:
     try:
         with open(blacklist_file, "r") as f:
             return json.load(f)
-    except (FileNotFoundError, json.JSONDecodeError):
+    except (FileNotFoundError, json.JSONDecodeError) as e:
+        logging.error(f"Error loading blacklist: {e}")
         return []
 
 # Save the blacklist to the file
 def save_blacklist(blacklist: list[str]) -> None:
-    with open(blacklist_file, "w") as f:
-        json.dump(blacklist, f)
+    try:
+        with open(blacklist_file, "w") as f:
+            json.dump(blacklist, f)
+    except Exception as e:
+        logging.error(f"Error saving blacklist: {e}")
 
 # Check if a user is blacklisted
 def is_blacklisted(user_id: str) -> bool:
@@ -113,14 +117,17 @@ def load_player_cards() -> None:
     except FileNotFoundError:
         logging.error("No player cards file found. Aborting.")
         exit(1)
-    except json.JSONDecodeError:
-        logging.error("Error decoding JSON from player cards file. Aborting.")
+    except json.JSONDecodeError as e:
+        logging.error(f"Error decoding JSON from player cards file: {e}")
         exit(1)
 
 # Save player cards to a JSON file
 def save_player_cards() -> None:
-    with open('player_cards.json', 'w') as f:
-        json.dump(player_cards, f, indent = 4)
+    try:
+        with open('player_cards.json', 'w') as f:
+            json.dump(player_cards, f, indent=4)
+    except Exception as e:
+        logging.error(f"Error saving player cards: {e}")
 
 def user_has_card(user_id: str, card_name: str) -> bool:
     card_name = card_name.lower()
@@ -274,7 +281,7 @@ def weighted_random_choice(cards: list[dict]) -> dict:
     return None
 
 # Command to change the spawn mode
-@bot.command(name='set_spawn_mode')
+@bot.command(name='set_spawn_mode', help="Set the spawn mode to 'both', 'test', or 'none'.")
 @commands.check(is_authorized)
 async def set_spawn_mode(ctx, mode: str):
     global spawn_mode, is_test_mode
@@ -341,7 +348,7 @@ async def spawn_card():
             await channel.send("An error occurred while spawning a card.")
 
 # Command to print the stats of a card
-@bot.command(name='stats')
+@bot.command(name='stats', help="Show the stats of a specific card.")
 async def print_stats(ctx, *, card_name: str):
     card = next((card for card in cards if card_name.lower() == card["name"].lower() or card_name in [alias.lower() for alias in card.get("aliases", [])]), None)
     if card:
@@ -477,7 +484,7 @@ async def give_card(ctx, card: str, receiving_user: discord.Member):
     await ctx.send(f"{ctx.author.mention} has given `{actual_card_name}` to {receiving_user.mention}.")
 
 # Command to spawn a certain card
-@bot.command(name='spawn_card')
+@bot.command(name='spawn_card', help="Spawn a specific card.")
 @commands.check(is_authorized)
 async def spawn_card_command(ctx, card_name: str):
     card_name = card_name.strip().lower()
@@ -572,12 +579,12 @@ async def shutdown_bot():
     await bot.close()
 
 # Command to shut down the bot
-@bot.command(name='shutdown')
+@bot.command(name='shutdown', help="Shut down the bot.")
 @commands.check(is_authorized)
 async def shutdown(ctx):
     await ctx.send("Shutting down the bot...")
     logging.info(f"Shutdown command issued by {ctx.author}.")
-    save_player_cards()  # Save player cards on shutdown
+    save_player_cards()
     await shutdown_bot()
 
 # Handle shutdown signal
