@@ -56,7 +56,10 @@ class BlacklistManager:
     def load_blacklist() -> List[str]:
         try:
             with open(blacklist_file, "r") as f:
-                return json.load(f)
+                data = f.read().strip()
+                if not data:
+                    return []
+                return json.loads(data)
         except (FileNotFoundError, json.JSONDecodeError) as e:
             logging.error(f"Error loading blacklist: {e}")
             return []
@@ -96,11 +99,14 @@ class BlacklistManager:
 @bot.command(name="blacklist")
 @commands.check(is_authorized)
 async def blacklist_user(ctx, user_id: int):
-    user_id_str = str(user_id)
-    if BlacklistManager.add_to_blacklist(user_id_str):
-        await ctx.send(f"User with ID {user_id} has been blacklisted.")
-    else:
-        await ctx.send(f"User with ID {user_id} is already blacklisted.")
+    try:
+        user_id_str = str(user_id)
+        if BlacklistManager.add_to_blacklist(user_id_str):
+            await ctx.send(f"User with ID {user_id} has been blacklisted.")
+        else:
+            await ctx.send(f"User with ID {user_id} is already blacklisted.")
+    except ValueError:
+        await ctx.send("Invalid user ID. Please provide a valid integer.")
 
 # Remove a user from the blacklist
 @bot.command(name="unblacklist")
@@ -426,38 +432,19 @@ async def on_ready():
 
 # see_card command to see a specific card
 @bot.command(name='see_card')
-async def see_card(ctx, *, card_name: str = None):
+async def see_card(ctx, *, card_name: str):
     user_id = str(ctx.author.id)  # Ensure user ID is a string
     
     if user_id in player_cards and player_cards[user_id]:
-        if card_name:
-            card_name = card_name.strip().lower()
-            user_card = next((card for card in player_cards[user_id] if card.lower() == card_name or card_name in [alias.lower() for alias in next(c.get('aliases', []) for c in cards if c['name'].lower() == card.lower())]), None)
-            if user_card:
-                selected_card = next(card for card in cards if card["name"].lower() == card_name or card_name in [alias.lower() for alias in card.get("aliases", [])])
-                embed = discord.Embed(title=f"Here's your {selected_card['name']}", description="")
-                embed.set_image(url=selected_card["card_image_url"])
-                await ctx.send(embed=embed)
-            else:
-                await ctx.send("You don't have this card.")
+        card_name = card_name.strip().lower()
+        user_card = next((card for card in player_cards[user_id] if card.lower() == card_name or card_name in [alias.lower() for alias in next(c.get('aliases', []) for c in cards if c['name'].lower() == card.lower())]), None)
+        if user_card:
+            selected_card = next(card for card in cards if card["name"].lower() == card_name or card_name in [alias.lower() for alias in card.get("aliases", [])])
+            embed = discord.Embed(title=f"Here's your {selected_card['name']}", description="")
+            embed.set_image(url=selected_card["card_image_url"])
+            await ctx.send(embed=embed)
         else:
-            options = [discord.SelectOption(label=card, value=card) for card in player_cards[user_id]]
-            select = Select(placeholder="Choose a card to see", options=options)
-
-            async def select_callback(interaction):
-                if interaction.user.id != ctx.author.id:
-                    await interaction.response.send_message("You can only view your own cards.", ephemeral=True)
-                    return
-                selected_card_name = select.values[0]
-                selected_card = next(card for card in cards if card["name"] == selected_card_name)
-                embed = discord.Embed(title=f"Here's your {selected_card_name}", description="")
-                embed.set_image(url=selected_card["card_image_url"])
-                await interaction.response.send_message(embed=embed)
-
-            select.callback = select_callback
-            view = View()
-            view.add_item(select)
-            await ctx.send("Select a card to see", view=view)
+            await ctx.send("You don't have this card.")
     else:
         await ctx.send("You haven't caught any cards yet.")
 
