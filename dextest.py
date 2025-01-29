@@ -5,6 +5,7 @@ import asyncio
 import signal
 import json
 from typing import List
+from collections import Counter
 
 import discord # type: ignore
 from discord.ext import commands, tasks # type: ignore
@@ -122,6 +123,15 @@ async def unblacklist_user(ctx, user_id: str):
         await ctx.send(f"User with ID {user_id} has been removed from the blacklist.")
     else:
         await ctx.send(f"User with ID {user_id} is not in the blacklist.")
+        
+@bot.command(name="show_blacklist")
+@commands.check(is_authorized)
+async def show_blacklist(ctx):
+    blacklist = BlacklistManager.load_blacklist()
+    if blacklist:
+        await ctx.send(f"Blacklisted user IDs: {', '.join(blacklist)}")
+    else:
+        await ctx.send("No users are currently blacklisted.")
 
 # Player cards view starter
 player_cards = {}
@@ -395,9 +405,20 @@ async def on_command_error(ctx, error):
         await ctx.send("Command not found.")
     elif isinstance(error, commands.MissingRequiredArgument):
         await ctx.send("Missing arguments.")
+    elif isinstance(error, commands.BadArgument):
+        await ctx.send("Bad argument.")
+    elif isinstance(error, commands.DisabledCommand):
+        await ctx.send("This command is disabled.")
+    elif isinstance(error, commands.CommandInvokeError):
+        logging.error(f"An error occurred while invoking the command: {error}")
+        await ctx.send("An error occurred while invoking the command.")
+    elif isinstance(error, commands.TooManyArguments):
+        await ctx.send("Too many arguments provided.")
     elif isinstance(error, commands.CheckFailure):
         if not (is_test_mode and str(ctx.author.id) not in authorized_user_ids):
             await ctx.send("You do not have permission to use this command.")
+    elif isinstance(error, commands.UserInputError):
+        await ctx.send("There was an error with your input.")
     else:
         logging.error(f"An error occurred: {error}")
         await ctx.send("An error occurred.")
@@ -508,6 +529,32 @@ async def spawn_card_command(ctx, card_name: str):
     else:
         await ctx.send("Card not found.")
 
+@bot.command(name='givecard')
+@commands.check(is_authorized)
+async def give_card(ctx, card: str, receiving_user: discord.Member):
+    receiver_id = str(receiving_user.id)
+    card_lower = card.lower()
+
+    receiver_cards = player_cards.setdefault(receiver_id, [])
+    receiver_cards.append(card)
+
+    save_player_cards()  # Save the updated player cards
+    await ctx.send(f"{ctx.author.mention} has given `{card}` to {receiving_user.mention}.")
+
+@bot.command(name='removecard')
+@commands.check(is_authorized)
+async def remove_card(ctx, card: str, user: discord.Member):
+    user_id = str(user.id)
+    card_lower = card.lower()
+
+    user_cards = player_cards.get(user_id, [])
+    if card_lower in map(str.lower, user_cards):
+        actual_card_name = next(c for c in user_cards if c.lower() == card_lower)
+        user_cards.remove(actual_card_name)
+        save_player_cards()  # Save the updated player cards
+        await ctx.send(f"Removed `{actual_card_name}` from {user.mention}'s inventory.")
+    else:
+        await ctx.send(f"{user.mention} does not have the card `{card}`.")
 #///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 #other commands not related to the card game
 #///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -535,6 +582,7 @@ async def list_commands(ctx):
         '!progress - Shows your progress in catching cards.',
         '!stats - Shows the stats of a certain card.',
         '!give - Give a card to another user.',
+        '!stats_full - Gives stats of the bot.',
         'If you have any questions about the bot or commands, please go to https://discordapp.com/channels/1103817592889679892/1323370905874989100'
     ]
     commands_description = '\n'.join(commands_list)
@@ -543,7 +591,7 @@ async def list_commands(ctx):
 #info, command to show the current release
 @bot.command(name='info_dex')
 async def info(ctx):
-    await ctx.send('Current release: v.1.1.3, "The trade update"') #expand later when we actually released the bot to the public
+    await ctx.send('Current release: v.1.1.5, "The more-stats update"') #expand later when we actually released the bot to the public
 
 # Command to play a certain GIF, restricted to authorized users
 @bot.command(name='celebrate')
@@ -552,7 +600,33 @@ async def play_gif(ctx):
     gif_url = "https://images-ext-1.discordapp.net/external/g2WvOwPwXD3KtaqKdjNQ-RWFBmwpS01Nc2f_NPURW7w/https/media.tenor.com/BDxIoo-dxPgAAAPo/missouri-tigers-truman-the-tiger.mp4"
     await ctx.send(gif_url)
 
-
+# Public !stats command
+@bot.command(name='stats_full', help="Show general statistics about the card game.")
+async def public_stats(ctx):
+    total_users = len(player_cards)
+    total_cards_collected = sum(len(cards) for user_id, cards in player_cards.items() if user_id not in authorized_user_ids)
+    
+    # Top Collectors
+    collectors = [(user_id, len(cards)) for user_id, cards in player_cards.items() if user_id not in authorized_user_ids]
+    top_collectors = sorted(collectors, key=lambda x: x[1], reverse=True)[:5]
+    
+    # Most Collected Card
+    all_cards = [card for cards in player_cards.values() for card in cards]
+    most_collected_card = Counter(all_cards).most_common(1)[0][0]
+    
+    # Rarest Card Owned
+    card_rarity = {card['name']: card['rarity'] for card in cards}
+    owned_cards = set(all_cards)
+    rarest_card_owned = min(owned_cards, key=lambda card: card_rarity.get(card, float('inf')))
+    
+    embed = discord.Embed(title="235th Dex Statistics")
+    embed.add_field(name="Total Users", value=total_users, inline=False)
+    embed.add_field(name="Total Cards Collected", value=total_cards_collected, inline=False)
+    embed.add_field(name="Top Collectors", value="\n".join([f"<@{user_id}>: {count} cards" for user_id, count in top_collectors]), inline=False)
+    embed.add_field(name="Most Collected Card", value=most_collected_card, inline=False)
+    embed.add_field(name="Rarest Card Owned", value=rarest_card_owned, inline=False)
+    
+    await ctx.send(embed=embed)
 #///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 #other cool things for shutdown and signal handling
 
