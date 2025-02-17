@@ -492,7 +492,7 @@ async def give_card(ctx, card: str, receiving_user: discord.Member):
     card_lower = card.lower()
     
     sender_cards = player_cards.get(sender_id, [])
-    if sender_id not in map(str.lower, sender_cards):
+    if card_lower not in map(str.lower, sender_cards):
         await ctx.send(f"You don't own the card `{card}`.")
         return
     
