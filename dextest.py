@@ -506,7 +506,7 @@ async def give_card(ctx, card: str, receiving_user: discord.Member):
 
     save_player_cards()  # Save the updated player cards
     await ctx.send(f"{ctx.author.mention} has given `{actual_card_name}` to {receiving_user.mention}.")
-
+    logging.info(f"{ctx.author} gave {actual_card_name} to {receiving_user}.")
 # Command to spawn a certain card
 @bot.command(name='spawn_card', help="Spawn a specific card.")
 @commands.check(is_authorized)
@@ -540,6 +540,7 @@ async def give_card(ctx, card: str, receiving_user: discord.Member):
 
     save_player_cards()  # Save the updated player cards
     await ctx.send(f"{ctx.author.mention} has given `{card}` to {receiving_user.mention}.")
+    logging.info(f"Admin: {ctx.author} gave {card} to {receiving_user}.")
 
 @bot.command(name='removecard')
 @commands.check(is_authorized)
@@ -553,8 +554,10 @@ async def remove_card(ctx, card: str, user: discord.Member):
         user_cards.remove(actual_card_name)
         save_player_cards()  # Save the updated player cards
         await ctx.send(f"Removed `{actual_card_name}` from {user.mention}'s inventory.")
+        logging.info(f"Admin: {ctx.author} removed {actual_card_name} from {user}.")
     else:
         await ctx.send(f"{user.mention} does not have the card `{card}`.")
+        logging.info(f"Admin: {ctx.author} attempted to remove {card} from {user}, but {user} did not possess {card}.")
 #///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 #other commands not related to the card game
 #///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -565,14 +568,14 @@ async def hello(ctx):
     await ctx.send('Hello! I am the 235th dex! At your service!')
 
 # Gives a random number between 0 and 10000000
-@bot.command(name='random_number')
+@bot.command(name='random_number',help="Gives a random number.")
 async def random_number(ctx):
     random_number = random.randint(0, 10000000)
     await ctx.send(f'Your random number is: {random_number}')
 
 
 # command to show the current commands that users can use
-@bot.command(name='commands_dex')
+@bot.command(name='commands_dex', help="Shows a list of all the commands you can use.")
 async def list_commands(ctx):
     commands_list = [
         '!hello - Responds with a greeting message.',
@@ -589,9 +592,22 @@ async def list_commands(ctx):
     await ctx.send(f'Here is a list of all the commands you can use:\n{commands_description}')
 
 #info, command to show the current release
-@bot.command(name='info_dex')
+@bot.command(name='info_dex', help="Shows some info like the current release, developers and total lines of code!")
 async def info(ctx):
-    await ctx.send('Current release: v.1.1.5, "The more-stats update"') #expand later when we actually released the bot to the public
+
+    #bit of code to count the lines of code in the project
+    project_dir = '/home/container'
+    total_lines = 0
+
+    for root, _, files in os.walk(project_dir):
+        for file in files:
+            if file.endswith('.py'):
+                file_path = os.path.join(root, file)
+                with open(file_path, 'r') as f:
+                    total_lines += sum(1 for _ in f)
+                    
+    embed = discord.Embed(title="Current Release", description=f"v.1.2.5, \"The more-stats update\"\n Developers: <@1035607651985403965>, <@573878397952851988> and <@845973389415284746> \n Total lines of code: {total_lines}")
+    await ctx.send(embed=embed) #expand later when we actually released the bot to the public
 
 # Command to play a certain GIF, restricted to authorized users
 @bot.command(name='celebrate')
