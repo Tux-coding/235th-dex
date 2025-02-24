@@ -601,7 +601,7 @@ async def info(ctx):
 
     for root, _, files in os.walk(project_dir):
         for file in files:
-            if file.endswith('.py'):
+            if file.endswith('test.py') or file.endswith('cards.py'):
                 file_path = os.path.join(root, file)
                 with open(file_path, 'r') as f:
                     total_lines += sum(1 for _ in f)
