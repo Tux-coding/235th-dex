@@ -4,6 +4,9 @@ import os
 import asyncio
 import signal
 import json
+import datetime
+import shutil
+
 from typing import List
 from collections import Counter
 
@@ -166,6 +169,20 @@ def save_player_cards() -> None:
     except Exception as e:
         logging.error(f"Error saving player cards: {e}")
 
+def create_backup():
+    try:
+        timestamp = datetime.datetime.now().strftime("%Y%m%d_%H%M%S")
+        backup_filename = f"player_cards_backup_{timestamp}.json"
+        shutil.copy('player_cards.json', backup_filename)
+        logging.info(f"Created backup: {backup_filename}")
+    except Exception as e:
+        logging.error(f"Failed to create backup: {e}")
+
+@tasks.loop(hours=8)
+async def backup_player_data():
+    logging.info("Running scheduled backup of player data")
+    create_backup()
+
 def user_has_card(user_id: str, card_name: str) -> bool:
     card_name = card_name.lower()
     for card in player_cards.get(user_id, []):
@@ -221,12 +238,15 @@ class CatchButton(Button):
         self.card_name = card_name
 
     async def callback(self, interaction: discord.Interaction):
-        if is_test_mode and str(interaction.user.id) not in authorized_user_ids:
+        user_id = str(interaction.user.id)
+        if is_test_mode and user_id not in authorized_user_ids:
             await interaction.response.send_message("We are currently updating the bot, please wait until we are finished.", ephemeral=True)
             return
-        if BlacklistManager.is_blacklisted(str(interaction.user.id)):
+        
+        if BlacklistManager.is_blacklisted(str(interaction.user.id)) and user_id not in authorized_user_ids:
             await interaction.response.send_message("You are blacklisted and cannot use this bot.", ephemeral=True)
             return
+        
         user = interaction.user
         if user_has_card(str(user.id), self.card_name):
             await interaction.response.send_message("You already have this card!", ephemeral=True)
@@ -248,24 +268,62 @@ class ProgressView(View):
         self.missing_cards = missing_cards
         self.user = user
         self.current_page = 0
-        self.max_page = (len(user_cards) + 9) // 10  # 10 cards per page
+        self.viewing_owned = True  # Start by viewing owned cards
+        
+        # Calculate pages needed for owned cards
+        self.owned_pages = max(1, (len(user_cards) + 9) // 10)  # At least 1 page
+        
+        # Calculate pages needed for missing cards
+        self.missing_pages = max(1, (len(missing_cards) + 9) // 10)  # At least 1 page
+        
+        # Total pages across both sections
+        self.total_pages = self.owned_pages + self.missing_pages
+        
         self.update_buttons()
 
+    def create_embed(self):
+        if self.viewing_owned:
+            return self.create_owned_embed()
+        else:
+            return self.create_missing_embed()
+    
     def update_buttons(self):
         self.clear_items()
+        
+        # Previous page button
         if self.current_page > 0:
-            prev_button = Button(label="Previous", style=discord.ButtonStyle.primary)
+            prev_button = Button(label="Previous", style=discord.ButtonStyle.primary, emoji="⬅️")
             prev_button.callback = self.previous_page
             self.add_item(prev_button)
-        if self.current_page < self.max_page - 1:
-            next_button = Button(label="Next", style=discord.ButtonStyle.primary)
+        
+        # Toggle between owned and missing cards
+        toggle_label = "View Missing Cards" if self.viewing_owned else "View Owned Cards"
+        toggle_button = Button(label=toggle_label, style=discord.ButtonStyle.secondary, emoji="🔄")
+        toggle_button.callback = self.toggle_view
+        self.add_item(toggle_button)
+        
+        # Next page button
+        if (self.viewing_owned and self.current_page < self.owned_pages - 1) or \
+           (not self.viewing_owned and self.current_page < self.missing_pages - 1):
+            next_button = Button(label="Next", style=discord.ButtonStyle.primary, emoji="➡️")
             next_button.callback = self.next_page
             self.add_item(next_button)
+
+    async def toggle_view(self, interaction: discord.Interaction):
+        if interaction.user != self.user:
+            await interaction.response.send_message("You can't control this menu, sorry!", ephemeral=True)
+            return
+            
+        self.viewing_owned = not self.viewing_owned
+        self.current_page = 0  # Reset to first page when toggling view
+        self.update_buttons()
+        await interaction.response.edit_message(embed=self.create_embed(), view=self)
 
     async def previous_page(self, interaction: discord.Interaction):
         if interaction.user != self.user:
             await interaction.response.send_message("You can't control this menu, sorry!", ephemeral=True)
             return
+            
         self.current_page -= 1
         self.update_buttons()
         await interaction.response.edit_message(embed=self.create_embed(), view=self)
@@ -274,24 +332,47 @@ class ProgressView(View):
         if interaction.user != self.user:
             await interaction.response.send_message("You can't control this menu, sorry!", ephemeral=True)
             return
+            
         self.current_page += 1
         self.update_buttons()
         await interaction.response.edit_message(embed=self.create_embed(), view=self)
-
-    def create_embed(self):
-        embed = discord.Embed(title="Card Collection Progress")
+            
+    def create_owned_embed(self):
+        embed = discord.Embed(
+            title="📚 Card Collection Progress",
+            description=f"Showing your owned cards ({len(self.user_cards)}/{len(self.user_cards) + len(self.missing_cards)} collected)",
+            color=discord.Color.green()
+        )
+        
         start = self.current_page * 10
-        end = start + 10
-
-        owned_cards = "\n".join(self.user_cards[start:end])
-        embed.add_field(name="Owned Cards", value=owned_cards or "None", inline=False)
-
-        if end >= len(self.user_cards):
-            missing_start = max(0, start - len(self.user_cards))
-            missing_end = max(0, end - len(self.user_cards))
-            missing_cards = "\n".join(self.missing_cards[missing_start:missing_end])
-            embed.add_field(name="Missing Cards", value=missing_cards or "None", inline=False)
-
+        end = min(start + 10, len(self.user_cards))
+        
+        if self.user_cards:
+            owned_cards = "\n".join([f"• {card}" for card in self.user_cards[start:end]])
+            embed.add_field(name="📋 Your Cards", value=owned_cards, inline=False)
+        else:
+            embed.add_field(name="📋 Your Cards", value="You don't have any cards yet.", inline=False)
+        
+        embed.set_footer(text=f"Page {self.current_page + 1}/{self.owned_pages} (Owned Cards) • Use buttons to navigate")
+        return embed
+            
+    def create_missing_embed(self):
+        embed = discord.Embed(
+            title="📚 Card Collection Progress",
+            description=f"Showing missing cards ({len(self.missing_cards)} remaining)",
+            color=discord.Color.red()
+        )
+        
+        start = self.current_page * 10
+        end = min(start + 10, len(self.missing_cards))
+        
+        if self.missing_cards:
+            missing_cards = "\n".join([f"• {card}" for card in self.missing_cards[start:end]])
+            embed.add_field(name="❓ Missing Cards", value=missing_cards, inline=False)
+        else:
+            embed.add_field(name="❓ Missing Cards", value="You've collected all cards! Congratulations!", inline=False)
+        
+        embed.set_footer(text=f"Page {self.current_page + 1}/{self.missing_pages} (Missing Cards) • Use buttons to navigate")
         return embed
 
 # List of allowed server IDs
@@ -336,7 +417,7 @@ async def set_spawn_mode(ctx, mode: str):
 last_spawned_card = None
 spawned_messages = []
 
-@tasks.loop(minutes=20)
+@tasks.loop(minutes=1)
 async def spawn_card():
     global last_spawned_card, spawned_messages
     channels = []
@@ -442,19 +523,24 @@ async def on_ready():
             except Exception as e:
                 logging.error(f"Failed to send message to channel {channel.id}: {e}")
         else:
-            
             logging.error(f"Channel not found.")
     
     # Disable buttons of previous cards on restart
-    for message in spawned_messages:
-        view = message.components[0]
-        for item in view.children:
-            if isinstance(item, Button):
-                item.disabled = True
-        await message.edit(view=view)
+    try:
+        for message in spawned_messages:
+            if hasattr(message, 'components') and message.components:
+                view = message.components[0]
+                for item in view.children:
+                    if isinstance(item, Button):
+                        item.disabled = True
+                await message.edit(view=view)
+    except Exception as e:
+        logging.error(f"Failed to disable buttons on previous cards: {e}")
+
     spawned_messages = []
 
     spawn_card.start()
+    backup_player_data.start()  # Start the backup task
 
 # see_card command to see a specific card
 @bot.command(name='see_card')
@@ -507,31 +593,49 @@ async def give_card(ctx, card: str, receiving_user: discord.Member):
     save_player_cards()  # Save the updated player cards
     await ctx.send(f"{ctx.author.mention} has given `{actual_card_name}` to {receiving_user.mention}.")
     logging.info(f"{ctx.author} gave {actual_card_name} to {receiving_user}.")
+
 # Command to spawn a certain card
 @bot.command(name='spawn_card', help="Spawn a specific card.")
 @commands.check(is_authorized)
-async def spawn_card_command(ctx, card_name: str):
-    card_name = card_name.strip().lower()
+async def spawn_card_command(ctx, *, args: str):
+    args = args.strip().lower()
+    
+    # Check if 'test' is in the arguments
+    use_test_channel = False
+    if args.endswith(' test'):
+        use_test_channel = True
+        card_name = args[:-5].strip()  # Remove ' test' from the end
+    else:
+        card_name = args
+    
+    # Validate card name
     if not all(c.isalnum() or c.isspace() or c in ["'", "-"] for c in card_name):
         await ctx.send("Invalid card name. Only alphanumeric characters, spaces, apostrophes, and hyphens are allowed.")
         return
 
     card = next((card for card in cards if card_name == card["name"].lower() or card_name in [alias.lower() for alias in card.get("aliases", [])]), None)
     if card:
-        channel = bot.get_channel(int(channel_id))
+        # Choose the channel based on the 'test' parameter
+        if use_test_channel:
+            channel = bot.get_channel(int(test_channel_id))
+            channel_name = "test channel"
+        else:
+            channel = bot.get_channel(int(channel_id))
+            channel_name = "main channel"
+
         if channel:
             embed = discord.Embed(title=f"A wild card has appeared!", description="Click the button below to catch it!")
             embed.set_image(url=card['spawn_image_url'])
             await channel.send(embed=embed, view=CatchView(card['name']))
-            await ctx.send(f"{card['name']} has been spawned.")
+            await ctx.send(f"{card['name']} has been spawned in the {channel_name}.")
         else:
-            await ctx.send("Channel not found.")
+            await ctx.send(f"Channel not found for {channel_name}.")
     else:
         await ctx.send("Card not found.")
 
 @bot.command(name='givecard')
 @commands.check(is_authorized)
-async def give_card(ctx, card: str, receiving_user: discord.Member):
+async def admin_give_card(ctx, card: str, receiving_user: discord.Member):
     receiver_id = str(receiving_user.id)
     card_lower = card.lower()
 
@@ -651,7 +755,7 @@ async def check_conditions(ctx):
     if is_test_mode and str(ctx.author.id) not in authorized_user_ids and not ctx.command.name == 'set_spawn_mode':
         await ctx.send("We are currently updating the bot, please wait until we are finished.")
         raise commands.CheckFailure("Bot is in test mode.")
-    if BlacklistManager.is_blacklisted(str(ctx.author.id)):
+    if BlacklistManager.is_blacklisted(str(ctx.author.id)) and str(ctx.author.id) not in authorized_user_ids:
         await ctx.send("You are blacklisted and cannot use this bot.")
         raise commands.CheckFailure("User is blacklisted.")
 
@@ -669,6 +773,7 @@ async def shutdown_bot():
         else:
             logging.error(f"Channel not found.")
     logging.info("235th dex going offline")
+    create_backup()
     await bot.close()
 
 # Command to shut down the bot

@@ -5,9 +5,9 @@
         "Sentinel",
         "Blau",
         "Hounder",
-        "Pipopro",
         "Wilson",
         "Stinger",
+        "Sandy",
         "Rancor",
         "Cooker",
         "Longshot",
@@ -21,7 +21,6 @@
         "Stars",
         "Ringo",
         "Rush",
-        "Breaker",
         "Micro",
         "Zak",
         "Hollow",
@@ -29,9 +28,8 @@
         "Apok",
         "Sharpeye",
         "Sparrow",
-        "Worst",
-        "Sigma squad",
-        "Sandy"
+        "Pipopro",
+        "Breaker"
     ],
     "1035607651985403965": [
         "Dicer",
@@ -42,6 +40,7 @@
         "Pipopro",
         "Wilson",
         "Stinger",
+        "Sandy",
         "Rancor",
         "Cooker",
         "Longshot",
@@ -64,42 +63,10 @@
         "Sharpeye",
         "Sparrow",
         "Worst",
-        "Sigma squad",
-        "Sandy"
+        "Sigma-squad",
+        "Sparrow"
     ],
-    "845973389415284746": [
-        "Sandy",
-        "Dicer",
-        "Reyes",
-        "Sentinel",
-        "Blau",
-        "Hounder",
-        "Pipopro",
-        "Wilson",
-        "Stinger",
-        "Sandy",
-        "Rancor",
-        "Cooker",
-        "Longshot",
-        "Mertho",
-        "Bricker",
-        "Sinner",
-        "Voca",
-        "Ren'dar Auron",
-        "Skye",
-        "Je'keshi Vale",
-        "Stars",
-        "Rush",
-        "Breaker",
-        "Micro",
-        "Zak",
-        "Hollow",
-        "Vic",
-        "Apok",
-        "Sparrow",
-        "Worst",
-        "Ringo"
-    ],
+    "845973389415284746": [],
     "1096880582547472527": [
         "Longshot",
         "Skye",
@@ -120,7 +87,12 @@
         "Breaker",
         "Vic",
         "Ringo",
-        "Micro"
+        "Micro",
+        "Je'keshi Vale",
+        "Mertho",
+        "Cooker",
+        "Stinger",
+        "Sparrow"
     ],
     "1046453039638253729": [
         "Skye",
@@ -148,7 +120,11 @@
         "Worst",
         "Rush",
         "Sharpeye",
-        "Sparrow"
+        "Sparrow",
+        "Je'keshi Vale",
+        "Ringo",
+        "Pipopro",
+        "Dicer"
     ],
     "1228514070009876600": [
         "Skye",
@@ -175,7 +151,10 @@
         "Sharpeye",
         "Worst",
         "Blau",
-        "Sparrow"
+        "Sparrow",
+        "Pipopro",
+        "Dicer",
+        "Rancor"
     ],
     "1262605411408806000": [
         "Sentinel",
@@ -184,7 +163,8 @@
     "1205742541505437737": [
         "Sentinel",
         "Voca",
-        "Ringo"
+        "Ringo",
+        "Sparrow"
     ],
     "783884810912399380": [
         "Zak",
@@ -208,7 +188,13 @@
         "Sparrow",
         "Je'keshi Vale",
         "Sinner",
-        "Dicer"
+        "Dicer",
+        "Cooker",
+        "Sentinel",
+        "Blau",
+        "Apok",
+        "Hounder",
+        "Stars"
     ],
     "1175180741596942350": [
         "Zak",
@@ -231,7 +217,13 @@
         "Sharpeye",
         "Blau",
         "Cooker",
-        "Mertho"
+        "Mertho",
+        "Ren'dar Auron",
+        "Vic",
+        "Sparrow",
+        "Hounder",
+        "Rancor",
+        "Pipopro"
     ],
     "1290359222332162119": [
         "Sinner",
@@ -243,7 +235,9 @@
         "Apok",
         "Blau",
         "Skye",
-        "Mertho"
+        "Mertho",
+        "Sigma-squad",
+        "Stars"
     ],
     "1275741230705152062": [
         "Ringo",
@@ -278,7 +272,11 @@
         "Rush",
         "Mertho",
         "Bricker",
-        "Micro"
+        "Micro",
+        "Cooker",
+        "Breaker",
+        "Ren'dar Auron",
+        "Stars"
     ],
     "1206536927658909737": [
         "Zak",
@@ -299,12 +297,18 @@
         "Blau",
         "Worst",
         "Sharpeye",
-        "Sigma squad",
+        "Sigma-squad",
         "Sparrow",
         "Ren'dar Auron",
         "Micro",
         "Breaker",
-        "Rancor"
+        "Rancor",
+        "Hounder",
+        "Cooker",
+        "Stars",
+        "Pipopro",
+        "Dicer",
+        "Je'keshi Vale"
     ],
     "1238214734428377198": [
         "Skye",
@@ -331,12 +335,18 @@
         "Apok",
         "Worst",
         "Sparrow",
-        "Je'keshi Vale"
+        "Je'keshi Vale",
+        "Micro",
+        "Zak",
+        "Reyes",
+        "Dicer"
     ],
     "826156031906283571": [
         "Sandy",
         "Longshot",
-        "Ren'dar Auron"
+        "Ren'dar Auron",
+        "Hounder",
+        "Bricker"
     ],
     "1195584762954395738": [
         "Rush",
@@ -356,7 +366,16 @@
         "Sentinel",
         "Voca",
         "Cooker",
-        "Sinner"
+        "Sinner",
+        "Mertho",
+        "Hounder",
+        "Breaker",
+        "Je'keshi Vale",
+        "Apok",
+        "Sharpeye",
+        "Hollow",
+        "Blau",
+        "Dicer"
     ],
     "1162762570915123201": [
         "Dicer",
@@ -373,7 +392,12 @@
         "Longshot",
         "Breaker",
         "Apok",
-        "Sinner"
+        "Sinner",
+        "Voca",
+        "Worst",
+        "Sparrow",
+        "Ren'dar Auron",
+        "Micro"
     ],
     "1195045771762999376": [
         "Sinner",
@@ -398,7 +422,10 @@
         "Sharpeye",
         "Apok",
         "Worst",
-        "Sentinel"
+        "Sentinel",
+        "Stars",
+        "Sparrow",
+        "Cooker"
     ],
     "1159121566681006110": [
         "Rush",
@@ -419,7 +446,12 @@
         "Sentinel",
         "Micro",
         "Apok",
-        "Mertho"
+        "Mertho",
+        "Voca",
+        "Je'keshi Vale",
+        "Ren'dar Auron",
+        "Cooker",
+        "Hounder"
     ],
     "1044399085211373698": [
         "Vic",
@@ -436,7 +468,14 @@
         "Zak",
         "Voca",
         "Sparrow",
-        "Sharpeye"
+        "Sharpeye",
+        "Mertho",
+        "Ren'dar Auron",
+        "Hounder",
+        "Je'keshi Vale",
+        "Dicer",
+        "Blau",
+        "Sentinel"
     ],
     "1245363823846756418": [
         "Ringo",
@@ -454,7 +493,10 @@
         "Worst",
         "Dicer",
         "Stars",
-        "Sharpeye"
+        "Sharpeye",
+        "Micro",
+        "Blau",
+        "Rancor"
     ],
     "802260200501411910": [
         "Longshot",
@@ -472,7 +514,15 @@
         "Sinner",
         "Ren'dar Auron",
         "Skye",
-        "Stinger"
+        "Stinger",
+        "Je'keshi Vale",
+        "Sharpeye",
+        "Ringo",
+        "Apok",
+        "Cooker",
+        "Zak",
+        "Hounder",
+        "Blau"
     ],
     "1223247679144988765": [
         "Breaker",
@@ -487,7 +537,16 @@
         "Voca",
         "Stars",
         "Sinner",
-        "Mertho"
+        "Mertho",
+        "Je'keshi Vale",
+        "Sparrow",
+        "Hollow",
+        "Ren'dar Auron",
+        "Hounder",
+        "Cooker",
+        "Pipopro",
+        "Sharpeye",
+        "Micro"
     ],
     "689468537387089981": [
         "Bricker",
@@ -504,7 +563,12 @@
         "Sinner",
         "Voca",
         "Rush",
-        "Worst"
+        "Worst",
+        "Rancor",
+        "Breaker",
+        "Hounder",
+        "Sparrow",
+        "Stars"
     ],
     "1244694798594609212": [
         "Breaker",
@@ -531,7 +595,8 @@
         "Vic",
         "Rush",
         "Sparrow",
-        "Sentinel"
+        "Sentinel",
+        "Apok"
     ],
     "1260602625955725465": [
         "Dicer",
@@ -539,11 +604,20 @@
         "Bricker",
         "Sandy",
         "Mertho",
-        "Worst"
+        "Worst",
+        "Breaker",
+        "Sharpeye"
     ],
     "1111186604623675513": [
         "Sandy",
-        "Bricker"
+        "Bricker",
+        "Ringo",
+        "Sharpeye",
+        "Longshot",
+        "Skye",
+        "Apok",
+        "Sentinel",
+        "Micro"
     ],
     "977299254290833469": [
         "Bricker",
@@ -557,7 +631,16 @@
         "Ringo",
         "Voca",
         "Sparrow",
-        "Je'keshi Vale"
+        "Je'keshi Vale",
+        "Dicer",
+        "Skye",
+        "Sandy",
+        "Hollow",
+        "Breaker",
+        "Micro",
+        "Hounder",
+        "Ren'dar Auron",
+        "Sentinel"
     ],
     "1293641249043255450": [
         "Stinger",
@@ -565,7 +648,27 @@
         "Worst",
         "Sandy",
         "Vic",
-        "Sparrow"
+        "Sparrow",
+        "Blau",
+        "Hollow",
+        "Longshot",
+        "Sinner",
+        "Sharpeye",
+        "Ren'dar Auron",
+        "Hounder",
+        "Ringo",
+        "Apok",
+        "Voca",
+        "Sentinel",
+        "Rush",
+        "Rancor",
+        "Mertho",
+        "Micro",
+        "Stars",
+        "Dicer",
+        "Cooker",
+        "Skye",
+        "Bricker"
     ],
     "842050909844275231": [
         "Sharpeye"
@@ -600,17 +703,41 @@
         "Breaker",
         "Bricker",
         "Voca",
-        "Sandy"
+        "Sandy",
+        "Ren'dar Auron",
+        "Blau",
+        "Dicer",
+        "Wilson",
+        "Je'keshi Vale",
+        "Cooker",
+        "Rancor"
     ],
     "1174669097938735165": [
-        "Worst"
+        "Worst",
+        "Mertho",
+        "Zak",
+        "Je'keshi Vale",
+        "Hounder",
+        "Vic",
+        "Micro",
+        "Hollow",
+        "Sinner",
+        "Rush",
+        "Ren'dar Auron",
+        "Bricker",
+        "Voca",
+        "Sandy",
+        "Breaker",
+        "Skye"
     ],
     "1137595181441482783": [
         "Vic",
         "Mertho",
         "Stinger",
         "Sandy",
-        "Hollow"
+        "Hollow",
+        "Breaker",
+        "Sparrow"
     ],
     "1321813254128930867": [
         "Bricker",
@@ -619,25 +746,72 @@
         "Rancor",
         "Longshot",
         "Sharpeye",
-        "Ringo"
+        "Ringo",
+        "Mertho",
+        "Pipopro",
+        "Pipopro"
     ],
     "1290046959301689498": [
         "Apok",
         "Blau",
-        "Hollow"
+        "Hollow",
+        "Voca",
+        "Sandy",
+        "Skye"
     ],
     "1103370791145447495": [
-        "hounder",
         "Reyes",
         "Dicer",
         "Hounder",
         "Wilson"
     ],
     "693058056593866782": [
-        "Rancor"
+        "Rancor",
+        "Hounder"
     ],
     "735678657569357884": [
         "Mertho",
-        "Ringo"
+        "Ringo",
+        "Apok",
+        "Voca"
+    ],
+    "485936161643298817": [
+        "Sinner",
+        "Sandy"
+    ],
+    "808033389051248661": [
+        "Stinger",
+        "Sinner",
+        "Voca",
+        "Skye",
+        "Sandy",
+        "Ren'dar Auron",
+        "Apok",
+        "Vic",
+        "Micro",
+        "Hollow"
+    ],
+    "1200861210963357822": [
+        "Hollow",
+        "Cooker",
+        "Sharpeye",
+        "Sinner",
+        "Sandy",
+        "Micro",
+        "Worst",
+        "Longshot"
+    ],
+    "235148962103951360": [
+        "subtle_discontent"
+    ],
+    "1314855013922897982": [
+        "Zak",
+        "Voca",
+        "Apok",
+        "Blau"
+    ],
+    "1226870596952916081": [
+        "Voca",
+        "Hollow"
     ]
 }
