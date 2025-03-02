@@ -146,20 +146,35 @@ modal_lock = asyncio.Lock()
 def load_player_cards() -> None:
     global player_cards
     try:
-        if os.path.getsize('player_cards.json') > 0:  # Check if the file is not empty
+        if os.path.exists('player_cards.json') and os.path.getsize('player_cards.json') > 0:
             with open('player_cards.json', 'r') as f:
                 player_cards = json.load(f)
             # Ensure all keys are strings
             player_cards = {str(k): v for k, v in player_cards.items()}
         else:
+            # Create a new file if it doesn't exist or is empty
             player_cards = {}
-            logging.info("Player cards file is empty. Starting with an empty dictionary.")
-    except FileNotFoundError:
-        logging.error("No player cards file found. Aborting.")
-        exit(1)
+            logging.info("Player cards file is empty or doesn't exist. Creating a new file.")
+            save_player_cards()  # Save the empty dictionary to create the file
     except json.JSONDecodeError as e:
         logging.error(f"Error decoding JSON from player cards file: {e}")
-        exit(1)
+        # Try to recover from the most recent backup
+        backup_files = [f for f in os.listdir() if f.startswith("player_cards_backup_")]
+        if backup_files:
+            latest_backup = max(backup_files)
+            logging.info(f"Attempting to recover from backup: {latest_backup}")
+            try:
+                with open(latest_backup, 'r') as f:
+                    player_cards = json.load(f)
+                player_cards = {str(k): v for k, v in player_cards.items()}
+                logging.info("Recovery successful")
+                save_player_cards()  # Save the recovered data back to the main file
+            except Exception as backup_error:
+                logging.error(f"Backup recovery failed: {backup_error}")
+                player_cards = {}
+        else:
+            logging.error("No backups found. Starting with an empty dictionary.")
+            player_cards = {}
 
 # Save player cards to a JSON file
 def save_player_cards() -> None:
