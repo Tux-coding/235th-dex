@@ -184,12 +184,17 @@ def save_player_cards() -> None:
     except Exception as e:
         logging.error(f"Error saving player cards: {e}")
 
+# Backup creation
+backup_folder = "backup_folder"
+os.makedirs(backup_folder, exist_ok=True)
+
 def create_backup():
     try:
         timestamp = datetime.datetime.now().strftime("%Y%m%d_%H%M%S")
         backup_filename = f"player_cards_backup_{timestamp}.json"
-        shutil.copy('player_cards.json', backup_filename)
-        logging.info(f"Created backup: {backup_filename}")
+        backup_filepath = os.path.join(backup_folder, backup_filename)
+        shutil.copy('player_cards.json', backup_filepath)
+        logging.info(f"Created backup: {backup_filename} in {backup_filepath}")
     except Exception as e:
         logging.error(f"Failed to create backup: {e}")
 
@@ -711,7 +716,7 @@ async def list_commands(ctx):
     await ctx.send(f'Here is a list of all the commands you can use:\n{commands_description}')
 
 #info, command to show the current release
-@bot.command(name='info_dex', help="Shows some info like the current release, developers and total lines of code!")
+@bot.command(name='info_dex', help="General info about the dex")
 async def info(ctx):
 
     #bit of code to count the lines of code in the project
