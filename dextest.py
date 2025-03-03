@@ -238,17 +238,14 @@ class CatchModal(Modal):
             input_name = self.card_input.value.lower()
             if input_name == self.card_name.lower() or input_name in [alias.lower() for alias in next(card['aliases'] for card in cards if card['name'].lower() == self.card_name.lower())]:
                 user_id = str(user.id)
-                if not user_has_card(user_id, self.card_name):
-                    player_cards.setdefault(user_id, []).append(self.card_name)
-                    save_player_cards()
-                    await interaction.response.send_message(f"{user.mention} caught the card: {self.card_name}!", ephemeral=False)
-                    self.view.card_claimed = True
-                    for item in self.view.children:
-                        if isinstance(item, Button):
-                            item.disabled = True
-                    await self.message.edit(view=self.view)
-                else:
-                    await interaction.response.send_message(f"{user.mention}, you already have this card.", ephemeral=True)
+                player_cards.setdefault(user_id, []).append(self.card_name)
+                save_player_cards()
+                await interaction.response.send_message(f"{user.mention} caught the card: {self.card_name}!", ephemeral=False)
+                self.view.card_claimed = True
+                for item in self.view.children:
+                    if isinstance(item, Button):
+                        item.disabled = True
+                await self.message.edit(view=self.view)
             else:
                 await interaction.response.send_message(f"{user.mention}; Incorrect name.", ephemeral=False)
 
@@ -268,11 +265,8 @@ class CatchButton(Button):
             return
         
         user = interaction.user
-        if user_has_card(str(user.id), self.card_name):
-            await interaction.response.send_message("You already have this card!", ephemeral=True)
-        else:
-            modal = CatchModal(self.card_name, self.view, interaction.message)
-            await interaction.response.send_modal(modal)
+        modal = CatchModal(self.card_name, self.view, interaction.message)
+        await interaction.response.send_modal(modal)
 
 class CatchView(View):
     def __init__(self, card_name):
@@ -368,7 +362,8 @@ class ProgressView(View):
         end = min(start + 10, len(self.user_cards))
         
         if self.user_cards:
-            owned_cards = "\n".join([f"• {card}" for card in self.user_cards[start:end]])
+            card_counts = Counter(self.user_cards)
+            owned_cards = "\n".join([f"• {card} x{count}" if count > 1 else f"• {card}" for card, count in card_counts.items()][start:end])
             embed.add_field(name="📋 Your Cards", value=owned_cards, inline=False)
         else:
             embed.add_field(name="📋 Your Cards", value="You don't have any cards yet.", inline=False)
