@@ -699,7 +699,7 @@ async def list_commands(ctx):
     commands_list = [
         '!hello - Responds with a greeting message.',
         '!random_number - Gives a random number',
-        '!info_dex - Shows the current release ',
+        '!info_dex - Shows info about the dex',
         '!see_card - View a card you have caught.',
         '!progress - Shows your progress in catching cards.',
         '!stats - Shows the stats of a certain card.',
@@ -713,8 +713,11 @@ async def list_commands(ctx):
 #info, command to show the current release
 @bot.command(name='info_dex', help="General info about the dex")
 async def info(ctx):
+    total_lines = count_lines_of_code()
+    embed = discord.Embed(title="Current Release", description=f"v.1.2.5, \"The more-stats update\"\n Developers: <@1035607651985403965>, <@573878397952851988> and <@845973389415284746> \n Total lines of code: {total_lines}")
+    await ctx.send(embed=embed) #expand later when we actually released the bot to the public
 
-    #bit of code to count the lines of code in the project
+def count_lines_of_code() -> int:
     project_dir = '/home/container'
     total_lines = 0
 
@@ -724,16 +727,39 @@ async def info(ctx):
                 file_path = os.path.join(root, file)
                 with open(file_path, 'r') as f:
                     total_lines += sum(1 for _ in f)
-                    
-    embed = discord.Embed(title="Current Release", description=f"v.1.2.5, \"The more-stats update\"\n Developers: <@1035607651985403965>, <@573878397952851988> and <@845973389415284746> \n Total lines of code: {total_lines}")
-    await ctx.send(embed=embed) #expand later when we actually released the bot to the public
+    return total_lines
 
 # Command to play a certain GIF, restricted to authorized users
 @bot.command(name='celebrate')
 @commands.check(is_authorized)
 async def play_gif(ctx):
     gif_url = "https://images-ext-1.discordapp.net/external/g2WvOwPwXD3KtaqKdjNQ-RWFBmwpS01Nc2f_NPURW7w/https/media.tenor.com/BDxIoo-dxPgAAAPo/missouri-tigers-truman-the-tiger.mp4"
-    await ctx.send(gif_url)
+    embed = discord.Embed()
+    embed.set_image(url=gif_url)
+    await ctx.send(embed=embed)
+
+# for funzies, it reacts to messages
+@bot.event
+async def on_message(message):
+    if message.author == bot.user:
+        return
+
+    if "good bot" in message.content.lower():
+        await message.channel.send("Good human!")
+
+    if "bad bot" in message.content.lower():
+        embed = discord.Embed(title="I think you meant to say... good bot")
+        embed.set_image(url="https://media.discordapp.net/attachments/1322202354421989414/1346845659252391999/th-2404264802.jpg?ex=67c9ab44&is=67c859c4&hm=bc40b032057c8635bedfcc07519d561bc58edad1d2e1715a24694e5f43112108&=&format=webp")
+        await message.channel.send(embed=embed)
+
+        await bot.process_commands(message)
+
+@bot.command(name="gud_boy")
+async def gud_boy(ctx):
+    gud_boy_url = "https://cdn.discordapp.com/attachments/1258772746897461458/1340729833889464422/image0.gif?ex=67c92c35&is=67c7dab5&hm=0b58bb55cc24fbeb9e74f77ed4eedaf4d48ba68f61e82922b9632c6a61f7713b&"
+    embed = discord.Embed()
+    embed.set_image(url=gud_boy_url)
+    await ctx.send(embed=embed)
 
 # Public !stats command
 @bot.command(name='stats_full', help="Show general statistics about the card game.")

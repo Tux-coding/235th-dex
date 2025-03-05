@@ -75,8 +75,8 @@ cards = [
     {
         "name": "Sandy",
         "aliases": ["Granular"],
-        "spawn_image_url": "https://media.discordapp.net/attachments/1322205679028670495/1328809463808786484/RobloxScreenShot20250114_202141022.png?ex=6788b680&is=67876500&hm=f88665db11b61879168dc16a335b20bf08e4ef4dbbeb160f34032bde5141ae58&=&format=webp&quality=lossless&width=435&height=385",
-        "card_image_url": "https://media.discordapp.net/attachments/1322202570529177642/1328809380963024958/Kopie_van_Just_another_trooper_trying_to_stay_alive._He_doesnt_like_insurgents._His_left_arm_and_left_eye_are_gone_due_to_the_Gulag_3.png?ex=6788b66c&is=678764ec&hm=9ca081637314761fd9498e200160838cfad472a388628ad4154cec6bc5cceae2&=&format=webp&quality=lossless&width=479&height=671",
+        "spawn_image_url": "",
+        "card_image_url": "https://i.imgur.com/CjvRccv.png",
         "rarity": 50,
         "health": 3000,
         "damage": 1950,
@@ -84,8 +84,8 @@ cards = [
     {
         "name": "Rancor",
         "aliases": ["Rancour"],
-        "spawn_image_url": "https://media.discordapp.net/attachments/1322205679028670495/1323561918878847047/RobloxScreenShot20241231_090056606.png?ex=6774f698&is=6773a518&hm=cffc47d9ab08a0b3d98df85ef86f7abf413be74c2b4f2ecc56ee520991ed5f7d&=&format=webp&quality=lossless",
-        "card_image_url": "https://media.discordapp.net/attachments/1322202570529177642/1323569282088697866/Just_another_trooper_trying_to_stay_alive._He_doesnt_like_insurgents._His_left_arm_and_left_eye_are_gone_due_to_the_Gulag_16.png?ex=6778f1f3&is=6777a073&hm=b3f539a1b286d529d971c78244b9028dee29ad4495c95222cc75af175a075bb0&=&format=webp&quality=lossless&width=250&height=350",
+        "spawn_image_url": "https://i.imgur.com/7zxapp6.png",
+        "card_image_url": "https://i.imgur.com/CjvRccv.png",
         "rarity": 12.5,
         "health": 6950,
         "damage": 3050,
@@ -281,11 +281,20 @@ cards = [
     },
     {
         "name": "Sigma-squad",
-        "aliases": ["eaglesmademedothis", "whydidiagreetothis", "PAIN", "aaah"],
+        "aliases": ["eaglesmademedothis", "whydidiagreetothis", "PAIN", "aaah","sigma squad"],
         "spawn_image_url": "https://cdn.discordapp.com/attachments/1322205679028670495/1323215414393700455/RobloxScreenShot20241230_100007909.png?ex=67a086e2&is=679f3562&hm=cf9521fb29329e7ab81f84548e9c0664566adc9dccac4bc549b1d0e8cd70f166&",
         "card_image_url": "https://media.discordapp.net/attachments/1322202570529177642/1323215495637504010/Pipopro_1.png?ex=67a086f6&is=679f3576&hm=a95177683cf7782138009565d2c8952c9d53482146ac5be7d829375fb03becf8&=&format=webp&quality=lossless&width=358&height=502",
         "rarity": 0,
         "health": 1,
         "attack": 100000000000000000000000000000000000000000000000000000000000000000000,
-    }
+    },
+    {
+        "name": "Hades",
+        "aliases": ["Hot Topic Hellboy", "Fiery Furnace Fred", "Devils Basement Manager", "Grim Gramps"],
+        "spawn_image_url": "https://i.imgur.com/ZyrxWzY.png",
+        "card_image_url": "https://i.imgur.com/tJQu2dZ.png",
+        "rarity": 67,
+        "health": 2900,
+        "damage": 1700,
+    },
 ]
