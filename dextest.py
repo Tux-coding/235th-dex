@@ -490,6 +490,7 @@ async def print_stats(ctx, *, card_name: str):
         embed.add_field(name="Health", value=card["health"], inline=True)
         embed.add_field(name="Damage", value=card["damage"], inline=True)
         embed.add_field(name="Rarity", value=f"{card['rarity']}%", inline=True)
+        #embed.add_field(name="Description", value=card["description"], inline=False) add later when all cards have a description
         await ctx.send(embed=embed)
     else:
         await ctx.send("Card not found.")
@@ -745,14 +746,16 @@ async def on_message(message):
         return
 
     if "good bot" in message.content.lower():
-        await message.channel.send("Good human!")
+        embed = discord.Embed(title="good human!")
+        embed.set_image(url="https://media.discordapp.net/attachments/1258772746897461458/1340729833889464422/image0.gif?ex=67c92c35&is=67c7dab5&hm=0b58bb55cc24fbeb9e74f77ed4eedaf4d48ba68f61e82922b9632c6a61f7713b&=")
+        await message.channel.send(embed=embed)
 
     if "bad bot" in message.content.lower():
         embed = discord.Embed(title="I think you meant to say... good bot")
         embed.set_image(url="https://media.discordapp.net/attachments/1322202354421989414/1346845659252391999/th-2404264802.jpg?ex=67c9ab44&is=67c859c4&hm=bc40b032057c8635bedfcc07519d561bc58edad1d2e1715a24694e5f43112108&=&format=webp")
         await message.channel.send(embed=embed)
 
-        await bot.process_commands(message)
+    await bot.process_commands(message)
 
 @bot.command(name="gud_boy")
 async def gud_boy(ctx):

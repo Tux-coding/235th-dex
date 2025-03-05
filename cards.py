@@ -1,4 +1,5 @@
 # List of cards with their names and image URLs
+#NOTE: start adding descriptions please, we might need them later if we're actually planning on using PIL(the image api thingie) for variable stats
 cards = [
     {
         "name": "Dicer",
@@ -8,6 +9,7 @@ cards = [
         "rarity": 8.5,  
         "health": 6500,
         "damage": 3500,
+        "description": "he's retired "
     },
     {
         "name": "Reyes",
@@ -53,6 +55,7 @@ cards = [
         "rarity": 0.75,
         "health": 15000,
         "damage": 7500,
+        "description": "Was one of the developers before he changed his mind and became a world-class tap dancer, to outdance the dangers of a galaxy far, far away.."
     },
     {
         "name": "Wilson",
@@ -260,6 +263,7 @@ cards = [
         "rarity": 89,
         "health": 1200,
         "damage": 550,
+        "description": "Going prone, aiming, and pulling the trigger. Target eliminated."
     },
     {
         "name": "Sparrow",
@@ -269,6 +273,7 @@ cards = [
         "rarity": 60,
         "health": 2600,
         "damage": 1700,
+        "description": "The best ever pilot in all of spitfire (says sparrow himself) breaker and fragger hate him."
     },
     {
         "name": "Worst",
@@ -278,6 +283,7 @@ cards = [
         "rarity": 86,
         "health": 1500,
         "damage": 750,
+        "description": "After a training disaster, his sergeant called him 'Worst' a failing marksman."
     },
     {
         "name": "Sigma-squad",
@@ -287,6 +293,7 @@ cards = [
         "rarity": 0,
         "health": 1,
         "attack": 100000000000000000000000000000000000000000000000000000000000000000000,
+        "description": "They might be sigma, but they are definitely not the best squad."
     },
     {
         "name": "Hades",
@@ -296,5 +303,6 @@ cards = [
         "rarity": 67,
         "health": 2900,
         "damage": 1700,
+        "description": "You know that one guy who thinks he's the main character but really isn't? Well, that's Hades right there!"
     },
 ]
