@@ -1,4 +1,5 @@
 # List of cards with their names and image URLs
+# NOTE: start adding descriptions please, we might need them later if we're actually planning on using PIL(the image api thingie) for variable stats
 cards = [
     {
         "name": "Dicer",
@@ -8,6 +9,7 @@ cards = [
         "rarity": 8.5,  
         "health": 6500,
         "damage": 3500,
+        "description": "Retired :-)"
     },
     {
         "name": "Reyes",
@@ -17,6 +19,7 @@ cards = [
         "rarity": 0.5,
         "health": 10000,
         "damage": 5000,
+        "description": "CC-1598 \"Reyes\" is the Marshal Commander of the 235th Elite Corps. He has led the Corps since the very beginning. His experience, tactical insight and French accent have earned him the trust of his troopers."
     },
     {
         "name": "Sentinel",
@@ -26,6 +29,7 @@ cards = [
         "rarity": 23,
         "health": 1650,
         "damage": 550,
+        "description": "Just another trooper trying to stay alive. He doesn't like insurgents. His left arm and left eye are gone due to the Gulag."
     },
     {
         "name": "Blau",
@@ -35,6 +39,7 @@ cards = [
         "rarity": 12.5,
         "health": 6050,
         "damage": 2250,
+        "description": "SLEEP."
     },
     {
         "name": "Hounder",
@@ -44,6 +49,7 @@ cards = [
         "rarity": 9.5,
         "health": 9250,
         "damage": 4500,
+        "description": "CC-9382 \"Hounder\" is a Senior Commander in the 235th Elite Corps. Hounder himself is a clone who doesn't take his rank too seriously and is mostly chill. Oh, keep an eye on your balls when he is around..."
     },
     {
         "name": "Pipopro",
@@ -53,6 +59,7 @@ cards = [
         "rarity": 0.75,
         "health": 15000,
         "damage": 7500,
+        "description": "Was one of the developers before he changed his mind and became a world-class tap dancer, to outdance the dangers of a galaxy far, far away.."
     },
     {
         "name": "Wilson",
@@ -62,6 +69,7 @@ cards = [
         "rarity": 1,
         "health": 9550,
         "damage": 4670,
+        "description": "CC-1695, also known as (grandpa) \"Wilson\" is one of the Senior Commanders of the Corps, also known for his ability as a sharpshooter. He always puts his brothers first, and motivates them with his baguettes on the battlefield."
     },
     {
         "name": "Stinger",
@@ -71,24 +79,27 @@ cards = [
         "rarity": 75,
         "health": 2150,
         "damage": 950,
+        "description": "Dead..."
     },
     {
         "name": "Sandy",
         "aliases": ["Granular"],
-        "spawn_image_url": "https://media.discordapp.net/attachments/1322205679028670495/1328809463808786484/RobloxScreenShot20250114_202141022.png?ex=6788b680&is=67876500&hm=f88665db11b61879168dc16a335b20bf08e4ef4dbbeb160f34032bde5141ae58&=&format=webp&quality=lossless&width=435&height=385",
-        "card_image_url": "https://media.discordapp.net/attachments/1322202570529177642/1328809380963024958/Kopie_van_Just_another_trooper_trying_to_stay_alive._He_doesnt_like_insurgents._His_left_arm_and_left_eye_are_gone_due_to_the_Gulag_3.png?ex=6788b66c&is=678764ec&hm=9ca081637314761fd9498e200160838cfad472a388628ad4154cec6bc5cceae2&=&format=webp&quality=lossless&width=479&height=671",
+        "spawn_image_url": "https://media.discordapp.net/attachments/1322205679028670495/1328809463808786484/RobloxScreenShot20250114_202141022.png?ex=67cded40&is=67cc9bc0&hm=ffc5380c0d4dcf711286e7ce8487ad98f804b3edf70f6742054ee83378a5e10b&=&format=webp&quality=lossless",
+        "card_image_url": "https://media.discordapp.net/attachments/1322202570529177642/1328809380963024958/Kopie_van_Just_another_trooper_trying_to_stay_alive._He_doesnt_like_insurgents._His_left_arm_and_left_eye_are_gone_due_to_the_Gulag_3.png?ex=67cded2c&is=67cc9bac&hm=517a0556055f176fe7f543ae4541d799ad7d9d1f6e69ff6c014eb656d8df2bcb&=&format=webp&quality=lossless",
         "rarity": 50,
         "health": 3000,
         "damage": 1950,
+        "description": "Sandy, also known as CT-2457, is a clone engineer in the 31st Shepherd Battalion. He is called Sandy because of his dirty armour on his first mission, which was to Tatooine."
     },
     {
         "name": "Rancor",
         "aliases": ["Rancour"],
-        "spawn_image_url": "https://media.discordapp.net/attachments/1322205679028670495/1323561918878847047/RobloxScreenShot20241231_090056606.png?ex=6774f698&is=6773a518&hm=cffc47d9ab08a0b3d98df85ef86f7abf413be74c2b4f2ecc56ee520991ed5f7d&=&format=webp&quality=lossless",
-        "card_image_url": "https://media.discordapp.net/attachments/1322202570529177642/1323569282088697866/Just_another_trooper_trying_to_stay_alive._He_doesnt_like_insurgents._His_left_arm_and_left_eye_are_gone_due_to_the_Gulag_16.png?ex=6778f1f3&is=6777a073&hm=b3f539a1b286d529d971c78244b9028dee29ad4495c95222cc75af175a075bb0&=&format=webp&quality=lossless&width=250&height=350",
+        "spawn_image_url": "https://i.imgur.com/7zxapp6.png",
+        "card_image_url": "https://i.imgur.com/CjvRccv.png",
         "rarity": 12.5,
         "health": 6950,
         "damage": 3050,
+        "description": "Rancor is an adaptable, honest, persistent, understanding, rational, Norwegian and easy-going clone. Missions he takes are mostly all around, as he's well rounded in (almost) everything, and is a good tactician... sort of."
     },
     {
         "name": "Cooker",
@@ -98,6 +109,7 @@ cards = [
         "rarity": 17.5,
         "health": 5000,
         "damage": 2500,
+        "description": "The number one stove! From medic to clone commando to sharpshooter, it is... the STOVE!"
     },
     {
         "name": "Longshot",
@@ -173,7 +185,7 @@ cards = [
     },
     {
         "name": "Stars",
-        "aliases": ["twinkletoes" ], #dont ask why, what, how, where or when
+        "aliases": ["Twinkletoes" ], #dont ask why, what, how, where or when
         "spawn_image_url": "https://cdn.discordapp.com/attachments/1322205679028670495/1327722697647456336/RobloxScreenShot20250111_203536461.png?ex=6784199f&is=6782c81f&hm=ce4fbdf5b8cf708d7fbec195863fdff44e799a322aeaaab456135d17a3a3d078&",
         "card_image_url": "https://cdn.discordapp.com/attachments/1322202570529177642/1327723966873210950/CC-_8.png?ex=67841acd&is=6782c94d&hm=139ff0e1661f647c03b15892c4834a8d8e6c8ebcd76b30688df4397366d3279f&", 
         "rarity": 8.5,
@@ -260,6 +272,7 @@ cards = [
         "rarity": 89,
         "health": 1200,
         "damage": 550,
+        "description": "Going prone, aiming, and pulling the trigger. Target eliminated."
     },
     {
         "name": "Sparrow",
@@ -269,6 +282,7 @@ cards = [
         "rarity": 60,
         "health": 2600,
         "damage": 1700,
+        "description": "The best ever pilot in all of spitfire (says sparrow himself) breaker and fragger hate him."
     },
     {
         "name": "Worst",
@@ -278,14 +292,26 @@ cards = [
         "rarity": 86,
         "health": 1500,
         "damage": 750,
+        "description": "After a training disaster, his sergeant called him 'Worst' a failing marksman."
     },
     {
         "name": "Sigma-squad",
-        "aliases": ["eaglesmademedothis", "whydidiagreetothis", "PAIN", "aaah"],
+        "aliases": ["eaglesmademedothis", "whydidiagreetothis", "PAIN", "aaah","sigma squad"],
         "spawn_image_url": "https://cdn.discordapp.com/attachments/1322205679028670495/1323215414393700455/RobloxScreenShot20241230_100007909.png?ex=67a086e2&is=679f3562&hm=cf9521fb29329e7ab81f84548e9c0664566adc9dccac4bc549b1d0e8cd70f166&",
         "card_image_url": "https://media.discordapp.net/attachments/1322202570529177642/1323215495637504010/Pipopro_1.png?ex=67a086f6&is=679f3576&hm=a95177683cf7782138009565d2c8952c9d53482146ac5be7d829375fb03becf8&=&format=webp&quality=lossless&width=358&height=502",
         "rarity": 0,
         "health": 1,
         "attack": 100000000000000000000000000000000000000000000000000000000000000000000,
-    }
+        "description": "They might be sigma, but they are definitely not the best squad."
+    },
+    {
+        "name": "Hades",
+        "aliases": ["Hot Topic Hellboy", "Fiery Furnace Fred", "Devils Basement Manager", "Grim Gramps"],
+        "spawn_image_url": "https://i.imgur.com/ZyrxWzY.png",
+        "card_image_url": "https://i.imgur.com/tJQu2dZ.png",
+        "rarity": 67,
+        "health": 2900,
+        "damage": 1700,
+        "description": "You know that one guy who thinks he's the main character but really isn't? Well, that's Hades right there!"
+    },
 ]

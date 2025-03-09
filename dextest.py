@@ -4,11 +4,14 @@ import os
 import asyncio
 import signal
 import json
+import time
+import aiohttp
 import datetime
 import shutil
 
 from typing import List
 from collections import Counter
+from aiohttp import client_exceptions
 
 import discord # type: ignore
 from discord.ext import commands, tasks # type: ignore
@@ -184,12 +187,27 @@ def save_player_cards() -> None:
     except Exception as e:
         logging.error(f"Error saving player cards: {e}")
 
+# Backup creation
+backup_folder = "backup_folder"
+os.makedirs(backup_folder, exist_ok=True)
+MAX_BACKUPS = 6
+
 def create_backup():
     try:
         timestamp = datetime.datetime.now().strftime("%Y%m%d_%H%M%S")
         backup_filename = f"player_cards_backup_{timestamp}.json"
-        shutil.copy('player_cards.json', backup_filename)
-        logging.info(f"Created backup: {backup_filename}")
+        backup_filepath = os.path.join(backup_folder, backup_filename)
+        shutil.copy('player_cards.json', backup_filepath)
+        logging.info(f"Created backup: {backup_filename} in {backup_filepath}")
+
+        backup_files = [f for f in os.listdir(backup_folder) if f.startswith("player_cards_backup_")]
+        backup_files.sort(reverse=True)
+
+        if len(backup_files) > MAX_BACKUPS:
+            for old_file in backup_files[MAX_BACKUPS:]:
+                old_filepath = os.path.join(backup_folder, old_file)
+                os.remove(old_filepath)
+                logging.info(f"Removed old backup: {old_file}")
     except Exception as e:
         logging.error(f"Failed to create backup: {e}")
 
@@ -220,12 +238,18 @@ class CatchModal(Modal):
         global modal_lock
         user = interaction.user
 
-        # Attempt to acquire the lock
-        if modal_lock.locked():
-            await interaction.response.send_message("The card is currently being claimed by another user. Please wait.", ephemeral=True)
+        # Attempt to acquire the lock with a timeout of 5 seconds
+        try:
+            acquired = await asyncio.wait_for(modal_lock.acquire(), timeout=5.0)
+            if not acquired:
+                await interaction.response.send_message("Unable to process your request. Please try again.", ephemeral=True)
+                return
+        except asyncio.TimeoutError:
+            await interaction.response.send_message("The system is busy. Please try again in a moment.", ephemeral=True)
             return
         
-        async with modal_lock:
+        # Use try-finally to ensure lock is released even if an error occurs
+        try:
             if self.view.card_claimed:
                 await interaction.response.send_message("The card has already been claimed.", ephemeral=True)
                 return
@@ -233,19 +257,18 @@ class CatchModal(Modal):
             input_name = self.card_input.value.lower()
             if input_name == self.card_name.lower() or input_name in [alias.lower() for alias in next(card['aliases'] for card in cards if card['name'].lower() == self.card_name.lower())]:
                 user_id = str(user.id)
-                if not user_has_card(user_id, self.card_name):
-                    player_cards.setdefault(user_id, []).append(self.card_name)
-                    save_player_cards()
-                    await interaction.response.send_message(f"{user.mention} caught the card: {self.card_name}!", ephemeral=False)
-                    self.view.card_claimed = True
-                    for item in self.view.children:
-                        if isinstance(item, Button):
-                            item.disabled = True
-                    await self.message.edit(view=self.view)
-                else:
-                    await interaction.response.send_message(f"{user.mention}, you already have this card.", ephemeral=True)
+                player_cards.setdefault(user_id, []).append(self.card_name)
+                save_player_cards()
+                await interaction.response.send_message(f"{user.mention} caught the card: {self.card_name}!", ephemeral=False)
+                self.view.card_claimed = True
+                for item in self.view.children:
+                    if isinstance(item, Button):
+                        item.disabled = True
+                await self.message.edit(view=self.view)
             else:
                 await interaction.response.send_message(f"{user.mention}; Incorrect name.", ephemeral=False)
+        finally:
+            modal_lock.release()
 
 class CatchButton(Button):
     def __init__(self, card_name):
@@ -263,11 +286,8 @@ class CatchButton(Button):
             return
         
         user = interaction.user
-        if user_has_card(str(user.id), self.card_name):
-            await interaction.response.send_message("You already have this card!", ephemeral=True)
-        else:
-            modal = CatchModal(self.card_name, self.view, interaction.message)
-            await interaction.response.send_modal(modal)
+        modal = CatchModal(self.card_name, self.view, interaction.message)
+        await interaction.response.send_modal(modal)
 
 class CatchView(View):
     def __init__(self, card_name):
@@ -363,7 +383,8 @@ class ProgressView(View):
         end = min(start + 10, len(self.user_cards))
         
         if self.user_cards:
-            owned_cards = "\n".join([f"• {card}" for card in self.user_cards[start:end]])
+            card_counts = Counter(self.user_cards)
+            owned_cards = "\n".join([f"• {card} x{count}" if count > 1 else f"• {card}" for card, count in card_counts.items()][start:end])
             embed.add_field(name="📋 Your Cards", value=owned_cards, inline=False)
         else:
             embed.add_field(name="📋 Your Cards", value="You don't have any cards yet.", inline=False)
@@ -490,6 +511,7 @@ async def print_stats(ctx, *, card_name: str):
         embed.add_field(name="Health", value=card["health"], inline=True)
         embed.add_field(name="Damage", value=card["damage"], inline=True)
         embed.add_field(name="Rarity", value=f"{card['rarity']}%", inline=True)
+        #embed.add_field(name="Description", value=card["description"], inline=False) add later when all cards have a description
         await ctx.send(embed=embed)
     else:
         await ctx.send("Card not found.")
@@ -677,6 +699,7 @@ async def remove_card(ctx, card: str, user: discord.Member):
     else:
         await ctx.send(f"{user.mention} does not have the card `{card}`.")
         logging.info(f"Admin: {ctx.author} attempted to remove {card} from {user}, but {user} did not possess {card}.")
+
 #///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 #other commands not related to the card game
 #///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -699,7 +722,7 @@ async def list_commands(ctx):
     commands_list = [
         '!hello - Responds with a greeting message.',
         '!random_number - Gives a random number',
-        '!info_dex - Shows the current release ',
+        '!info_dex - Shows info about the dex',
         '!see_card - View a card you have caught.',
         '!progress - Shows your progress in catching cards.',
         '!stats - Shows the stats of a certain card.',
@@ -711,10 +734,69 @@ async def list_commands(ctx):
     await ctx.send(f'Here is a list of all the commands you can use:\n{commands_description}')
 
 #info, command to show the current release
-@bot.command(name='info_dex', help="Shows some info like the current release, developers and total lines of code!")
+@bot.command(name='info_dex', help="General info about the dex")
 async def info(ctx):
+    # Store bot launch time
+    if not hasattr(bot, 'launch_time'):
+        bot.launch_time = datetime.datetime.now()
 
-    #bit of code to count the lines of code in the project
+    # Calculate uptime
+    uptime = datetime.datetime.now() - bot.launch_time
+    days, remainder = divmod(int(uptime.total_seconds()), 86400)
+    hours, remainder = divmod(remainder, 3600)
+    minutes, seconds = divmod(remainder, 60)
+    uptime_str = f"{days}d {hours}h {minutes}m {seconds}s"
+
+    # Count lines of code
+    total_lines = count_lines_of_code()
+
+    # Calculate card stats
+    total_cards = len(cards)
+    unique_collected = len(set(card for user_cards in player_cards.values() for card in user_cards))
+
+    # Get backup count
+    backup_count = len([f for f in os.listdir(backup_folder) if f.startswith("player_cards_backup_")])
+
+    embed = discord.Embed(
+        title="235th Dex Information",
+        color=discord.Color.blue()
+    )
+
+    embed.add_field(
+        name="Version",
+        value="v1.2.5 - \"The more-stats update\"", 
+        inline=False
+    )
+
+    embed.add_field(
+        name="Developers",
+        value="<@1035607651985403965>\n<@573878397952851988>\n<@845973389415284746>",
+        inline=True
+    )
+
+    embed.add_field(
+        name="Stats",
+        value=f"Total Code: {total_lines} lines\nUptime: {uptime_str}\nMode: {'Test' if is_test_mode else 'Production'}",
+        inline=True
+    )
+
+    embed.add_field(
+        name="Database",
+        value=f"Users: {len(player_cards)}\nBackups: {backup_count}/{MAX_BACKUPS}\nSpawn Mode: {spawn_mode}",
+        inline=True
+    )
+
+    embed.add_field(
+        name="Cards",
+        value=f"Total Cards: {total_cards}\nUnique Cards Collected: {unique_collected}",
+        inline=False
+    )
+
+    embed.set_footer(text=f"Last update: {datetime.datetime.now().strftime('%Y-%m-%d %H:%M')}")
+
+    await ctx.send(embed=embed)  
+
+def count_lines_of_code() -> int:
     project_dir = '/home/container'
     total_lines = 0
 
@@ -724,16 +806,49 @@ async def info(ctx):
                 file_path = os.path.join(root, file)
                 with open(file_path, 'r') as f:
                     total_lines += sum(1 for _ in f)
-                    
-    embed = discord.Embed(title="Current Release", description=f"v.1.2.5, \"The more-stats update\"\n Developers: <@1035607651985403965>, <@573878397952851988> and <@845973389415284746> \n Total lines of code: {total_lines}")
-    await ctx.send(embed=embed) #expand later when we actually released the bot to the public
+    return total_lines
 
 # Command to play a certain GIF, restricted to authorized users
-@bot.command(name='celebrate')
+bot.command(name='celebrate', help="Posts a celebration animation (admin only)")
 @commands.check(is_authorized)
 async def play_gif(ctx):
-    gif_url = "https://images-ext-1.discordapp.net/external/g2WvOwPwXD3KtaqKdjNQ-RWFBmwpS01Nc2f_NPURW7w/https/media.tenor.com/BDxIoo-dxPgAAAPo/missouri-tigers-truman-the-tiger.mp4"
-    await ctx.send(gif_url)
+    embed = discord.Embed(title="Celebration Time!")
+    embed.set_image(url="https://media.tenor.com/BDxIoo-dxPgAAAPo/missouri-tigers-truman-the-tiger.mp4")
+    await ctx.send(embed=embed)
+
+# For fun interactions with the bot
+@bot.event
+async def on_message(message):
+    if message.author == bot.user:
+        return
+
+    content = message.content.lower()
+
+    responses = {
+        "good bot": {
+            "title": "good human!",
+            "image": "https://media.discordapp.net/attachments/1258772746897461458/1340729833889464422/image0.gif?ex=67c92c35&is=67c7dab5&hm=0b58bb55cc24fbeb9e74f77ed4eedaf4d48ba68f61e82922b9632c6a61f7713b&="
+        },
+        "bad bot": {
+            "title": "I think you meant to say... good bot",
+            "image": "https://media.discordapp.net/attachments/1322202354421989414/1346845659252391999/th-2404264802.jpg?ex=67c9ab44&is=67c859c4&hm=bc40b032057c8635bedfcc07519d561bc58edad1d2e1715a24694e5f43112108&=&format=webp"	
+        }
+    }
+
+    for trigger, response in responses.items():
+        if trigger in content:
+            embed = discord.Embed(title=response["title"])
+            embed.set_image(url=response["image"])
+            await message.channel.send(embed=embed)
+            break
+
+    await bot.process_commands(message)
+
+@bot.command(name="gud_boy", help="Shows a good boy GIF")
+async def gud_boy(ctx):
+    embed = discord.Embed(title="Good boy!")
+    embed.set_image(url="https://cdn.discordapp.com/attachments/1258772746897461458/1340729833889464422/image0.gif?ex=67c92c35&is=67c7dab5&hm=0b58bb55cc24fbeb9e74f77ed4eedaf4d48ba68f61e82922b9632c6a61f7713b&")
+    await ctx.send(embed=embed)
 
 # Public !stats command
 @bot.command(name='stats_full', help="Show general statistics about the card game.")
@@ -811,8 +926,29 @@ signal.signal(signal.SIGTERM, handle_shutdown_signal)
 
 # Ensures that it will only work when executed directly, and will log any errors to the terminal
 if __name__ == "__main__":
-    try:
-        bot.run(token)
-        logging.info(f'Logged in as {bot.user.name}')
-    except Exception as e:
-        logging.error(f'Error: {e}')
+    retry_count = 0
+    max_retries = 5
+
+    while retry_count < max_retries:
+        try:
+            bot.run(token)
+            break
+        except discord.errors.ConnectionClosed as e:
+            retry_count += 1
+            logging.warning(f"Connection closed. Attempting reconnect {retry_count}/{max_retries}")
+            time.sleep(5)  # Wait before retrying
+        except client_exceptions.ClientConnectorError as e:
+            retry_count += 1
+            logging.warning(f"Connection error: {e}. Attempting reconnect {retry_count}/{max_retries}")
+            time.sleep(10)  # Longer wait for DNS issues
+        except Exception as e:
+            logging.error(f"Unhandled error: {e}")
+            break
+    
+    if retry_count >= max_retries:
+        logging.critical(f"Failed to connect after {max_retries} attempts. Giving up.")
+        # Save data before exiting to prevent data loss
+        save_player_cards()
+        create_backup()
+        print(f"Bot shutdown after {max_retries} failed connection attempts. Check logs for details.")
+        exit(1)
