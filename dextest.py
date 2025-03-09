@@ -735,6 +735,7 @@ async def list_commands(ctx):
 
 #info, command to show the current release
 @bot.command(name='info_dex', help="General info about the dex")
+@bot.command(name='info_dex', help="General info about the dex")
 async def info(ctx):
     # Store bot launch time
     if not hasattr(bot, 'launch_time'):
