@@ -715,7 +715,7 @@ async def list_commands(ctx):
 @bot.command(name='info_dex', help="General info about the dex")
 async def info(ctx):
     total_lines = count_lines_of_code()
-    embed = discord.Embed(title="Current Release", description=f"v.1.2.5, \"The more-stats update\"\n Developers: <@1035607651985403965>, <@573878397952851988> and <@845973389415284746> \n Total lines of code: {total_lines}")
+    embed = discord.Embed(title="Current Release", description=f"v.1.3.1, \"The gotta catch more of them update\"\n Developers: <@1035607651985403965>, <@573878397952851988> and <@845973389415284746> \n Total lines of code: {total_lines}")
     await ctx.send(embed=embed) #expand later when we actually released the bot to the public
 
 def count_lines_of_code() -> int:
