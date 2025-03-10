@@ -814,7 +814,7 @@ class CardBattle:
         self.challenger_selected = False
         self.opponent_selected = False
         self.battle_message = None
-        self.timeout = 60 # Seconds to wait for card selection
+        self.timeout = 90  # Increased timeout for card selection to 90 seconds
 
     async def start_battle(self):
         embed = discord.Embed(
@@ -833,14 +833,25 @@ class CardBattle:
         try:
             await asyncio.wait_for(self.wait_for_selection(), timeout=self.timeout)
         except asyncio.TimeoutError:
+            # Disable the view buttons when timing out
+            for child in view.children:
+                child.disabled = True
+            await self.battle_message.edit(view=view)
             await self.ctx.send("Battle invitation timed out.")
             return
         
         # Both players have selected cards, begin the battle
         if self.challenger_selected and self.opponent_selected:
+            # Send a "preparing battle" message
+            await self.ctx.send(f"Both players have selected their cards! Preparing for battle...")
+            await asyncio.sleep(2)  # Short dramatic pause
             await self.execute_battle()
+        else:
+            # This should not happen due to the wait_for_selection, but just in case
+            await self.ctx.send("Battle cancelled.")
     
     async def wait_for_selection(self):
+        """Wait until both players have selected their cards"""
         while not (self.challenger_selected and self.opponent_selected):
             await asyncio.sleep(1)
 
@@ -974,7 +985,7 @@ class BattleInviteView(View):
             return
         
         # Send a public message that the challenge was accepted
-        await self.battle.ctx.send(f"{interaction.user.mention} has accepted the battle challenge!")
+        await self.battle.ctx.send(f"{interaction.user.mention} has accepted the battle challenge! Both players must select their cards to begin.")
         
         # Send card selection directly in channel with ephemeral message (only visible to opponent)
         user_cards = player_cards.get(str(interaction.user.id), [])
@@ -1008,6 +1019,25 @@ class BattleInviteView(View):
             view=challenger_view,
             ephemeral=True
         )
+        
+        # Disable the buttons
+        for item in self.children:
+            item.disabled = True
+        
+        await self.battle.battle_message.edit(view=self)
+        
+    @discord.ui.button(label="Decline Challenge", style=discord.ButtonStyle.red)
+    async def decline_battle(self, interaction: discord.Interaction, button: discord.ui.Button):
+        if interaction.user.id != self.battle.opponent.id:
+            await interaction.response.send_message("This challenge isn't for you!", ephemeral=True)
+            return
+            
+        await interaction.response.send_message("You declined the battle.", ephemeral=True)
+        await self.battle.ctx.send(f"{interaction.user.mention} declined the battle challenge.")
+        
+        # Set flags so the battle terminates
+        self.battle.challenger_selected = True
+        self.battle.opponent_selected = True
         
         # Disable the buttons
         for item in self.children:
@@ -1118,9 +1148,13 @@ class CardSelectionView(View):
         if self.player_type == "challenger":
             self.battle.challenger_cards = self.selected_cards
             self.battle.challenger_selected = True
+            waiting_for = "opponent"
+            waiting_user = self.battle.opponent.display_name
         else:
             self.battle.opponent_cards = self.selected_cards
             self.battle.opponent_selected = True
+            waiting_for = "challenger"
+            waiting_user = self.battle.challenger.display_name
         
         # Confirmation message
         cards_list = ", ".join(self.selected_cards)
@@ -1129,18 +1163,33 @@ class CardSelectionView(View):
         for item in self.children:
             item.disabled = True
             
+        # Update the message to show we're waiting for the other player
+        embed = discord.Embed(
+            title="Battle Cards Selected",
+            description=f"You've selected your cards and are ready for battle.\n\n**Your Cards:**\n{cards_list}",
+            color=discord.Color.green()
+        )
+        
+        # Add waiting message
+        if not (self.battle.challenger_selected and self.battle.opponent_selected):
+            embed.add_field(
+                name="Waiting For", 
+                value=f"Waiting for {waiting_user} to select their cards...",
+                inline=False
+            )
+        
         try:
             # Try to update the message, but handle if it fails
-            await interaction.response.edit_message(
-                content=f"You've selected: {cards_list}\nWaiting for the battle to begin...",
-                view=self
-            )
+            await interaction.response.edit_message(embed=embed, view=self)
         except discord.errors.NotFound:
-            # If the message can't be found, send a new message
-            await interaction.followup.send(
-                f"You've selected: {cards_list}\nWaiting for the battle to begin...",
-                ephemeral=True
-            )
+            try:
+                # If the message can't be found, send a new message
+                await interaction.followup.send(
+                    embed=embed,
+                    ephemeral=True
+                )
+            except Exception as e:
+                logging.error(f"Failed to send card selection confirmation: {e}")
 
 class CardSelectMenu(discord.ui.Select):
     def __init__(self, parent_view):
@@ -1259,30 +1308,31 @@ class RemoveCardView(discord.ui.View):
             # Acknowledge the removal
             await interaction.response.send_message(f"Removed {card_to_remove} from your selection.", ephemeral=True)
             
-            # Close this view
-            await interaction.message.edit(view=None)
+            try:
+                # Close this view
+                await interaction.message.edit(view=None)
+            except discord.errors.NotFound:
+                # If message can't be found, just continue
+                pass
             
             try:
-                # Try to update the parent message with new card selection
-                parent_message = interaction.message.reference.resolved if interaction.message.reference else None
-                if parent_message:
-                    await parent_message.edit(embed=embed, view=self.parent_view)
-                else:
-                    # If we can't find the original message, send a new one
-                    await interaction.followup.send(
-                        content=self.parent_view.user.mention,
-                        embed=embed, 
-                        view=self.parent_view,
-                        ephemeral=True
-                    )
-            except (discord.errors.NotFound, AttributeError):
-                # If message can't be found or edited, send a new one
+                # Send a new ephemeral message with the updated card selection
                 await interaction.followup.send(
-                    content=self.parent_view.user.mention,
                     embed=embed, 
                     view=self.parent_view,
                     ephemeral=True
                 )
+            except Exception as e:
+                # If any other error occurs, try one more approach
+                try:
+                    await interaction.channel.send(
+                        content=f"{self.parent_view.user.mention}, here's your updated card selection:",
+                        embed=embed, 
+                        view=self.parent_view,
+                        ephemeral=True
+                    )
+                except Exception as e:
+                    logging.error(f"Failed to send updated card selection: {e}")
 
 #///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 #other commands not related to the card game
@@ -1300,22 +1350,57 @@ async def random_number(ctx):
     await ctx.send(f'Your random number is: {random_number}')
 
 
-# command to show the current commands that users can use
 @bot.command(name='commands_dex', help="Shows a list of all the commands you can use.")
 async def list_commands(ctx):
-    commands_list = [
-        '!hello - Responds with a greeting message.',
-        '!random_number - Gives a random number',
-        '!info_dex - Shows info about the dex',
-        '!see_card - View a card you have caught.',
-        '!progress - Shows your progress in catching cards.',
-        '!stats - Shows the stats of a certain card.',
-        '!give - Give a card to another user.',
-        '!stats_full - Gives stats of the bot.',
-        'If you have any questions about the bot or commands, please go to https://discordapp.com/channels/1103817592889679892/1323370905874989100'
-    ]
-    commands_description = '\n'.join(commands_list)
-    await ctx.send(f'Here is a list of all the commands you can use:\n{commands_description}')
+    embed = discord.Embed(
+        title="📋 Available Commands",
+        description="Here are all the commands you can use with the 235th dex:",
+        color=discord.Color.blue()
+    )
+    
+    # General Commands
+    embed.add_field(
+        name="📝 General",
+        value=(
+            "`!hello` - Get a greeting from the bot\n"
+            "`!random_number` - Generate a random number\n"
+            "`!info_dex` - View information about the bot\n"
+            "`!commands_dex` - Show this command list"
+        ),
+        inline=False
+    )
+    
+    # Card Collection Commands
+    embed.add_field(
+        name="🃏 Card Collection",
+        value=(
+            "`!see_card [card name]` - View a card you've caught\n"
+            "`!progress` - Show your card collection progress\n"
+            "`!stats [card name]` - Show stats for a specific card\n"
+            "`!give [card name] [@user]` - Give a card to another user"
+        ),
+        inline=False
+    )
+    
+    # Battle Commands
+    embed.add_field(
+        name="⚔️ Battle",
+        value=(
+            "`!battle [@user]` - Challenge another user to a card battle"
+        ),
+        inline=False
+    )
+    
+    # Bot Stats
+    embed.add_field(
+        name="📊 Bot Stats",
+        value="`!stats_full` - Show general statistics about the card game",
+        inline=False
+    )
+    
+    embed.set_footer(text="If you have questions about the bot or commands, visit the help channel: https://discord.com/channels/1103817592889679892/1323370905874989100")
+    
+    await ctx.send(embed=embed)
 
 #info, command to show the current release
 @bot.command(name='info_dex', aliases=['dex_info', 'bot_info'], help="General info about the dex")
