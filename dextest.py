@@ -608,6 +608,69 @@ async def progress(ctx):
     view = ProgressView(user_cards, missing_cards, ctx.author)
     view.message = await ctx.send(embed=view.create_embed(), view=view)
 
+@bot.command(name='view_progress', help="Admin command to view another user's collection progress")
+@commands.check(is_authorized)
+async def view_progress(ctx, user: discord.Member):
+    """
+    Allows authorized users to view the card collection progress of any user.
+    Usage: !view_progress @username
+    """
+    target_user_id = str(user.id)
+    total_cards = len(cards)
+    user_cards = player_cards.get(target_user_id, [])
+    
+    if not user_cards:
+        await ctx.send(f"{user.display_name} hasn't collected any cards yet.")
+        return
+    
+    # Count total unique cards (no duplicates)
+    unique_cards = set(user_cards)
+    # Get card duplicates info
+    card_counts = Counter(user_cards)
+    # Calculate duplicates
+    total_duplicates = len(user_cards) - len(unique_cards)
+    
+    # Find missing cards
+    missing_cards = [card['name'] for card in cards if card['name'] not in user_cards]
+    
+    # Find rarest card owned by rarity value
+    card_rarity = {card['name']: card['rarity'] for card in cards}
+    if user_cards:
+        rarest_card = min(set(user_cards), key=lambda card: card_rarity.get(card, float('inf')))
+        most_duplicated_card = card_counts.most_common(1)[0][0] if total_duplicates > 0 else "None"
+    else:
+        rarest_card = "None"
+        most_duplicated_card = "None"
+    
+    # Create the embed
+    embed = discord.Embed(
+        title=f"📊 Card Collection Stats for {user.display_name}",
+        description=f"Collection progress: {len(unique_cards)}/{total_cards} unique cards ({len(unique_cards)/total_cards*100:.1f}%)",
+        color=discord.Color.blue()
+    )
+    
+    # Add collection stats
+    embed.add_field(name="Total Cards", value=f"{len(user_cards)} (including duplicates)", inline=True)
+    embed.add_field(name="Unique Cards", value=f"{len(unique_cards)}", inline=True)
+    embed.add_field(name="Duplicates", value=f"{total_duplicates}", inline=True)
+    
+    # Add interesting stats
+    embed.add_field(name="Rarest Card Owned", value=rarest_card, inline=True)
+    embed.add_field(name="Most Duplicated", value=f"{most_duplicated_card} ({card_counts[most_duplicated_card]}x)" if most_duplicated_card != "None" else "None", inline=True)
+    embed.add_field(name="Missing Cards", value=f"{len(missing_cards)}", inline=True)
+    
+    # Create collection view for the specified user
+    view = ProgressView(user_cards, missing_cards, ctx.author)  # Note: controls belong to command invoker
+    
+    # Send the statistics and view
+    embed.set_footer(text="Use the buttons below to navigate cards")
+    message = await ctx.send(embed=embed)
+    
+    # Send the detailed card view in a second message
+    view.message = await ctx.send(embed=view.create_embed(), view=view)
+    
+    logging.info(f"Admin {ctx.author} viewed collection progress for {user.display_name}")
+
 @bot.command(name='give')
 async def give_card(ctx, card: str, receiving_user: discord.Member):
     sender_id = str(ctx.author.id)
@@ -700,6 +763,527 @@ async def remove_card(ctx, card: str, user: discord.Member):
         await ctx.send(f"{user.mention} does not have the card `{card}`.")
         logging.info(f"Admin: {ctx.author} attempted to remove {card} from {user}, but {user} did not possess {card}.")
 
+@bot.command(name='battle', help="Battle another player with your cards.")
+async def battle(ctx, opponent: discord.Member):
+    if opponent.id == ctx.author.id:
+        await ctx.send("You can't battle yourself!")
+        return
+    
+    challenger_id = str(ctx.author.id)
+    opponent_id = str(opponent.id)
+
+    if challenger_id not in player_cards or not player_cards[challenger_id]:
+        await ctx.send("You don't have any cards to battle with!")
+        return
+    
+    if opponent_id not in player_cards or not player_cards[opponent_id]:
+        await ctx.send(f"{opponent.display_name} doesn't have any cards to battle with!")
+        return
+    
+    # Check if opponent is available (not in another battle)
+    if hasattr(bot, 'ongoing_battles') and (challenger_id in bot.ongoing_battles or opponent_id in bot.ongoing_battles):
+        await ctx.send("Either you or your opponent is already in a battle!")
+        return
+    
+    # Initialize ongoing battles tracker
+    if not hasattr(bot, 'ongoing_battles'):
+        bot.ongoing_battles = set()
+
+    # Add both players to ongoing battles
+    bot.ongoing_battles.add(challenger_id)
+    bot.ongoing_battles.add(opponent_id)
+
+    try:
+        # Create the battle
+        battle = CardBattle(ctx, ctx.author, opponent)
+        await battle.start_battle()
+    finally:
+        # Clean up after battle ends
+        bot.ongoing_battles.remove(challenger_id)
+        bot.ongoing_battles.remove(opponent_id)
+
+class CardBattle:
+    def __init__(self, ctx, challenger, opponent):
+        self.ctx = ctx
+        self.challenger = challenger
+        self.opponent = opponent
+        self.challenger_id = str(challenger.id)
+        self.opponent_id = str(opponent.id)
+        self.challenger_cards = []
+        self.opponent_cards = []
+        self.challenger_selected = False
+        self.opponent_selected = False
+        self.battle_message = None
+        self.timeout = 60 # Seconds to wait for card selection
+
+    async def start_battle(self):
+        embed = discord.Embed(
+            title="Card Battle!",
+            description=f"{self.challenger.mention} has challenged {self.opponent.mention} to a card battle!\n\n"
+                        f"Each player will select up to 3 cards to battle with.\n"
+                        f"Cards will take turns attacking until one side has no cards left.",
+            color=discord.Color.gold()
+        )
+        embed.set_footer(text=f"Both players have {self.timeout} seconds to accept and select cards")
+
+        view = BattleInviteView(self)
+        self.battle_message = await self.ctx.send(embed=embed, view=view)
+
+        # Wait for acceptance and card selection
+        try:
+            await asyncio.wait_for(self.wait_for_selection(), timeout=self.timeout)
+        except asyncio.TimeoutError:
+            await self.ctx.send("Battle invitation timed out.")
+            return
+        
+        # Both players have selected cards, begin the battle
+        if self.challenger_selected and self.opponent_selected:
+            await self.execute_battle()
+    
+    async def wait_for_selection(self):
+        while not (self.challenger_selected and self.opponent_selected):
+            await asyncio.sleep(1)
+
+    async def execute_battle(self):
+        # Initialize battle state
+        challenger_battle_cards = [self._copy_card_for_battle(card) for card in self.challenger_cards]
+        opponent_battle_cards = [self._copy_card_for_battle(card) for card in self.opponent_cards]
+
+        # Battle announcement
+        embed = discord.Embed(
+            title="A battle has started!",
+            description=f"{self.challenger.mention} vs {self.opponent.mention}",
+            color=discord.Color.dark_red()
+        )
+
+        # Show selected cards
+        challenger_cards_str = "\n".join([f"• **{card['name']}** (❤️ {card['health']}, ⚔️ {card['damage']})" 
+                                        for card in challenger_battle_cards])
+        opponent_cards_str = "\n".join([f"• **{card['name']}** (❤️ {card['health']}, ⚔️ {card['damage']})" 
+                                    for card in opponent_battle_cards])
+        
+        embed.add_field(name=f"{self.challenger.display_name}'s Team:", value=challenger_cards_str, inline=True)
+        embed.add_field(name=f"{self.opponent.display_name}'s Team:", value=opponent_cards_str, inline=True)
+        
+        battle_log = await self.ctx.send(embed=embed)
+
+        # Battle loop
+        turn = 0
+        battle_log_text = []
+
+        while challenger_battle_cards and opponent_battle_cards:
+            turn += 1 
+            await asyncio.sleep(2)  # Dramatic pause between turns
+
+            # Determine attacker and defender based on turn
+            if turn % 2 == 1:  # Challenger's turn
+                attacker_name = self.challenger.display_name
+                defender_name = self.opponent.display_name
+                attacker_cards = challenger_battle_cards
+                defender_cards = opponent_battle_cards
+            else:  # Opponent's turn
+                attacker_name = self.opponent.display_name
+                defender_name = self.challenger.display_name
+                attacker_cards = opponent_battle_cards
+                defender_cards = challenger_battle_cards
+
+            # Select random cards for attack/defense
+            attacking_card = random.choice(attacker_cards)
+            defending_card = random.choice(defender_cards)
+
+            # Calculate damage
+            damage = attacking_card['damage']
+            defending_card['health'] -= damage
+
+            # Log the attack
+            log_entry = f"**Turn {turn}:** {attacker_name}'s **{attacking_card['name']}** attacks {defender_name}'s **{defending_card['name']}** for {damage} damage!"
+            battle_log_text.append(log_entry)
+
+            # Check if defending card is defeated
+            if defending_card['health'] <= 0:
+                log_entry = f"💥 {defender_name}'s **{defending_card['name']}** has been defeated!"
+                battle_log_text.append(log_entry)
+                defender_cards.remove(defending_card)
+
+            # Update battle log (show last 10 actions)
+            recent_log = "\n".join(battle_log_text[-10:])
+
+            # Update the battle status embed
+            status_embed = discord.Embed(
+                title=f"⚔️ Battle: Turn {turn} ⚔️",
+                description=recent_log,
+                color=discord.Color.dark_red()
+            )
+
+            # Show current cards and their health
+            if challenger_battle_cards:
+                challenger_status = "\n".join([f"• **{card['name']}** (❤️ {card['health']})" for card in challenger_battle_cards])
+            else:
+                challenger_status = "*No cards left*"
+
+            if opponent_battle_cards:
+                opponent_status = "\n".join([f"• **{card['name']}** (❤️ {card['health']})" for card in opponent_battle_cards])
+            else:
+                opponent_status = "*No cards left*"
+
+            status_embed.add_field(name=f"{self.challenger.display_name}'s Team:", value=challenger_status, inline=True)
+            status_embed.add_field(name=f"{self.opponent.display_name}'s Team:", value=opponent_status, inline=True)
+            
+            await battle_log.edit(embed=status_embed)
+
+        # Determine winner
+        if not opponent_battle_cards:
+            winner = self.challenger
+            loser = self.opponent
+        else:
+            winner = self.opponent
+            loser = self.challenger
+
+        # Victory message
+        victory_embed = discord.Embed(
+            title="🏆 Battle Results 🏆",
+            description=f"**{winner.display_name}** has defeated {loser.display_name} in battle!",
+            color=discord.Color.gold()
+        )
+        await self.ctx.send(embed=victory_embed)
+
+    def _copy_card_for_battle(self, card_name):
+        original_card = next((c for c in cards if c['name'] == card_name), None)
+        if original_card:
+            return {
+                'name': original_card['name'],
+                'health': original_card['health'],
+                'damage': original_card.get('damage', original_card.get('attack', 1))
+            }
+        # Fallback in case the card isn't found
+        return {
+            'name': card_name,
+            'health': 1,
+            'damage': 1
+        }
+    
+class BattleInviteView(View):
+    def __init__(self, battle):
+        super().__init__(timeout=battle.timeout)
+        self.battle = battle
+        
+    @discord.ui.button(label="Accept Challenge", style=discord.ButtonStyle.green)
+    async def accept_battle(self, interaction: discord.Interaction, button: discord.ui.Button):
+        if interaction.user.id != self.battle.opponent.id:
+            await interaction.response.send_message("This challenge isn't for you!", ephemeral=True)
+            return
+        
+        # Send a public message that the challenge was accepted
+        await self.battle.ctx.send(f"{interaction.user.mention} has accepted the battle challenge!")
+        
+        # Send card selection directly in channel with ephemeral message (only visible to opponent)
+        user_cards = player_cards.get(str(interaction.user.id), [])
+        unique_cards = list(set(user_cards))
+        
+        # Create card selection view for opponent
+        view = CardSelectionView(self.battle, interaction.user, "opponent", unique_cards)
+        embed = discord.Embed(
+            title="Select Your Battle Cards",
+            description="Choose up to 3 cards for battle.\nClick Submit when you're done.",
+            color=discord.Color.blue()
+        )
+        await interaction.response.send_message(embed=embed, view=view, ephemeral=True)
+        
+        # Also send selection to challenger (in a separate ephemeral message)
+        challenger_cards = player_cards.get(self.battle.challenger_id, [])
+        unique_challenger_cards = list(set(challenger_cards))
+        
+        # Create a new message for the challenger
+        challenger_view = CardSelectionView(self.battle, self.battle.challenger, "challenger", unique_challenger_cards)
+        challenger_embed = discord.Embed(
+            title="Select Your Battle Cards",
+            description="Choose up to 3 cards for battle.\nClick Submit when you're done.",
+            color=discord.Color.blue()
+        )
+        
+        # Send the challenger their own ephemeral message (only they can see it)
+        await self.battle.ctx.send(
+            content=f"{self.battle.challenger.mention}, choose your cards for battle!",
+            embed=challenger_embed,
+            view=challenger_view,
+            ephemeral=True
+        )
+        
+        # Disable the buttons
+        for item in self.children:
+            item.disabled = True
+        
+        await self.battle.battle_message.edit(view=self)
+
+# Extend the CardBattle class with card selection methods
+async def challenger_card_selection(self, user):
+    """Let challenger select their battle cards"""
+    user_cards = player_cards.get(str(user.id), [])
+    unique_cards = list(set(user_cards))
+    
+    # Send DM with card selection
+    try:
+        dm_channel = await user.create_dm()
+        
+        # Create card selection view
+        view = CardSelectionView(self, user, "challenger", unique_cards)
+        embed = discord.Embed(
+            title="Select Your Battle Cards",
+            description="Choose up to 3 cards for battle.\nClick Submit when you're done.",
+            color=discord.Color.blue()
+        )
+        await dm_channel.send(embed=embed, view=view)
+    except discord.Forbidden:
+        await self.ctx.send(f"{user.mention} I can't send you a DM. Please enable DMs from server members.")
+        self.challenger_selected = True
+        self.opponent_selected = True  # Force battle termination
+
+async def opponent_card_selection(self, user):
+    """Let opponent select their battle cards"""
+    user_cards = player_cards.get(str(user.id), [])
+    unique_cards = list(set(user_cards))
+    
+    # Send DM with card selection
+    try:
+        dm_channel = await user.create_dm()
+        
+        # Create card selection view
+        view = CardSelectionView(self, user, "opponent", unique_cards)
+        embed = discord.Embed(
+            title="Select Your Battle Cards",
+            description="Choose up to 3 cards for battle.\nClick Submit when you're done.",
+            color=discord.Color.blue()
+        )
+        await dm_channel.send(embed=embed, view=view)
+    except discord.Forbidden:
+        await self.ctx.send(f"{user.mention} I can't send you a DM. Please enable DMs from server members.")
+        self.challenger_selected = True
+        self.opponent_selected = True  # Force battle termination
+
+# Add these methods to the CardBattle class
+CardBattle.challenger_card_selection = challenger_card_selection
+CardBattle.opponent_card_selection = opponent_card_selection
+
+class CardSelectionView(View):
+    def __init__(self, battle, user, player_type, available_cards):
+        super().__init__(timeout=battle.timeout)
+        self.battle = battle
+        self.user = user
+        self.player_type = player_type  # "challenger" or "opponent"
+        self.available_cards = available_cards
+        self.selected_cards = []
+        self.max_cards = 3
+        self.selected_cards_text = ""
+        
+        # Add card selection dropdown
+        self.add_item(CardSelectMenu(self))
+        
+        # Add card removal dropdown if needed
+        self.remove_button = Button(
+            label="Remove Card", 
+            style=discord.ButtonStyle.red,
+            disabled=True
+        )
+        self.remove_button.callback = self.remove_card
+        self.add_item(self.remove_button)
+    
+    async def remove_card(self, interaction: discord.Interaction):
+        if interaction.user.id != self.user.id:
+            await interaction.response.send_message("This isn't your battle card selection!", ephemeral=True)
+            return
+            
+        if not self.selected_cards:
+            await interaction.response.send_message("No cards to remove!", ephemeral=True)
+            return
+            
+        # Create remove selection view
+        remove_view = RemoveCardView(self)
+        await interaction.response.send_message(
+            "Select a card to remove:", 
+            view=remove_view,
+            ephemeral=True
+        )
+    
+    @discord.ui.button(label="Submit Selection", style=discord.ButtonStyle.green)
+    async def submit_cards(self, interaction: discord.Interaction, button: discord.ui.Button):
+        if interaction.user.id != self.user.id:
+            await interaction.response.send_message("This isn't your battle card selection!", ephemeral=True)
+            return
+            
+        if not self.selected_cards:
+            await interaction.response.send_message("You must select at least one card!", ephemeral=True)
+            return
+        
+        # Store the selected cards in the battle object
+        if self.player_type == "challenger":
+            self.battle.challenger_cards = self.selected_cards
+            self.battle.challenger_selected = True
+        else:
+            self.battle.opponent_cards = self.selected_cards
+            self.battle.opponent_selected = True
+        
+        # Confirmation message
+        cards_list = ", ".join(self.selected_cards)
+        
+        # Disable all buttons in the view
+        for item in self.children:
+            item.disabled = True
+            
+        try:
+            # Try to update the message, but handle if it fails
+            await interaction.response.edit_message(
+                content=f"You've selected: {cards_list}\nWaiting for the battle to begin...",
+                view=self
+            )
+        except discord.errors.NotFound:
+            # If the message can't be found, send a new message
+            await interaction.followup.send(
+                f"You've selected: {cards_list}\nWaiting for the battle to begin...",
+                ephemeral=True
+            )
+
+class CardSelectMenu(discord.ui.Select):
+    def __init__(self, parent_view):
+        self.parent_view = parent_view
+        
+        # Create options from available cards
+        options = []
+        for i, card_name in enumerate(parent_view.available_cards[:25]):  # Discord limit of 25 options
+            if i >= 25:  # Ensure we don't exceed Discord's limit
+                break
+                
+            card_data = next((c for c in cards if c["name"] == card_name), None)
+            if card_data:
+                # Handle both 'damage' and 'attack' attributes for compatibility
+                attack_value = card_data.get('damage', card_data.get('attack', 1))
+                option = discord.SelectOption(
+                    label=card_name[:25],  # Limit to 25 chars for label
+                    description=f"HP: {card_data['health']} | ATK: {attack_value}",
+                    value=card_name
+                )
+                options.append(option)
+        
+        # If no options, create a placeholder option
+        if not options:
+            options = [discord.SelectOption(label="No cards available", value="none")]
+        
+        super().__init__(
+            placeholder="Select a card to add to your team...",
+            min_values=1,
+            max_values=1,
+            options=options,
+            disabled=len(options) == 1 and options[0].value == "none"
+        )
+    
+    async def callback(self, interaction: discord.Interaction):
+        # Verify this is the correct user
+        if interaction.user.id != self.parent_view.user.id:
+            await interaction.response.send_message("This isn't your battle card selection!", ephemeral=True)
+            return
+            
+        selected_card = self.values[0]
+        
+        if selected_card == "none":
+            await interaction.response.send_message("You don't have any cards to select.", ephemeral=True)
+            return
+            
+        # Add card if limit not reached
+        if len(self.parent_view.selected_cards) < self.parent_view.max_cards:
+            if selected_card not in self.parent_view.selected_cards:
+                self.parent_view.selected_cards.append(selected_card)
+                
+                # Enable the remove button once cards are selected
+                self.parent_view.remove_button.disabled = False
+                
+                # Update the current selection text
+                self.parent_view.selected_cards_text = ", ".join(self.parent_view.selected_cards)
+                
+                # Create a new embed showing the current selection
+                embed = discord.Embed(
+                    title="Select Your Battle Cards",
+                    description=f"Choose up to 3 cards for battle.\nClick Submit when you're done.\n\n**Current Selection:**\n{self.parent_view.selected_cards_text}",
+                    color=discord.Color.blue()
+                )
+                
+                # Update the message with the new embed and view
+                try:
+                    await interaction.response.edit_message(embed=embed, view=self.parent_view)
+                except discord.errors.NotFound:
+                    await interaction.followup.send("There was an error updating your selection. Please try again.", ephemeral=True)
+            else:
+                await interaction.response.send_message("You've already selected this card!", ephemeral=True)
+        else:
+            await interaction.response.send_message(f"You can only select {self.parent_view.max_cards} cards!", ephemeral=True)
+
+class RemoveCardView(discord.ui.View):
+    def __init__(self, parent_view):
+        super().__init__(timeout=60)
+        self.parent_view = parent_view
+        
+        # Add dropdown to select card to remove
+        options = []
+        for card in parent_view.selected_cards:
+            options.append(discord.SelectOption(label=card, value=card))
+            
+        self.select = discord.ui.Select(
+            placeholder="Select card to remove...",
+            options=options
+        )
+        self.select.callback = self.remove_callback
+        self.add_item(self.select)
+    
+    async def remove_callback(self, interaction: discord.Interaction):
+        # Verify this is the correct user
+        if interaction.user.id != self.parent_view.user.id:
+            await interaction.response.send_message("This isn't your battle card selection!", ephemeral=True)
+            return
+            
+        card_to_remove = self.select.values[0]
+        if card_to_remove in self.parent_view.selected_cards:
+            self.parent_view.selected_cards.remove(card_to_remove)
+            
+            # Update the selection text
+            self.parent_view.selected_cards_text = ", ".join(self.parent_view.selected_cards)
+            
+            # Disable remove button if no cards left
+            if not self.parent_view.selected_cards:
+                self.parent_view.remove_button.disabled = True
+            
+            # Update the parent embed
+            embed = discord.Embed(
+                title="Select Your Battle Cards",
+                description=f"Choose up to 3 cards for battle.\nClick Submit when you're done.\n\n**Current Selection:**\n{self.parent_view.selected_cards_text}",
+                color=discord.Color.blue()
+            )
+            
+            # Acknowledge the removal
+            await interaction.response.send_message(f"Removed {card_to_remove} from your selection.", ephemeral=True)
+            
+            # Close this view
+            await interaction.message.edit(view=None)
+            
+            try:
+                # Try to update the parent message with new card selection
+                parent_message = interaction.message.reference.resolved if interaction.message.reference else None
+                if parent_message:
+                    await parent_message.edit(embed=embed, view=self.parent_view)
+                else:
+                    # If we can't find the original message, send a new one
+                    await interaction.followup.send(
+                        content=self.parent_view.user.mention,
+                        embed=embed, 
+                        view=self.parent_view,
+                        ephemeral=True
+                    )
+            except (discord.errors.NotFound, AttributeError):
+                # If message can't be found or edited, send a new one
+                await interaction.followup.send(
+                    content=self.parent_view.user.mention,
+                    embed=embed, 
+                    view=self.parent_view,
+                    ephemeral=True
+                )
+
 #///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 #other commands not related to the card game
 #///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -734,8 +1318,7 @@ async def list_commands(ctx):
     await ctx.send(f'Here is a list of all the commands you can use:\n{commands_description}')
 
 #info, command to show the current release
-@bot.command(name='info_dex', help="General info about the dex")
-@bot.command(name='info_dex', help="General info about the dex")
+@bot.command(name='info_dex', aliases=['dex_info', 'bot_info'], help="General info about the dex")
 async def info(ctx):
     # Store bot launch time
     if not hasattr(bot, 'launch_time'):
@@ -745,15 +1328,11 @@ async def info(ctx):
     uptime = datetime.datetime.now() - bot.launch_time
     days, remainder = divmod(int(uptime.total_seconds()), 86400)
     hours, remainder = divmod(remainder, 3600)
-    minutes, seconds = divmod(remainder, 60)
-    uptime_str = f"{days}d {hours}h {minutes}m {seconds}s"
+    minutes, _ = divmod(remainder, 60) 
+    uptime_str = f"{days}d {hours}h {minutes}m"
 
     # Count lines of code
     total_lines = count_lines_of_code()
-
-    # Calculate card stats
-    total_cards = len(cards)
-    unique_collected = len(set(card for user_cards in player_cards.values() for card in user_cards))
 
     # Get backup count
     backup_count = len([f for f in os.listdir(backup_folder) if f.startswith("player_cards_backup_")])
@@ -765,7 +1344,7 @@ async def info(ctx):
 
     embed.add_field(
         name="Version",
-        value="v1.2.5 - \"The more-stats update\"", 
+        value="1.3 - \"The double cards update\"", 
         inline=False
     )
 
@@ -777,23 +1356,17 @@ async def info(ctx):
 
     embed.add_field(
         name="Stats",
-        value=f"Total Code: {total_lines} lines\nUptime: {uptime_str}\nMode: {'Test' if is_test_mode else 'Production'}",
+        value=f"Total Code: {total_lines} lines\nUptime: {uptime_str}",
         inline=True
     )
 
     embed.add_field(
         name="Database",
-        value=f"Users: {len(player_cards)}\nBackups: {backup_count}/{MAX_BACKUPS}\nSpawn Mode: {spawn_mode}",
+        value=f"Users: {len(player_cards)}\nBackups: {backup_count}/{MAX_BACKUPS}",
         inline=True
     )
 
-    embed.add_field(
-        name="Cards",
-        value=f"Total Cards: {total_cards}\nUnique Cards Collected: {unique_collected}",
-        inline=False
-    )
-
-    embed.set_footer(text=f"Last update: {datetime.datetime.now().strftime('%Y-%m-%d %H:%M')}")
+    embed.set_footer(text=f"Last update: {datetime.datetime.now().strftime('%d-%m-%Y %H:%M')}")
 
     await ctx.send(embed=embed)  
 
@@ -810,11 +1383,11 @@ def count_lines_of_code() -> int:
     return total_lines
 
 # Command to play a certain GIF, restricted to authorized users
-bot.command(name='celebrate', help="Posts a celebration animation (admin only)")
+@bot.command(name='celebrate', help="Posts a celebration animation (admin only)")
 @commands.check(is_authorized)
 async def play_gif(ctx):
     embed = discord.Embed(title="Celebration Time!")
-    embed.set_image(url="https://media.tenor.com/BDxIoo-dxPgAAAPo/missouri-tigers-truman-the-tiger.mp4")
+    embed.set_image(url="https://cdn.discordapp.com/attachments/1322197080625647627/1348320094660464863/image0.gif?ex=67cf0871&is=67cdb6f1&hm=d47b2a88b5fe88a4da2c03c78a94f67eb66b9efa0104c69b72c6a9006c4c95e2")
     await ctx.send(embed=embed)
 
 # For fun interactions with the bot
