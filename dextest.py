@@ -788,6 +788,10 @@ async def battle(ctx, opponent: discord.Member):
     # Initialize ongoing battles tracker
     if not hasattr(bot, 'ongoing_battles'):
         bot.ongoing_battles = set()
+    
+    # Initialize active battles list
+    if not hasattr(bot, 'active_battles'):
+        bot.active_battles = []
 
     # Add both players to ongoing battles
     bot.ongoing_battles.add(challenger_id)
@@ -796,11 +800,163 @@ async def battle(ctx, opponent: discord.Member):
     try:
         # Create the battle
         battle = CardBattle(ctx, ctx.author, opponent)
+        bot.active_battles.append(battle)  # Add to active battles
         await battle.start_battle()
     finally:
         # Clean up after battle ends
         bot.ongoing_battles.remove(challenger_id)
         bot.ongoing_battles.remove(opponent_id)
+        if hasattr(bot, 'active_battles') and battle in bot.active_battles:
+            bot.active_battles.remove(battle)
+
+@bot.command(name='battle_ready', help="Confirm your battle card selection")
+async def battle_ready(ctx):
+    user_id = str(ctx.author.id)
+    
+    # Check if the user is in a battle
+    if not hasattr(bot, 'ongoing_battles') or user_id not in bot.ongoing_battles:
+        await ctx.send("You're not in an active battle!")
+        return
+    
+    # Find the active battle for this user
+    active_battle = None
+    for battle in getattr(bot, 'active_battles', []):
+        if battle.challenger_id == user_id:
+            active_battle = battle
+            player_type = "challenger"
+            break
+        elif battle.opponent_id == user_id:
+            active_battle = battle
+            player_type = "opponent"
+            break
+    
+    if not active_battle:
+        await ctx.send("Couldn't find your active battle.")
+        return
+    
+    # Check if cards were selected
+    selection_attr = f"{player_type}_cards"
+    current_selection = getattr(active_battle, selection_attr, [])
+    
+    if not current_selection:
+        await ctx.send("You haven't selected any cards yet! Use `!battle_add [card name]` to add cards.")
+        return
+    
+    # Mark as ready
+    setattr(active_battle, f"{player_type}_selected", True)
+    await ctx.send(f"You're ready for battle with: {', '.join(current_selection)}! Waiting for your opponent...")
+
+@bot.command(name='battle_add', help="Add a specific card to your active battle")
+async def battle_add(ctx, *, card_name: str):
+    user_id = str(ctx.author.id)
+    
+    # Check if the user is in a battle
+    if not hasattr(bot, 'ongoing_battles') or user_id not in bot.ongoing_battles:
+        await ctx.send("You're not in an active battle!")
+        return
+    
+    # Find the active battle for this user
+    active_battle = None
+    for battle in getattr(bot, 'active_battles', []):
+        if battle.challenger_id == user_id:
+            active_battle = battle
+            player_type = "challenger"
+            break
+        elif battle.opponent_id == user_id:
+            active_battle = battle
+            player_type = "opponent"
+            break
+    
+    if not active_battle:
+        await ctx.send("Couldn't find your active battle.")
+        return
+    
+    # Reset activity timer when adding a card via command
+    active_battle.reset_activity_timer()
+    
+    # Check if the user has already submitted their cards
+    if (player_type == "challenger" and active_battle.challenger_selected) or \
+       (player_type == "opponent" and active_battle.opponent_selected):
+        await ctx.send("You've already submitted your card selection!")
+        return
+    
+    # Check if the user has this card
+    user_cards = player_cards.get(user_id, [])
+    card_lower = card_name.lower()
+    
+    # Find the actual card with matching name (case insensitive) or aliases
+    found_card = None
+    for card in user_cards:
+        card_data = next((c for c in cards if c['name'].lower() == card.lower()), None)
+        if card.lower() == card_lower:
+            found_card = card
+            break
+        elif card_data and 'aliases' in card_data:
+            if card_lower in [alias.lower() for alias in card_data['aliases']]:
+                found_card = card
+                break
+    
+    if not found_card:
+        await ctx.send(f"You don't have a card named `{card_name}`!")
+        return
+    
+    # Check if the card is already in the battle selection
+    selection_attr = f"{player_type}_cards"
+    current_selection = getattr(active_battle, selection_attr, [])
+    
+    if found_card in current_selection:
+        await ctx.send(f"`{found_card}` is already in your battle selection!")
+        return
+    
+    # Check if user has reached the card limit
+    if len(current_selection) >= 3:
+        await ctx.send("You've already selected the maximum number of cards (3)!")
+        return
+    
+    # Add the card to the battle selection
+    current_selection.append(found_card)
+    setattr(active_battle, selection_attr, current_selection)
+    
+    # Provide feedback
+    if len(current_selection) == 3:
+        await ctx.send(f"Added `{found_card}` to your battle selection. Your team is complete! Cards: {', '.join(current_selection)}\n\nReady to fight? Type `!battle_ready` to confirm your selection.")
+    else:
+        await ctx.send(f"Added `{found_card}` to your battle selection. You have selected {len(current_selection)}/3 cards: {', '.join(current_selection)}")
+
+@bot.command(name='battle_cards', help="See your currently selected battle cards")
+async def battle_cards(ctx):
+    user_id = str(ctx.author.id)
+    
+    # Check if the user is in a battle
+    if not hasattr(bot, 'ongoing_battles') or user_id not in bot.ongoing_battles:
+        await ctx.send("You're not in an active battle!")
+        return
+    
+    # Find the active battle for this user
+    active_battle = None
+    for battle in getattr(bot, 'active_battles', []):
+        if battle.challenger_id == user_id:
+            active_battle = battle
+            player_type = "challenger"
+            break
+        elif battle.opponent_id == user_id:
+            active_battle = battle
+            player_type = "opponent"
+            break
+    
+    if not active_battle:
+        await ctx.send("Couldn't find your active battle.")
+        return
+        
+    # Get selected cards
+    selection_attr = f"{player_type}_cards"
+    current_selection = getattr(active_battle, selection_attr, [])
+    
+    if not current_selection:
+        await ctx.send("You haven't selected any cards yet! Use `!battle_add [card name]` to add cards.")
+    else:
+        cards_str = "\n".join([f"• {card}" for card in current_selection])
+        await ctx.send(f"Your selected battle cards ({len(current_selection)}/3):\n{cards_str}")
 
 class CardBattle:
     def __init__(self, ctx, challenger, opponent):
@@ -814,7 +970,12 @@ class CardBattle:
         self.challenger_selected = False
         self.opponent_selected = False
         self.battle_message = None
-        self.timeout = 90  # Increased timeout for card selection to 90 seconds
+        self.timeout = 120  # 2 minutes timeout
+        self.last_activity = time.time()  # Track last activity time
+    
+    def reset_activity_timer(self):
+        """Reset the activity timer whenever a user performs an action"""
+        self.last_activity = time.time()
 
     async def start_battle(self):
         embed = discord.Embed(
@@ -824,20 +985,21 @@ class CardBattle:
                         f"Cards will take turns attacking until one side has no cards left.",
             color=discord.Color.gold()
         )
-        embed.set_footer(text=f"Both players have {self.timeout} seconds to accept and select cards")
+        embed.set_footer(text=f"Players have {self.timeout} seconds to select cards. Timer resets with each action.")
 
         view = BattleInviteView(self)
         self.battle_message = await self.ctx.send(embed=embed, view=view)
 
         # Wait for acceptance and card selection
-        try:
-            await asyncio.wait_for(self.wait_for_selection(), timeout=self.timeout)
-        except asyncio.TimeoutError:
+        selection_complete = await self.wait_for_selection()
+        
+        # If wait_for_selection returns False, we timed out
+        if not selection_complete:
             # Disable the view buttons when timing out
             for child in view.children:
                 child.disabled = True
             await self.battle_message.edit(view=view)
-            await self.ctx.send("Battle invitation timed out.")
+            await self.ctx.send("Battle invitation timed out due to inactivity.")
             return
         
         # Both players have selected cards, begin the battle
@@ -851,9 +1013,13 @@ class CardBattle:
             await self.ctx.send("Battle cancelled.")
     
     async def wait_for_selection(self):
-        """Wait until both players have selected their cards"""
+        """Wait until both players have selected their cards or timeout occurs"""
         while not (self.challenger_selected and self.opponent_selected):
+            # Check if we've exceeded timeout since last activity
+            if time.time() - self.last_activity > self.timeout:
+                return False  # Timed out
             await asyncio.sleep(1)
+        return True  # Both players selected cards
 
     async def execute_battle(self):
         # Initialize battle state
@@ -983,6 +1149,9 @@ class BattleInviteView(View):
         if interaction.user.id != self.battle.opponent.id:
             await interaction.response.send_message("This challenge isn't for you!", ephemeral=True)
             return
+        
+        # Reset activity timer when accept button is pressed
+        self.battle.reset_activity_timer()
         
         # Send a public message that the challenge was accepted
         await self.battle.ctx.send(f"{interaction.user.mention} has accepted the battle challenge! Both players must select their cards to begin.")
@@ -1121,6 +1290,9 @@ class CardSelectionView(View):
         if interaction.user.id != self.user.id:
             await interaction.response.send_message("This isn't your battle card selection!", ephemeral=True)
             return
+        
+        # Reset activity timer when removing a card
+        self.battle.reset_activity_timer()
             
         if not self.selected_cards:
             await interaction.response.send_message("No cards to remove!", ephemeral=True)
@@ -1139,6 +1311,9 @@ class CardSelectionView(View):
         if interaction.user.id != self.user.id:
             await interaction.response.send_message("This isn't your battle card selection!", ephemeral=True)
             return
+        
+        # Reset activity timer when submitting cards
+        self.battle.reset_activity_timer()
             
         if not self.selected_cards:
             await interaction.response.send_message("You must select at least one card!", ephemeral=True)
@@ -1229,6 +1404,9 @@ class CardSelectMenu(discord.ui.Select):
         if interaction.user.id != self.parent_view.user.id:
             await interaction.response.send_message("This isn't your battle card selection!", ephemeral=True)
             return
+        
+        # Reset activity timer when selecting a card
+        self.parent_view.battle.reset_activity_timer()
             
         selected_card = self.values[0]
         
@@ -1286,6 +1464,9 @@ class RemoveCardView(discord.ui.View):
         if interaction.user.id != self.parent_view.user.id:
             await interaction.response.send_message("This isn't your battle card selection!", ephemeral=True)
             return
+        
+        # Reset activity timer when removing a card
+        self.parent_view.battle.reset_activity_timer()
             
         card_to_remove = self.select.values[0]
         if card_to_remove in self.parent_view.selected_cards:
@@ -1334,6 +1515,43 @@ class RemoveCardView(discord.ui.View):
                 except Exception as e:
                     logging.error(f"Failed to send updated card selection: {e}")
 
+@bot.command(name='battle_help', help="Explains how to battle with cards")
+async def battle_help(ctx):
+    embed = discord.Embed(
+        title="Card Battle Help",
+        description="How to battle with your cards",
+        color=discord.Color.blue()
+    )
+    
+    embed.add_field(
+        name="Starting a Battle",
+        value="Use `!battle @user` to challenge another player",
+        inline=False
+    )
+    
+    embed.add_field(
+        name="Selecting Cards",
+        value="After the opponent accepts, both players can select cards with:\n"
+              "• Use dropdown menus in the selection dialog OR\n"
+              "• Type `!battle_add [card name]` to add a specific card\n"
+              "You can select up to 3 cards.",
+        inline=False
+    )
+    
+    embed.add_field(
+        name="Confirming Selection", 
+        value="After adding cards with `!battle_add`, use `!battle_ready` to confirm your selection",
+        inline=False
+    )
+    
+    embed.add_field(
+        name="Battle Process",
+        value="Cards will automatically take turns attacking until one side has no cards left.",
+        inline=False
+    )
+    
+    await ctx.send(embed=embed)
+
 #///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 #other commands not related to the card game
 #///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -1349,13 +1567,12 @@ async def random_number(ctx):
     random_number = random.randint(0, 10000000)
     await ctx.send(f'Your random number is: {random_number}')
 
-
 @bot.command(name='commands_dex', help="Shows a list of all the commands you can use.")
 async def list_commands(ctx):
     embed = discord.Embed(
-        title="📋 Available Commands",
-        description="Here are all the commands you can use with the 235th dex:",
-        color=discord.Color.blue()
+        title="🎮 235th Dex Command Center",
+        description="Here are all the commands available to you:",
+        color=discord.Color.purple()  # Changed to purple to distinguish from other embeds
     )
     
     # General Commands
@@ -1365,7 +1582,8 @@ async def list_commands(ctx):
             "`!hello` - Get a greeting from the bot\n"
             "`!random_number` - Generate a random number\n"
             "`!info_dex` - View information about the bot\n"
-            "`!commands_dex` - Show this command list"
+            "`!commands_dex` - Show this command list\n"
+            "`!gud_boy` - Shows a good boy GIF"
         ),
         inline=False
     )
@@ -1398,7 +1616,9 @@ async def list_commands(ctx):
         inline=False
     )
     
-    embed.set_footer(text="If you have questions about the bot or commands, visit the help channel: https://discord.com/channels/1103817592889679892/1323370905874989100")
+    embed.set_thumbnail(url="https://cdn.discordapp.com/app-icons/1321813254128930867/450fa2947cf99f3182797b7b503c5c63.png")
+
+    embed.set_footer(text="Need help? Join our support server: discord.gg/yRNxTXtm")
     
     await ctx.send(embed=embed)
 
@@ -1424,36 +1644,45 @@ async def info(ctx):
 
     embed = discord.Embed(
         title="235th Dex Information",
-        color=discord.Color.blue()
+        description="Technical details and status information",
+        color=discord.Color.teal()  # Using teal to distinguish from other commands
     )
 
     embed.add_field(
-        name="Version",
+        name="🏷️ Version",
         value="1.3 - \"The double cards update\"", 
         inline=False
     )
 
     embed.add_field(
-        name="Developers",
+        name="👨‍💻 Developers",
         value="<@1035607651985403965>\n<@573878397952851988>\n<@845973389415284746>",
         inline=True
     )
 
     embed.add_field(
-        name="Stats",
-        value=f"Total Code: {total_lines} lines\nUptime: {uptime_str}",
+        name="📈 System Stats",
+        value=f"• Code: {total_lines} lines\n• Uptime: {uptime_str}\n• Status: Online",
         inline=True
     )
 
     embed.add_field(
-        name="Database",
-        value=f"Users: {len(player_cards)}\nBackups: {backup_count}/{MAX_BACKUPS}",
+        name="💾 Database",
+        value=f"• Users: {len(player_cards)}\n• Backups: {backup_count}/{MAX_BACKUPS}",
         inline=True
     )
+    
+    # Add a changelog section for more information
+    embed.add_field(
+        name="📜 Latest Changes",
+        value="• Added double cards feature\n• Fixed battle system bugs\n• Improved card spawn rates",
+        inline=False
+    )
 
-    embed.set_footer(text=f"Last update: {datetime.datetime.now().strftime('%d-%m-%Y %H:%M')}")
+    # Add timestamp
+    embed.set_footer(text=f"Last updated: {datetime.datetime.now().strftime('%d-%m-%Y %H:%M')}")
 
-    await ctx.send(embed=embed)  
+    await ctx.send(embed=embed)
 
 def count_lines_of_code() -> int:
     project_dir = '/home/container'
@@ -1536,6 +1765,7 @@ async def public_stats(ctx):
     embed.add_field(name="Rarest Card Owned", value=rarest_card_owned, inline=False)
     
     await ctx.send(embed=embed)
+
 #///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 #other cool things for shutdown and signal handling
 
