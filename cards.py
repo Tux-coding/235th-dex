@@ -301,7 +301,7 @@ cards = [
         "card_image_url": "https://media.discordapp.net/attachments/1322202570529177642/1323215495637504010/Pipopro_1.png?ex=67a086f6&is=679f3576&hm=a95177683cf7782138009565d2c8952c9d53482146ac5be7d829375fb03becf8&=&format=webp&quality=lossless&width=358&height=502",
         "rarity": 0,
         "health": 1,
-        "attack": 100000000000000000000000000000000000000000000000000000000000000000000,
+        "damage": 100000000000000000000000000000000000000000000000000000000000000000000,
         "description": "They might be sigma, but they are definitely not the best squad."
     },
     {
