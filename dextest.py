@@ -1572,7 +1572,7 @@ async def list_commands(ctx):
     embed = discord.Embed(
         title="🎮 235th Dex Command Center",
         description="Here are all the commands available to you:",
-        color=discord.Color.purple()  # Changed to purple to distinguish from other embeds
+        color=discord.Color.purple()
     )
     
     # General Commands
@@ -1602,9 +1602,13 @@ async def list_commands(ctx):
     
     # Battle Commands
     embed.add_field(
-        name="⚔️ Battle",
+        name="⚔️ Battle System",
         value=(
-            "`!battle [@user]` - Challenge another user to a card battle"
+            "`!battle [@user]` - Challenge another user to a battle\n"
+            "`!battle_add [card name]` - Add a card to your battle team\n"
+            "`!battle_cards` - See your currently selected cards\n"
+            "`!battle_ready` - Confirm your card selection\n"
+            "`!battle_help` - Get help with the battle system"
         ),
         inline=False
     )
@@ -1636,8 +1640,9 @@ async def info(ctx):
     minutes, _ = divmod(remainder, 60) 
     uptime_str = f"{days}d {hours}h {minutes}m"
 
-    # Count lines of code
-    total_lines = count_lines_of_code()
+    # Count total users and cards
+    total_users = len(player_cards)
+    total_cards_collected = sum(len(cards) for cards in player_cards.values())
 
     # Get backup count
     backup_count = len([f for f in os.listdir(backup_folder) if f.startswith("player_cards_backup_")])
@@ -1645,12 +1650,12 @@ async def info(ctx):
     embed = discord.Embed(
         title="235th Dex Information",
         description="Technical details and status information",
-        color=discord.Color.teal()  # Using teal to distinguish from other commands
+        color=discord.Color.teal()
     )
 
     embed.add_field(
         name="🏷️ Version",
-        value="1.3 - \"The double cards update\"", 
+        value="1.4 - \"The Battle Update\"", 
         inline=False
     )
 
@@ -1662,20 +1667,19 @@ async def info(ctx):
 
     embed.add_field(
         name="📈 System Stats",
-        value=f"• Code: {total_lines} lines\n• Uptime: {uptime_str}\n• Status: Online",
+        value=f"• Users: {total_users}\n• Cards: {total_cards_collected}\n• Uptime: {uptime_str}",
         inline=True
     )
 
     embed.add_field(
         name="💾 Database",
-        value=f"• Users: {len(player_cards)}\n• Backups: {backup_count}/{MAX_BACKUPS}",
+        value=f"• Status: Healthy\n• Backups: {backup_count}/{MAX_BACKUPS}",
         inline=True
     )
     
-    # Add a changelog section for more information
     embed.add_field(
         name="📜 Latest Changes",
-        value="• Added double cards feature\n• Fixed battle system bugs\n• Improved card spawn rates",
+        value="• Enhanced battle system\n• Improved card selection UI",
         inline=False
     )
 
