@@ -34,8 +34,8 @@ cards = [
     {
         "name": "Blau",
         "aliases": ["Blue"],
-        "spawn_image_url": "https://media.discordapp.net/attachments/1322205679028670495/1322289394404687957/RobloxScreenShot20241227_204520218.png?ex=67724fb6&is=6770fe36&hm=b3fc9388163dfb8f6d33ea520cccc373156a6ea8c5b558d370d388a8ec8ae7d8&=&format=webp&quality=lossless&width=396&height=350",
-        "card_image_url": "https://cdn.discordapp.com/attachments/1322202570529177642/1327715434799169536/CC-_3.png?ex=678412db&is=6782c15b&hm=f45c6310e66b243171a68c5c9128bf2be7046ec45659ee3ddb7bf742855cee5f&",
+        "spawn_image_url": "https://i.imgur.com/GAipebf.png",
+        "card_image_url": "https://i.imgur.com/7gWpCBY.png",
         "rarity": 12.5,
         "health": 6050,
         "damage": 2250,
@@ -55,7 +55,7 @@ cards = [
         "name": "Pipopro",
         "aliases": ["Tux"],
         "spawn_image_url": "https://media.discordapp.net/attachments/1322205679028670495/1322977622778576976/artworks-OF3WFPHsapfnZrW8-lDiZAQ-t500x500.png?ex=67737f2d&is=67722dad&hm=1ec22c5b9af4c994af583de216afe05660c777e5437a738750577b9a49cbdf90&=&format=webp&quality=lossless",
-        "card_image_url": "https://cdn.discordapp.com/attachments/1322202570529177642/1322977702105579591/Pipopro.png?ex=67737f3f&is=67722dbf&hm=2cc3c639f2e613963f78ec6dbfc274df6f6a74666d06461e4bfb60fdb5c3568d&",
+        "card_image_url": "https://i.imgur.com/4OAxy8x.png",
         "rarity": 0.75,
         "health": 10000,
         "damage": 7500,
@@ -330,5 +330,35 @@ cards = [
         "health": 2900,
         "damage": 1700,
         "description": "You know that one guy who thinks he's the main character but really isn't? Well, that's Hades right there!"
+    },
+    {
+        "name": "Mixer",
+        "aliases": ["Blender", "existence", "dutchman" ], #mixer verzin er zelf is een paar leuke
+        "spawn_image_url": "https://i.imgur.com/ULt5mqn.png",
+        "card_image_url": "https://i.imgur.com/BxW3vdm.png",
+        "rarity": 30,
+        "health": 5800,
+        "damage": 2000,
+        "description": "A wild Mixer proves: Existence is mandatory!",
+    },
+    {
+        "name": "Eagles",
+        "aliases": ["eagly"],
+        "spawn_image_url": "https://i.imgur.com/DQRyj4F.png",
+        "card_image_url": "https://i.imgur.com/iBIbwEr.png",
+        "rarity": 30,
+        "health": 5700,
+        "attack": 2100,
+        "description": "ARC-1717, Better known as Eagles, is a persistent and experienced clone trooper. He fought many battles, and he cares about his brothers.",
+    },
+    {
+        "name":"Sanghelios",
+        "aliases": ["Sangheli"],
+        "spawn_image_url": "https://i.imgur.com/JwKNNKh.png",
+        "card_image_url": "https://i.imgur.com/7Yr4VUU.png",
+        "rarity": 31,
+        "health": 6100,
+        "damage": 2000,
+        "description": "Current Director of RI Clone Sergeant Sanghelios of the Republic Intelligence 235th attachement, highly skilled in stealth and disguise along with the essentials for a trooper."
     },
 ]

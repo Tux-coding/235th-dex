@@ -1796,7 +1796,7 @@ async def info(ctx):
 
     embed.add_field(
         name="🏷️ Version",
-        value="1.4 - \"The Battle Update\"", 
+        value="1.4.1 - \"The Battle Update\"", 
         inline=False
     )
 
