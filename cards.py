@@ -313,7 +313,7 @@ cards = [
     },
     {
         "name": "Sigma-squad",
-        "aliases": ["eaglesmademedothis", "whydidiagreetothis","sigma squad"],
+        "aliases": ["Iwasforced", "whydidiagreetothis","sigma squad"],
         "spawn_image_url": "https://cdn.discordapp.com/attachments/1322205679028670495/1323215414393700455/RobloxScreenShot20241230_100007909.png?ex=67a086e2&is=679f3562&hm=cf9521fb29329e7ab81f84548e9c0664566adc9dccac4bc549b1d0e8cd70f166&",
         "card_image_url": "https://media.discordapp.net/attachments/1322202570529177642/1323215495637504010/Pipopro_1.png?ex=67a086f6&is=679f3576&hm=a95177683cf7782138009565d2c8952c9d53482146ac5be7d829375fb03becf8&=&format=webp&quality=lossless&width=358&height=502",
         "rarity": 0,
