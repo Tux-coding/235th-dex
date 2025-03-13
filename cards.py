@@ -348,7 +348,7 @@ cards = [
         "card_image_url": "https://i.imgur.com/iBIbwEr.png",
         "rarity": 30,
         "health": 5700,
-        "attack": 2100,
+        "damage": 2100,
         "description": "ARC-1717, Better known as Eagles, is a persistent and experienced clone trooper. He fought many battles, and he cares about his brothers.",
     },
     {
