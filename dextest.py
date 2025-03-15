@@ -58,6 +58,9 @@ is_test_mode = spawn_mode == 'test'
 # File to store blacklisted user IDs
 blacklist_file = "blacklist.json"
 
+# Add a lock for battle operations
+battle_lock = asyncio.Lock()
+
 class BlacklistManager:
     @staticmethod
     def load_blacklist() -> List[str]:
@@ -144,16 +147,16 @@ player_cards = {}
 
 # Lock to ensure only one user can submit at a time
 modal_lock = asyncio.Lock()
-
 # Load player cards from a JSON file
 def load_player_cards() -> None:
     global player_cards
     try:
         if os.path.exists('player_cards.json') and os.path.getsize('player_cards.json') > 0:
-            with open('player_cards.json', 'r') as f:
+            with open('player_cards.json', 'r', encoding='utf-8') as f:
                 player_cards = json.load(f)
             # Ensure all keys are strings
             player_cards = {str(k): v for k, v in player_cards.items()}
+            logging.info("Player cards loaded successfully: %d users found", len(player_cards))
         else:
             # Create a new file if it doesn't exist or is empty
             player_cards = {}
@@ -162,30 +165,60 @@ def load_player_cards() -> None:
     except json.JSONDecodeError as e:
         logging.error(f"Error decoding JSON from player cards file: {e}")
         # Try to recover from the most recent backup
-        backup_files = [f for f in os.listdir() if f.startswith("player_cards_backup_")]
-        if backup_files:
-            latest_backup = max(backup_files)
-            logging.info(f"Attempting to recover from backup: {latest_backup}")
-            try:
-                with open(latest_backup, 'r') as f:
-                    player_cards = json.load(f)
-                player_cards = {str(k): v for k, v in player_cards.items()}
-                logging.info("Recovery successful")
-                save_player_cards()  # Save the recovered data back to the main file
-            except Exception as backup_error:
-                logging.error(f"Backup recovery failed: {backup_error}")
-                player_cards = {}
-        else:
-            logging.error("No backups found. Starting with an empty dictionary.")
+        recover_from_backup()
+    except PermissionError:
+        logging.error("Permission denied when trying to access player cards file")
+        player_cards = {}
+        recover_from_backup()
+    except Exception as e:
+        logging.error(f"Unexpected error loading player cards: {e}")
+        recover_from_backup()
+
+def recover_from_backup():
+    global player_cards
+    backup_files = [f for f in os.listdir(backup_folder) if f.startswith("player_cards_backup_")]
+    if backup_files:
+        latest_backup = max(backup_files)
+        backup_path = os.path.join(backup_folder, latest_backup)
+        logging.info(f"Attempting to recover from backup: {backup_path}")
+        try:
+            with open(backup_path, 'r', encoding='utf-8') as f:
+                player_cards = json.load(f)
+            player_cards = {str(k): v for k, v in player_cards.items()}
+            logging.info("Recovery successful")
+            save_player_cards()  # Save the recovered data back to the main file
+        except Exception as backup_error:
+            logging.error(f"Backup recovery failed: {backup_error}")
             player_cards = {}
+    else:
+        logging.error("No backups found. Starting with an empty dictionary.")
+        player_cards = {}
 
 # Save player cards to a JSON file
 def save_player_cards() -> None:
-    try:
-        with open('player_cards.json', 'w') as f:
-            json.dump(player_cards, f, indent=4)
-    except Exception as e:
-        logging.error(f"Error saving player cards: {e}")
+    max_retries = 3
+    for attempt in range(max_retries):
+        try:
+            with open('player_cards.json', 'w') as f:
+                json.dump(player_cards, f, indent=4)
+            return  # Successfully saved, exit function
+        except PermissionError:
+            if attempt < max_retries - 1:
+                logging.warning(f"Permission denied when saving player cards. Retry {attempt + 1}/{max_retries}...")
+                time.sleep(2)  # Wait before retrying
+            else:
+                logging.error("Persistent permission denied when saving player cards after multiple attempts")
+                # Create an emergency backup with a different filename
+                try:
+                    emergency_path = f'player_cards_emergency_{int(time.time())}.json'
+                    with open(emergency_path, 'w') as f:
+                        json.dump(player_cards, f, indent=4)
+                    logging.info(f"Created emergency backup at {emergency_path}")
+                except Exception as e:
+                    logging.error(f"Failed to create emergency backup: {e}")
+        except Exception as e:
+            logging.error(f"Error saving player cards: {e}")
+            break  # Exit on non-permission errors
 
 # Backup creation
 backup_folder = "backup_folder"
@@ -460,47 +493,89 @@ async def spawn_card():
     try:
         # Disable buttons of previous cards
         for message in spawned_messages:
-            view = View.from_message(message)
-            for item in view.children:
-                if isinstance(item, Button):
-                    item.disabled = True
-            await message.edit(view=view)
+            try:
+                view = View.from_message(message)
+                for item in view.children:
+                    if isinstance(item, Button):
+                        item.disabled = True
+                await message.edit(view=view)
+            except discord.NotFound:
+                logging.info(f"Message {message.id} not found, likely deleted")
+            except discord.HTTPException as e:
+                logging.error(f"HTTP error disabling buttons: {e}")
+            except Exception as e:
+                logging.error(f"Error disabling buttons on message {message.id}: {e}")
+        
         spawned_messages = []
 
-        if spawn_mode in ['both', 'test']:
-            test_channel = bot.get_channel(int(test_channel_id))
-            if test_channel:
-                channels.append(test_channel)
-            else:
-                logging.error("Test channel not found.")
-        
-        if spawn_mode == 'both':
-            main_channel = bot.get_channel(int(channel_id))
-            if main_channel:
-                channels.append(main_channel)
-            else:
-                logging.error("Main channel not found.")
+        # Get valid channels based on spawn mode
+        channels = get_spawn_channels()
         
         if not channels:
             logging.info("No channels configured for spawning cards.")
             return
 
-        card = weighted_random_choice(cards)
-        while card == last_spawned_card:
-            card = weighted_random_choice(cards)
+        # Select a card that's different from the last one
+        card = select_random_card()
         
-        last_spawned_card = card
         logging.info(f"Selected card: {card['name']}")
         embed = discord.Embed(title=f"A wild card has appeared!", description="Click the button below to catch it!")
         embed.set_image(url=card['spawn_image_url'])
         
+        # Send to all valid channels
         for channel in channels:
-            msg = await channel.send(embed=embed, view=CatchView(card['name']), allowed_mentions=discord.AllowedMentions.none())
-            spawned_messages.append(msg)
+            try:
+                msg = await channel.send(embed=embed, view=CatchView(card['name']), allowed_mentions=discord.AllowedMentions.none())
+                spawned_messages.append(msg)
+                logging.info(f"Card spawned in channel {channel.id}")
+            except discord.Forbidden:
+                logging.error(f"Missing permissions to send messages in channel {channel.id}")
+            except discord.HTTPException as e:
+                logging.error(f"Failed to send card to channel {channel.id}: {e}")
+            except Exception as e:
+                logging.error(f"Unexpected error sending card to channel {channel.id}: {e}")
+                
     except Exception as e:
-        logging.error(f"An error occurred: {e}")
+        logging.error(f"An error occurred during card spawn: {e}", exc_info=True)
         for channel in channels:
-            await channel.send("An error occurred while spawning a card.")
+            try:
+                await channel.send("An error occurred while spawning a card. The game will continue shortly.")
+            except:
+                pass
+
+def get_spawn_channels():
+    """Get the appropriate channels based on spawn mode"""
+    channels = []
+    
+    if spawn_mode in ['both', 'test']:
+        test_channel = bot.get_channel(int(test_channel_id))
+        if test_channel:
+            channels.append(test_channel)
+        else:
+            logging.error(f"Test channel {test_channel_id} not found.")
+    
+    if spawn_mode == 'both':
+        main_channel = bot.get_channel(int(channel_id))
+        if main_channel:
+            channels.append(main_channel)
+        else:
+            logging.error(f"Main channel {channel_id} not found.")
+    
+    return channels
+
+def select_random_card():
+    """Select a random card different from the last one"""
+    global last_spawned_card
+    card = weighted_random_choice(cards)
+    retry_count = 0
+    max_retries = 5  # Prevent infinite loop
+    
+    while card == last_spawned_card and retry_count < max_retries:
+        card = weighted_random_choice(cards)
+        retry_count += 1
+    
+    last_spawned_card = card
+    return card
 
 # Command to print the stats of a card
 @bot.command(name='stats', help="Show the stats of a specific card.")
@@ -516,36 +591,63 @@ async def print_stats(ctx, *, card_name: str):
     else:
         await ctx.send("Card not found.")
 
-# If error, he says why
 @bot.event
 async def on_command_error(ctx, error):
     if isinstance(error, commands.CommandNotFound):
-        await ctx.send("Command not found.")
+        await ctx.send(f"Command not found. Use `!commands_dex` to see available commands.")
     elif isinstance(error, commands.MissingRequiredArgument):
-        await ctx.send("Missing arguments.")
+        param = error.param.name
+        await ctx.send(f"Missing required argument: `{param}`. Check command usage with `!commands_dex`.")
     elif isinstance(error, commands.BadArgument):
-        await ctx.send("Bad argument.")
+        if "Member" in str(error):
+            await ctx.send("Could not find that user. Please @mention a valid user.")
+        else:
+            await ctx.send(f"Invalid argument provided. {str(error)}")
     elif isinstance(error, commands.DisabledCommand):
-        await ctx.send("This command is disabled.")
+        await ctx.send("This command is currently disabled.")
     elif isinstance(error, commands.CommandInvokeError):
-        logging.error(f"An error occurred while invoking the command: {error}")
-        await ctx.send("An error occurred while invoking the command.")
+        original = error.original
+        if isinstance(original, discord.Forbidden):
+            await ctx.send("I don't have permission to do that.")
+        elif isinstance(original, discord.HTTPException):
+            await ctx.send("There was a network error. Please try again later.")
+        else:
+            logging.error(f"Command {ctx.command} raised an error: {original}", exc_info=original)
+            await ctx.send(f"An error occurred while running the command: {type(original).__name__}")
     elif isinstance(error, commands.TooManyArguments):
-        await ctx.send("Too many arguments provided.")
+        await ctx.send("Too many arguments provided. Check command usage with `!commands_dex`.")
     elif isinstance(error, commands.CheckFailure):
-        if not (is_test_mode and str(ctx.author.id) not in authorized_user_ids):
+        if is_test_mode and str(ctx.author.id) not in authorized_user_ids:
+            await ctx.send("We are currently updating the bot, please wait until we are finished.")
+        elif BlacklistManager.is_blacklisted(str(ctx.author.id)):
+            await ctx.send("You are blacklisted and cannot use this bot.")
+        else:
             await ctx.send("You do not have permission to use this command.")
     elif isinstance(error, commands.UserInputError):
-        await ctx.send("There was an error with your input.")
+        await ctx.send("There was an error with your input. Please check the command syntax.")
     else:
-        logging.error(f"An error occurred: {error}")
-        await ctx.send("An error occurred.")
+        logging.error(f"Unhandled error: {error}", exc_info=error)
+        await ctx.send("An unexpected error occurred. The developers have been notified.")
+
+def validate_card_data():
+    """Validate that all cards have required fields"""
+    required_fields = ['name', 'health', 'damage', 'rarity', 'spawn_image_url', 'card_image_url', 'aliases']
+    for i, card in enumerate(cards):
+        missing_fields = [field for field in required_fields if field not in card]
+        if missing_fields:
+            logging.warning(f"Card #{i} ({card.get('name', 'Unknown')}) is missing fields: {', '.join(missing_fields)}")
+        
+        # Check for valid URLs
+        for url_field in ['spawn_image_url', 'card_image_url']:
+            if url_field in card and not card[url_field].startswith(('http://', 'https://')):
+                logging.warning(f"Card {card.get('name', 'Unknown')} has invalid {url_field}: {card[url_field]}")
 
 # When the bot is ready, it prints to the console that it's online
 @bot.event
 async def on_ready():
     global spawned_messages
     load_player_cards()  # Load player cards when the bot starts
+    validate_card_data()
     print(f'We have logged in as {bot.user}')
     logging.info("Logging is configured correctly.")
     
@@ -608,28 +710,102 @@ async def progress(ctx):
     view = ProgressView(user_cards, missing_cards, ctx.author)
     view.message = await ctx.send(embed=view.create_embed(), view=view)
 
+@bot.command(name='view_progress', help="Admin command to view another user's collection progress")
+@commands.check(is_authorized)
+async def view_progress(ctx, user: discord.Member):
+    """
+    Allows authorized users to view the card collection progress of any user.
+    Usage: !view_progress @username
+    """
+    target_user_id = str(user.id)
+    total_cards = len(cards)
+    user_cards = player_cards.get(target_user_id, [])
+    
+    if not user_cards:
+        await ctx.send(f"{user.display_name} hasn't collected any cards yet.")
+        return
+    
+    # Count total unique cards (no duplicates)
+    unique_cards = set(user_cards)
+    # Get card duplicates info
+    card_counts = Counter(user_cards)
+    # Calculate duplicates
+    total_duplicates = len(user_cards) - len(unique_cards)
+    
+    # Find missing cards
+    missing_cards = [card['name'] for card in cards if card['name'] not in user_cards]
+    
+    # Find rarest card owned by rarity value
+    card_rarity = {card['name']: card['rarity'] for card in cards}
+    if user_cards:
+        rarest_card = min(set(user_cards), key=lambda card: card_rarity.get(card, float('inf')))
+        most_duplicated_card = card_counts.most_common(1)[0][0] if total_duplicates > 0 else "None"
+    else:
+        rarest_card = "None"
+        most_duplicated_card = "None"
+    
+    # Create the embed
+    embed = discord.Embed(
+        title=f"📊 Card Collection Stats for {user.display_name}",
+        description=f"Collection progress: {len(unique_cards)}/{total_cards} unique cards ({len(unique_cards)/total_cards*100:.1f}%)",
+        color=discord.Color.blue()
+    )
+    
+    # Add collection stats
+    embed.add_field(name="Total Cards", value=f"{len(user_cards)} (including duplicates)", inline=True)
+    embed.add_field(name="Unique Cards", value=f"{len(unique_cards)}", inline=True)
+    embed.add_field(name="Duplicates", value=f"{total_duplicates}", inline=True)
+    
+    # Add interesting stats
+    embed.add_field(name="Rarest Card Owned", value=rarest_card, inline=True)
+    embed.add_field(name="Most Duplicated", value=f"{most_duplicated_card} ({card_counts[most_duplicated_card]}x)" if most_duplicated_card != "None" else "None", inline=True)
+    embed.add_field(name="Missing Cards", value=f"{len(missing_cards)}", inline=True)
+    
+    # Create collection view for the specified user
+    view = ProgressView(user_cards, missing_cards, ctx.author)  # Note: controls belong to command invoker
+    
+    # Send the statistics and view
+    embed.set_footer(text="Use the buttons below to navigate cards")
+    message = await ctx.send(embed=embed)
+    
+    # Send the detailed card view in a second message
+    view.message = await ctx.send(embed=view.create_embed(), view=view)
+    
+    logging.info(f"Admin {ctx.author} viewed collection progress for {user.display_name}")
+
 @bot.command(name='give')
 async def give_card(ctx, card: str, receiving_user: discord.Member):
     sender_id = str(ctx.author.id)
     receiver_id = str(receiving_user.id)
     card_lower = card.lower()
     
-    sender_cards = player_cards.get(sender_id, [])
-    if card_lower not in map(str.lower, sender_cards):
-        await ctx.send(f"You don't own the card `{card}`.")
-        return
-    
-    # Remove the card from the sender's inventory
-    actual_card_name = next(c for c in sender_cards if c.lower() == card_lower)
-    sender_cards.remove(actual_card_name)
+    async with battle_lock:  # Use the lock to prevent race conditions
+        try:
+            sender_cards = player_cards.get(sender_id, [])
+            if card_lower not in map(str.lower, sender_cards):
+                await ctx.send(f"You don't own the card `{card}`.")
+                return
+            
+            # Find the exact card name (preserving case)
+            actual_card_name = next((c for c in sender_cards if c.lower() == card_lower), None)
+            if not actual_card_name:
+                await ctx.send(f"Error finding card `{card}` in your inventory.")
+                return
+                
+            # Remove the card from the sender's inventory
+            sender_cards.remove(actual_card_name)
 
-    # Add the card to the receiver's inventory
-    receiver_cards = player_cards.setdefault(receiver_id, [])
-    receiver_cards.append(actual_card_name)
+            # Add the card to the receiver's inventory
+            receiver_cards = player_cards.setdefault(receiver_id, [])
+            receiver_cards.append(actual_card_name)
 
-    save_player_cards()  # Save the updated player cards
-    await ctx.send(f"{ctx.author.mention} has given `{actual_card_name}` to {receiving_user.mention}.")
-    logging.info(f"{ctx.author} gave {actual_card_name} to {receiving_user}.")
+            # Save immediately after transaction
+            save_player_cards()
+            await ctx.send(f"{ctx.author.mention} has given `{actual_card_name}` to {receiving_user.mention}.")
+            logging.info(f"{ctx.author} gave {actual_card_name} to {receiving_user}.")
+        except Exception as e:
+            logging.error(f"Error in card transfer: {e}", exc_info=True)
+            await ctx.send("An error occurred during card transfer.")
 
 # Command to spawn a certain card
 @bot.command(name='spawn_card', help="Spawn a specific card.")
@@ -700,6 +876,815 @@ async def remove_card(ctx, card: str, user: discord.Member):
         await ctx.send(f"{user.mention} does not have the card `{card}`.")
         logging.info(f"Admin: {ctx.author} attempted to remove {card} from {user}, but {user} did not possess {card}.")
 
+@bot.command(name='battle', help="Battle another player with your cards.")
+async def battle(ctx, opponent: discord.Member = None):
+    try:
+        if not opponent:
+            await ctx.send("Please specify an opponent to battle with. Usage: `!battle @user`")
+            return
+            
+        if opponent.id == ctx.author.id:
+            await ctx.send("You can't battle yourself!")
+            return
+        
+        if opponent.bot:
+            await ctx.send("You can't battle a bot!")
+            return
+        
+        challenger_id = str(ctx.author.id)
+        opponent_id = str(opponent.id)
+
+        # Check if players have cards
+        if challenger_id not in player_cards or not player_cards[challenger_id]:
+            await ctx.send("You don't have any cards to battle with!")
+            return
+        
+        if opponent_id not in player_cards or not player_cards[opponent_id]:
+            await ctx.send(f"{opponent.display_name} doesn't have any cards to battle with!")
+            return
+        
+        # Initialize trackers if not exist
+        if not hasattr(bot, 'ongoing_battles'):
+            bot.ongoing_battles = set()
+        
+        if not hasattr(bot, 'active_battles'):
+            bot.active_battles = []
+
+        # Check if players are in battles
+        if challenger_id in bot.ongoing_battles:
+            await ctx.send("You're already in a battle!")
+            return
+            
+        if opponent_id in bot.ongoing_battles:
+            await ctx.send(f"{opponent.display_name} is already in a battle!")
+            return
+
+        # Add both players to ongoing battles
+        bot.ongoing_battles.add(challenger_id)
+        bot.ongoing_battles.add(opponent_id)
+        
+        # Create and start battle
+        battle = CardBattle(ctx, ctx.author, opponent)
+        bot.active_battles.append(battle)
+        await battle.start_battle()
+        
+    except discord.NotFound:
+        await ctx.send("Could not find the specified user.")
+    except discord.Forbidden:
+        await ctx.send("I don't have permission to interact with one of the players.")
+    except Exception as e:
+        logging.error(f"Battle error: {e}", exc_info=True)
+        await ctx.send("An error occurred while setting up the battle.")
+    finally:
+        # Clean up in case of error
+        bot.ongoing_battles.discard(challenger_id)
+        bot.ongoing_battles.discard(opponent_id)
+        if 'battle' in locals() and battle in getattr(bot, 'active_battles', []):
+            bot.active_battles.remove(battle)
+
+@bot.command(name='battle_ready', help="Confirm your battle card selection")
+async def battle_ready(ctx):
+    user_id = str(ctx.author.id)
+    
+    # Check if the user is in a battle
+    if not hasattr(bot, 'ongoing_battles') or user_id not in bot.ongoing_battles:
+        await ctx.send("You're not in an active battle!")
+        return
+    
+    # Find the active battle for this user
+    active_battle = None
+    for battle in getattr(bot, 'active_battles', []):
+        if battle.challenger_id == user_id:
+            active_battle = battle
+            player_type = "challenger"
+            break
+        elif battle.opponent_id == user_id:
+            active_battle = battle
+            player_type = "opponent"
+            break
+    
+    if not active_battle:
+        await ctx.send("Couldn't find your active battle.")
+        return
+    
+    # Check if cards were selected
+    selection_attr = f"{player_type}_cards"
+    current_selection = getattr(active_battle, selection_attr, [])
+    
+    if not current_selection:
+        await ctx.send("You haven't selected any cards yet! Use `!battle_add [card name]` to add cards.")
+        return
+    
+    # Mark as ready
+    setattr(active_battle, f"{player_type}_selected", True)
+    await ctx.send(f"You're ready for battle with: {', '.join(current_selection)}! Waiting for your opponent...")
+
+@bot.command(name='battle_add', help="Add a specific card to your active battle")
+async def battle_add(ctx, *, card_name: str):
+    user_id = str(ctx.author.id)
+    
+    # Check if the user is in a battle
+    if not hasattr(bot, 'ongoing_battles') or user_id not in bot.ongoing_battles:
+        await ctx.send("You're not in an active battle!")
+        return
+    
+    # Find the active battle for this user
+    active_battle = None
+    for battle in getattr(bot, 'active_battles', []):
+        if battle.challenger_id == user_id:
+            active_battle = battle
+            player_type = "challenger"
+            break
+        elif battle.opponent_id == user_id:
+            active_battle = battle
+            player_type = "opponent"
+            break
+    
+    if not active_battle:
+        await ctx.send("Couldn't find your active battle.")
+        return
+    
+    # Reset activity timer when adding a card via command
+    active_battle.reset_activity_timer()
+    
+    # Check if the user has already submitted their cards
+    if (player_type == "challenger" and active_battle.challenger_selected) or \
+       (player_type == "opponent" and active_battle.opponent_selected):
+        await ctx.send("You've already submitted your card selection!")
+        return
+    
+    # Check if the user has this card
+    user_cards = player_cards.get(user_id, [])
+    card_lower = card_name.lower()
+    
+    # Find the actual card with matching name (case insensitive) or aliases
+    found_card = None
+    for card in user_cards:
+        card_data = next((c for c in cards if c['name'].lower() == card.lower()), None)
+        if card.lower() == card_lower:
+            found_card = card
+            break
+        elif card_data and 'aliases' in card_data:
+            if card_lower in [alias.lower() for alias in card_data['aliases']]:
+                found_card = card
+                break
+    
+    if not found_card:
+        await ctx.send(f"You don't have a card named `{card_name}`!")
+        return
+    
+    # Check if the card is already in the battle selection
+    selection_attr = f"{player_type}_cards"
+    current_selection = getattr(active_battle, selection_attr, [])
+    
+    if found_card in current_selection:
+        await ctx.send(f"`{found_card}` is already in your battle selection!")
+        return
+    
+    # Check if user has reached the card limit
+    if len(current_selection) >= 3:
+        await ctx.send("You've already selected the maximum number of cards (3)!")
+        return
+    
+    # Add the card to the battle selection
+    current_selection.append(found_card)
+    setattr(active_battle, selection_attr, current_selection)
+    
+    # Provide feedback
+    if len(current_selection) == 3:
+        await ctx.send(f"Added `{found_card}` to your battle selection. Your team is complete! Cards: {', '.join(current_selection)}\n\nReady to fight? Type `!battle_ready` to confirm your selection.")
+    else:
+        await ctx.send(f"Added `{found_card}` to your battle selection. You have selected {len(current_selection)}/3 cards: {', '.join(current_selection)}")
+
+@bot.command(name='battle_cards', help="See your currently selected battle cards")
+async def battle_cards(ctx):
+    user_id = str(ctx.author.id)
+    
+    # Check if the user is in a battle
+    if not hasattr(bot, 'ongoing_battles') or user_id not in bot.ongoing_battles:
+        await ctx.send("You're not in an active battle!")
+        return
+    
+    # Find the active battle for this user
+    active_battle = None
+    for battle in getattr(bot, 'active_battles', []):
+        if battle.challenger_id == user_id:
+            active_battle = battle
+            player_type = "challenger"
+            break
+        elif battle.opponent_id == user_id:
+            active_battle = battle
+            player_type = "opponent"
+            break
+    
+    if not active_battle:
+        await ctx.send("Couldn't find your active battle.")
+        return
+        
+    # Get selected cards
+    selection_attr = f"{player_type}_cards"
+    current_selection = getattr(active_battle, selection_attr, [])
+    
+    if not current_selection:
+        await ctx.send("You haven't selected any cards yet! Use `!battle_add [card name]` to add cards.")
+    else:
+        cards_str = "\n".join([f"• {card}" for card in current_selection])
+        await ctx.send(f"Your selected battle cards ({len(current_selection)}/3):\n{cards_str}")
+
+class CardBattle:
+    def __init__(self, ctx, challenger, opponent):
+        self.ctx = ctx
+        self.challenger = challenger
+        self.opponent = opponent
+        self.challenger_id = str(challenger.id)
+        self.opponent_id = str(opponent.id)
+        self.challenger_cards = []
+        self.opponent_cards = []
+        self.challenger_selected = False
+        self.opponent_selected = False
+        self.battle_message = None
+        self.timeout = 120  # 2 minutes timeout
+        self.last_activity = time.time()  # Track last activity time
+    
+    def reset_activity_timer(self):
+        """Reset the activity timer whenever a user performs an action"""
+        self.last_activity = time.time()
+
+    async def start_battle(self):
+        embed = discord.Embed(
+            title="Card Battle!",
+            description=f"{self.challenger.mention} has challenged {self.opponent.mention} to a card battle!\n\n"
+                        f"Each player will select up to 3 cards to battle with.\n"
+                        f"Cards will take turns attacking until one side has no cards left.",
+            color=discord.Color.gold()
+        )
+        embed.set_footer(text=f"Players have {self.timeout} seconds to select cards. Timer resets with each action.")
+
+        view = BattleInviteView(self)
+        self.battle_message = await self.ctx.send(embed=embed, view=view)
+
+        # Wait for acceptance and card selection
+        selection_complete = await self.wait_for_selection()
+        
+        # If wait_for_selection returns False, we timed out
+        if not selection_complete:
+            # Disable the view buttons when timing out
+            for child in view.children:
+                child.disabled = True
+            await self.battle_message.edit(view=view)
+            await self.ctx.send("Battle invitation timed out due to inactivity.")
+            return
+        
+        # Both players have selected cards, begin the battle
+        if self.challenger_selected and self.opponent_selected:
+            # Send a "preparing battle" message
+            await self.ctx.send(f"Both players have selected their cards! Preparing for battle...")
+            await asyncio.sleep(2)  # Short dramatic pause
+            await self.execute_battle()
+        else:
+            # This should not happen due to the wait_for_selection, but just in case
+            await self.ctx.send("Battle cancelled.")
+    
+    async def wait_for_selection(self):
+        """Wait until both players have selected their cards or timeout occurs"""
+        while not (self.challenger_selected and self.opponent_selected):
+            # Check if we've exceeded timeout since last activity
+            if time.time() - self.last_activity > self.timeout:
+                return False  # Timed out
+            await asyncio.sleep(1)
+        return True  # Both players selected cards
+
+    async def execute_battle(self):
+        # Initialize battle state
+        challenger_battle_cards = [self._copy_card_for_battle(card) for card in self.challenger_cards]
+        opponent_battle_cards = [self._copy_card_for_battle(card) for card in self.opponent_cards]
+
+        # Battle announcement
+        embed = discord.Embed(
+            title="A battle has started!",
+            description=f"{self.challenger.mention} vs {self.opponent.mention}",
+            color=discord.Color.dark_red()
+        )
+
+        # Show selected cards
+        challenger_cards_str = "\n".join([f"• **{card['name']}** (❤️ {card['health']}, ⚔️ {card['damage']})" 
+                                        for card in challenger_battle_cards])
+        opponent_cards_str = "\n".join([f"• **{card['name']}** (❤️ {card['health']}, ⚔️ {card['damage']})" 
+                                    for card in opponent_battle_cards])
+        
+        embed.add_field(name=f"{self.challenger.display_name}'s Team:", value=challenger_cards_str, inline=True)
+        embed.add_field(name=f"{self.opponent.display_name}'s Team:", value=opponent_cards_str, inline=True)
+        
+        battle_log = await self.ctx.send(embed=embed)
+
+        # Battle loop
+        turn = 0
+        battle_log_text = []
+
+        while challenger_battle_cards and opponent_battle_cards:
+            turn += 1 
+            await asyncio.sleep(2)  # Dramatic pause between turns
+
+            # Determine attacker and defender based on turn
+            if turn % 2 == 1:  # Challenger's turn
+                attacker_name = self.challenger.display_name
+                defender_name = self.opponent.display_name
+                attacker_cards = challenger_battle_cards
+                defender_cards = opponent_battle_cards
+            else:  # Opponent's turn
+                attacker_name = self.opponent.display_name
+                defender_name = self.challenger.display_name
+                attacker_cards = opponent_battle_cards
+                defender_cards = challenger_battle_cards
+
+            # Select random cards for attack/defense
+            attacking_card = random.choice(attacker_cards)
+            defending_card = random.choice(defender_cards)
+
+            # Calculate damage
+            damage = attacking_card['damage']
+            defending_card['health'] -= damage
+
+            # Log the attack
+            log_entry = f"**Turn {turn}:** {attacker_name}'s **{attacking_card['name']}** attacks {defender_name}'s **{defending_card['name']}** for {damage} damage!"
+            battle_log_text.append(log_entry)
+
+            # Check if defending card is defeated
+            if defending_card['health'] <= 0:
+                log_entry = f"💥 {defender_name}'s **{defending_card['name']}** has been defeated!"
+                battle_log_text.append(log_entry)
+                defender_cards.remove(defending_card)
+
+            # Update battle log (show last 10 actions)
+            recent_log = "\n".join(battle_log_text[-10:])
+
+            # Update the battle status embed
+            status_embed = discord.Embed(
+                title=f"⚔️ Battle: Turn {turn} ⚔️",
+                description=recent_log,
+                color=discord.Color.dark_red()
+            )
+
+            # Show current cards and their health
+            if challenger_battle_cards:
+                challenger_status = "\n".join([f"• **{card['name']}** (❤️ {card['health']})" for card in challenger_battle_cards])
+            else:
+                challenger_status = "*No cards left*"
+
+            if opponent_battle_cards:
+                opponent_status = "\n".join([f"• **{card['name']}** (❤️ {card['health']})" for card in opponent_battle_cards])
+            else:
+                opponent_status = "*No cards left*"
+
+            status_embed.add_field(name=f"{self.challenger.display_name}'s Team:", value=challenger_status, inline=True)
+            status_embed.add_field(name=f"{self.opponent.display_name}'s Team:", value=opponent_status, inline=True)
+            
+            await battle_log.edit(embed=status_embed)
+
+        # Determine winner
+        if not opponent_battle_cards:
+            winner = self.challenger
+            loser = self.opponent
+        else:
+            winner = self.opponent
+            loser = self.challenger
+
+        # Victory message
+        victory_embed = discord.Embed(
+            title="🏆 Battle Results 🏆",
+            description=f"**{winner.display_name}** has defeated {loser.display_name} in battle!",
+            color=discord.Color.gold()
+        )
+        await self.ctx.send(embed=victory_embed)
+
+    def _copy_card_for_battle(self, card_name):
+        original_card = next((c for c in cards if c['name'] == card_name), None)
+        if original_card:
+            return {
+                'name': original_card['name'],
+                'health': original_card['health'],
+                'damage': original_card.get('damage', original_card.get('attack', 1))
+            }
+        # Fallback in case the card isn't found
+        return {
+            'name': card_name,
+            'health': 1,
+            'damage': 1
+        }
+    
+class BattleInviteView(View):
+    def __init__(self, battle):
+        super().__init__(timeout=battle.timeout)
+        self.battle = battle
+        
+    @discord.ui.button(label="Accept Challenge", style=discord.ButtonStyle.green)
+    async def accept_battle(self, interaction: discord.Interaction, button: discord.ui.Button):
+        if interaction.user.id != self.battle.opponent.id:
+            await interaction.response.send_message("This challenge isn't for you!", ephemeral=True)
+            return
+        
+        # Reset activity timer when accept button is pressed
+        self.battle.reset_activity_timer()
+        
+        # Send a public message that the challenge was accepted
+        await self.battle.ctx.send(f"{interaction.user.mention} has accepted the battle challenge! Both players must select their cards to begin.")
+        
+        # Send card selection directly in channel with ephemeral message (only visible to opponent)
+        user_cards = player_cards.get(str(interaction.user.id), [])
+        unique_cards = list(set(user_cards))
+        
+        # Create card selection view for opponent
+        view = CardSelectionView(self.battle, interaction.user, "opponent", unique_cards)
+        embed = discord.Embed(
+            title="Select Your Battle Cards",
+            description="Choose up to 3 cards for battle.\nClick Submit when you're done.",
+            color=discord.Color.blue()
+        )
+        await interaction.response.send_message(embed=embed, view=view, ephemeral=True)
+        
+        # Also send selection to challenger (in a separate ephemeral message)
+        challenger_cards = player_cards.get(self.battle.challenger_id, [])
+        unique_challenger_cards = list(set(challenger_cards))
+        
+        # Create a new message for the challenger
+        challenger_view = CardSelectionView(self.battle, self.battle.challenger, "challenger", unique_challenger_cards)
+        challenger_embed = discord.Embed(
+            title="Select Your Battle Cards",
+            description="Choose up to 3 cards for battle.\nClick Submit when you're done.",
+            color=discord.Color.blue()
+        )
+        
+        # Send the challenger their own ephemeral message (only they can see it)
+        await self.battle.ctx.send(
+            content=f"{self.battle.challenger.mention}, choose your cards for battle!",
+            embed=challenger_embed,
+            view=challenger_view,
+            ephemeral=True
+        )
+        
+        # Disable the buttons
+        for item in self.children:
+            item.disabled = True
+        
+        await self.battle.battle_message.edit(view=self)
+        
+    @discord.ui.button(label="Decline Challenge", style=discord.ButtonStyle.red)
+    async def decline_battle(self, interaction: discord.Interaction, button: discord.ui.Button):
+        if interaction.user.id != self.battle.opponent.id:
+            await interaction.response.send_message("This challenge isn't for you!", ephemeral=True)
+            return
+            
+        await interaction.response.send_message("You declined the battle.", ephemeral=True)
+        await self.battle.ctx.send(f"{interaction.user.mention} declined the battle challenge.")
+        
+        # Set flags so the battle terminates
+        self.battle.challenger_selected = True
+        self.battle.opponent_selected = True
+        
+        # Disable the buttons
+        for item in self.children:
+            item.disabled = True
+        
+        await self.battle.battle_message.edit(view=self)
+
+# Extend the CardBattle class with card selection methods
+async def challenger_card_selection(self, user):
+    """Let challenger select their battle cards"""
+    user_cards = player_cards.get(str(user.id), [])
+    unique_cards = list(set(user_cards))
+    
+    # Send DM with card selection
+    try:
+        dm_channel = await user.create_dm()
+        
+        # Create card selection view
+        view = CardSelectionView(self, user, "challenger", unique_cards)
+        embed = discord.Embed(
+            title="Select Your Battle Cards",
+            description="Choose up to 3 cards for battle.\nClick Submit when you're done.",
+            color=discord.Color.blue()
+        )
+        await dm_channel.send(embed=embed, view=view)
+    except discord.Forbidden:
+        await self.ctx.send(f"{user.mention} I can't send you a DM. Please enable DMs from server members.")
+        self.challenger_selected = True
+        self.opponent_selected = True  # Force battle termination
+
+async def opponent_card_selection(self, user):
+    """Let opponent select their battle cards"""
+    user_cards = player_cards.get(str(user.id), [])
+    unique_cards = list(set(user_cards))
+    
+    # Send DM with card selection
+    try:
+        dm_channel = await user.create_dm()
+        
+        # Create card selection view
+        view = CardSelectionView(self, user, "opponent", unique_cards)
+        embed = discord.Embed(
+            title="Select Your Battle Cards",
+            description="Choose up to 3 cards for battle.\nClick Submit when you're done.",
+            color=discord.Color.blue()
+        )
+        await dm_channel.send(embed=embed, view=view)
+    except discord.Forbidden:
+        await self.ctx.send(f"{user.mention} I can't send you a DM. Please enable DMs from server members.")
+        self.challenger_selected = True
+        self.opponent_selected = True  # Force battle termination
+
+# Add these methods to the CardBattle class
+CardBattle.challenger_card_selection = challenger_card_selection
+CardBattle.opponent_card_selection = opponent_card_selection
+
+class CardSelectionView(View):
+    def __init__(self, battle, user, player_type, available_cards):
+        super().__init__(timeout=battle.timeout)
+        self.battle = battle
+        self.user = user
+        self.player_type = player_type  # "challenger" or "opponent"
+        self.available_cards = available_cards
+        self.selected_cards = []
+        self.max_cards = 3
+        self.selected_cards_text = ""
+        
+        # Add card selection dropdown
+        self.add_item(CardSelectMenu(self))
+        
+        # Add card removal dropdown if needed
+        self.remove_button = Button(
+            label="Remove Card", 
+            style=discord.ButtonStyle.red,
+            disabled=True
+        )
+        self.remove_button.callback = self.remove_card
+        self.add_item(self.remove_button)
+    
+    async def remove_card(self, interaction: discord.Interaction):
+        if interaction.user.id != self.user.id:
+            await interaction.response.send_message("This isn't your battle card selection!", ephemeral=True)
+            return
+        
+        # Reset activity timer when removing a card
+        self.battle.reset_activity_timer()
+            
+        if not self.selected_cards:
+            await interaction.response.send_message("No cards to remove!", ephemeral=True)
+            return
+            
+        # Create remove selection view
+        remove_view = RemoveCardView(self)
+        await interaction.response.send_message(
+            "Select a card to remove:", 
+            view=remove_view,
+            ephemeral=True
+        )
+    
+    @discord.ui.button(label="Submit Selection", style=discord.ButtonStyle.green)
+    async def submit_cards(self, interaction: discord.Interaction, button: discord.ui.Button):
+        if interaction.user.id != self.user.id:
+            await interaction.response.send_message("This isn't your battle card selection!", ephemeral=True)
+            return
+        
+        # Reset activity timer when submitting cards
+        self.battle.reset_activity_timer()
+            
+        if not self.selected_cards:
+            await interaction.response.send_message("You must select at least one card!", ephemeral=True)
+            return
+        
+        # Store the selected cards in the battle object
+        if self.player_type == "challenger":
+            self.battle.challenger_cards = self.selected_cards
+            self.battle.challenger_selected = True
+            waiting_for = "opponent"
+            waiting_user = self.battle.opponent.display_name
+        else:
+            self.battle.opponent_cards = self.selected_cards
+            self.battle.opponent_selected = True
+            waiting_for = "challenger"
+            waiting_user = self.battle.challenger.display_name
+        
+        # Confirmation message
+        cards_list = ", ".join(self.selected_cards)
+        
+        # Disable all buttons in the view
+        for item in self.children:
+            item.disabled = True
+            
+        # Update the message to show we're waiting for the other player
+        embed = discord.Embed(
+            title="Battle Cards Selected",
+            description=f"You've selected your cards and are ready for battle.\n\n**Your Cards:**\n{cards_list}",
+            color=discord.Color.green()
+        )
+        
+        # Add waiting message
+        if not (self.battle.challenger_selected and self.battle.opponent_selected):
+            embed.add_field(
+                name="Waiting For", 
+                value=f"Waiting for {waiting_user} to select their cards...",
+                inline=False
+            )
+        
+        try:
+            # Try to update the message, but handle if it fails
+            await interaction.response.edit_message(embed=embed, view=self)
+        except discord.errors.NotFound:
+            try:
+                # If the message can't be found, send a new message
+                await interaction.followup.send(
+                    embed=embed,
+                    ephemeral=True
+                )
+            except Exception as e:
+                logging.error(f"Failed to send card selection confirmation: {e}")
+
+class CardSelectMenu(discord.ui.Select):
+    def __init__(self, parent_view):
+        self.parent_view = parent_view
+        
+        # Create options from available cards
+        options = []
+        for i, card_name in enumerate(parent_view.available_cards[:25]):  # Discord limit of 25 options
+            if i >= 25:  # Ensure we don't exceed Discord's limit
+                break
+                
+            card_data = next((c for c in cards if c["name"] == card_name), None)
+            if card_data:
+                # Handle both 'damage' and 'attack' attributes for compatibility
+                attack_value = card_data.get('damage', card_data.get('attack', 1))
+                option = discord.SelectOption(
+                    label=card_name[:25],  # Limit to 25 chars for label
+                    description=f"HP: {card_data['health']} | ATK: {attack_value}",
+                    value=card_name
+                )
+                options.append(option)
+        
+        # If no options, create a placeholder option
+        if not options:
+            options = [discord.SelectOption(label="No cards available", value="none")]
+        
+        super().__init__(
+            placeholder="Select a card to add to your team...",
+            min_values=1,
+            max_values=1,
+            options=options,
+            disabled=len(options) == 1 and options[0].value == "none"
+        )
+    
+    async def callback(self, interaction: discord.Interaction):
+        # Verify this is the correct user
+        if interaction.user.id != self.parent_view.user.id:
+            await interaction.response.send_message("This isn't your battle card selection!", ephemeral=True)
+            return
+        
+        # Reset activity timer when selecting a card
+        self.parent_view.battle.reset_activity_timer()
+            
+        selected_card = self.values[0]
+        
+        if selected_card == "none":
+            await interaction.response.send_message("You don't have any cards to select.", ephemeral=True)
+            return
+            
+        # Add card if limit not reached
+        if len(self.parent_view.selected_cards) < self.parent_view.max_cards:
+            if selected_card not in self.parent_view.selected_cards:
+                self.parent_view.selected_cards.append(selected_card)
+                
+                # Enable the remove button once cards are selected
+                self.parent_view.remove_button.disabled = False
+                
+                # Update the current selection text
+                self.parent_view.selected_cards_text = ", ".join(self.parent_view.selected_cards)
+                
+                # Create a new embed showing the current selection
+                embed = discord.Embed(
+                    title="Select Your Battle Cards",
+                    description=f"Choose up to 3 cards for battle.\nClick Submit when you're done.\n\n**Current Selection:**\n{self.parent_view.selected_cards_text}",
+                    color=discord.Color.blue()
+                )
+                
+                # Update the message with the new embed and view
+                try:
+                    await interaction.response.edit_message(embed=embed, view=self.parent_view)
+                except discord.errors.NotFound:
+                    await interaction.followup.send("There was an error updating your selection. Please try again.", ephemeral=True)
+            else:
+                await interaction.response.send_message("You've already selected this card!", ephemeral=True)
+        else:
+            await interaction.response.send_message(f"You can only select {self.parent_view.max_cards} cards!", ephemeral=True)
+
+class RemoveCardView(discord.ui.View):
+    def __init__(self, parent_view):
+        super().__init__(timeout=60)
+        self.parent_view = parent_view
+        
+        # Add dropdown to select card to remove
+        options = []
+        for card in parent_view.selected_cards:
+            options.append(discord.SelectOption(label=card, value=card))
+            
+        self.select = discord.ui.Select(
+            placeholder="Select card to remove...",
+            options=options
+        )
+        self.select.callback = self.remove_callback
+        self.add_item(self.select)
+    
+    async def remove_callback(self, interaction: discord.Interaction):
+        # Verify this is the correct user
+        if interaction.user.id != self.parent_view.user.id:
+            await interaction.response.send_message("This isn't your battle card selection!", ephemeral=True)
+            return
+        
+        # Reset activity timer when removing a card
+        self.parent_view.battle.reset_activity_timer()
+            
+        card_to_remove = self.select.values[0]
+        if card_to_remove in self.parent_view.selected_cards:
+            self.parent_view.selected_cards.remove(card_to_remove)
+            
+            # Update the selection text
+            self.parent_view.selected_cards_text = ", ".join(self.parent_view.selected_cards)
+            
+            # Disable remove button if no cards left
+            if not self.parent_view.selected_cards:
+                self.parent_view.remove_button.disabled = True
+            
+            # Update the parent embed
+            embed = discord.Embed(
+                title="Select Your Battle Cards",
+                description=f"Choose up to 3 cards for battle.\nClick Submit when you're done.\n\n**Current Selection:**\n{self.parent_view.selected_cards_text}",
+                color=discord.Color.blue()
+            )
+            
+            # Acknowledge the removal
+            await interaction.response.send_message(f"Removed {card_to_remove} from your selection.", ephemeral=True)
+            
+            try:
+                # Close this view
+                await interaction.message.edit(view=None)
+            except discord.errors.NotFound:
+                # If message can't be found, just continue
+                pass
+            
+            try:
+                # Send a new ephemeral message with the updated card selection
+                await interaction.followup.send(
+                    embed=embed, 
+                    view=self.parent_view,
+                    ephemeral=True
+                )
+            except Exception as e:
+                # If any other error occurs, try one more approach
+                try:
+                    await interaction.channel.send(
+                        content=f"{self.parent_view.user.mention}, here's your updated card selection:",
+                        embed=embed, 
+                        view=self.parent_view,
+                        ephemeral=True
+                    )
+                except Exception as e:
+                    logging.error(f"Failed to send updated card selection: {e}")
+
+@bot.command(name='battle_help', help="Explains how to battle with cards")
+async def battle_help(ctx):
+    embed = discord.Embed(
+        title="Card Battle Help",
+        description="How to battle with your cards",
+        color=discord.Color.blue()
+    )
+    
+    embed.add_field(
+        name="Starting a Battle",
+        value="Use `!battle @user` to challenge another player",
+        inline=False
+    )
+    
+    embed.add_field(
+        name="Selecting Cards",
+        value="After the opponent accepts, both players can select cards with:\n"
+              "• Use dropdown menus in the selection dialog OR\n"
+              "• Type `!battle_add [card name]` to add a specific card\n"
+              "You can select up to 3 cards.",
+        inline=False
+    )
+    
+    embed.add_field(
+        name="Confirming Selection", 
+        value="After adding cards with `!battle_add`, use `!battle_ready` to confirm your selection",
+        inline=False
+    )
+    
+    embed.add_field(
+        name="Battle Process",
+        value="Cards will automatically take turns attacking until one side has no cards left.",
+        inline=False
+    )
+    
+    await ctx.send(embed=embed)
+
 #///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 #other commands not related to the card game
 #///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -715,27 +1700,67 @@ async def random_number(ctx):
     random_number = random.randint(0, 10000000)
     await ctx.send(f'Your random number is: {random_number}')
 
-
-# command to show the current commands that users can use
 @bot.command(name='commands_dex', help="Shows a list of all the commands you can use.")
 async def list_commands(ctx):
-    commands_list = [
-        '!hello - Responds with a greeting message.',
-        '!random_number - Gives a random number',
-        '!info_dex - Shows info about the dex',
-        '!see_card - View a card you have caught.',
-        '!progress - Shows your progress in catching cards.',
-        '!stats - Shows the stats of a certain card.',
-        '!give - Give a card to another user.',
-        '!stats_full - Gives stats of the bot.',
-        'If you have any questions about the bot or commands, please go to https://discordapp.com/channels/1103817592889679892/1323370905874989100'
-    ]
-    commands_description = '\n'.join(commands_list)
-    await ctx.send(f'Here is a list of all the commands you can use:\n{commands_description}')
+    embed = discord.Embed(
+        title="🎮 235th Dex Command Center",
+        description="Here are all the commands available to you:",
+        color=discord.Color.purple()
+    )
+    
+    # General Commands
+    embed.add_field(
+        name="📝 General",
+        value=(
+            "`!hello` - Get a greeting from the bot\n"
+            "`!random_number` - Generate a random number\n"
+            "`!info_dex` - View information about the bot\n"
+            "`!commands_dex` - Show this command list\n"
+            "`!gud_boy` - Shows a good boy GIF"
+        ),
+        inline=False
+    )
+    
+    # Card Collection Commands
+    embed.add_field(
+        name="🃏 Card Collection",
+        value=(
+            "`!see_card [card name]` - View a card you've caught\n"
+            "`!progress` - Show your card collection progress\n"
+            "`!stats [card name]` - Show stats for a specific card\n"
+            "`!give [card name] [@user]` - Give a card to another user"
+        ),
+        inline=False
+    )
+    
+    # Battle Commands
+    embed.add_field(
+        name="⚔️ Battle System",
+        value=(
+            "`!battle [@user]` - Challenge another user to a battle\n"
+            "`!battle_add [card name]` - Add a card to your battle team\n"
+            "`!battle_cards` - See your currently selected cards\n"
+            "`!battle_ready` - Confirm your card selection\n"
+            "`!battle_help` - Get help with the battle system"
+        ),
+        inline=False
+    )
+    
+    # Bot Stats
+    embed.add_field(
+        name="📊 Bot Stats",
+        value="`!stats_full` - Show general statistics about the card game",
+        inline=False
+    )
+    
+    embed.set_thumbnail(url="https://cdn.discordapp.com/app-icons/1321813254128930867/450fa2947cf99f3182797b7b503c5c63.png")
+
+    embed.set_footer(text="Need help? Join our support server: discord.gg/yRNxTXtm")
+    
+    await ctx.send(embed=embed)
 
 #info, command to show the current release
-@bot.command(name='info_dex', help="General info about the dex")
-@bot.command(name='info_dex', help="General info about the dex")
+@bot.command(name='info_dex', aliases=['dex_info', 'bot_info'], help="General info about the dex")
 async def info(ctx):
     # Store bot launch time
     if not hasattr(bot, 'launch_time'):
@@ -745,57 +1770,56 @@ async def info(ctx):
     uptime = datetime.datetime.now() - bot.launch_time
     days, remainder = divmod(int(uptime.total_seconds()), 86400)
     hours, remainder = divmod(remainder, 3600)
-    minutes, seconds = divmod(remainder, 60)
-    uptime_str = f"{days}d {hours}h {minutes}m {seconds}s"
+    minutes, _ = divmod(remainder, 60) 
+    uptime_str = f"{days}d {hours}h {minutes}m"
 
-    # Count lines of code
-    total_lines = count_lines_of_code()
-
-    # Calculate card stats
-    total_cards = len(cards)
-    unique_collected = len(set(card for user_cards in player_cards.values() for card in user_cards))
+    # Count total users and cards
+    total_users = len(player_cards)
+    total_cards_collected = sum(len(cards) for cards in player_cards.values())
 
     # Get backup count
     backup_count = len([f for f in os.listdir(backup_folder) if f.startswith("player_cards_backup_")])
 
     embed = discord.Embed(
         title="235th Dex Information",
-        color=discord.Color.blue()
+        description="Technical details and status information",
+        color=discord.Color.teal()
     )
 
     embed.add_field(
-        name="Version",
-        value="v1.2.5 - \"The more-stats update\"", 
+        name="🏷️ Version",
+        value="1.4 - \"The Battle Update\"", 
         inline=False
     )
 
     embed.add_field(
-        name="Developers",
+        name="👨‍💻 Developers",
         value="<@1035607651985403965>\n<@573878397952851988>\n<@845973389415284746>",
         inline=True
     )
 
     embed.add_field(
-        name="Stats",
-        value=f"Total Code: {total_lines} lines\nUptime: {uptime_str}\nMode: {'Test' if is_test_mode else 'Production'}",
+        name="📈 System Stats",
+        value=f"• Users: {total_users}\n• Cards: {total_cards_collected}\n• Uptime: {uptime_str}",
         inline=True
     )
 
     embed.add_field(
-        name="Database",
-        value=f"Users: {len(player_cards)}\nBackups: {backup_count}/{MAX_BACKUPS}\nSpawn Mode: {spawn_mode}",
+        name="💾 Database",
+        value=f"• Status: Healthy\n• Backups: {backup_count}/{MAX_BACKUPS}",
         inline=True
     )
-
+    
     embed.add_field(
-        name="Cards",
-        value=f"Total Cards: {total_cards}\nUnique Cards Collected: {unique_collected}",
+        name="📜 Latest Changes",
+        value="• Enhanced battle system\n• Improved card selection UI",
         inline=False
     )
 
-    embed.set_footer(text=f"Last update: {datetime.datetime.now().strftime('%Y-%m-%d %H:%M')}")
+    # Add timestamp
+    embed.set_footer(text=f"Last updated: {datetime.datetime.now().strftime('%d-%m-%Y %H:%M')}")
 
-    await ctx.send(embed=embed)  
+    await ctx.send(embed=embed)
 
 def count_lines_of_code() -> int:
     project_dir = '/home/container'
@@ -810,11 +1834,11 @@ def count_lines_of_code() -> int:
     return total_lines
 
 # Command to play a certain GIF, restricted to authorized users
-bot.command(name='celebrate', help="Posts a celebration animation (admin only)")
+@bot.command(name='celebrate', help="Posts a celebration animation (admin only)")
 @commands.check(is_authorized)
 async def play_gif(ctx):
     embed = discord.Embed(title="Celebration Time!")
-    embed.set_image(url="https://media.tenor.com/BDxIoo-dxPgAAAPo/missouri-tigers-truman-the-tiger.mp4")
+    embed.set_image(url="https://cdn.discordapp.com/attachments/1322197080625647627/1348320094660464863/image0.gif?ex=67cf0871&is=67cdb6f1&hm=d47b2a88b5fe88a4da2c03c78a94f67eb66b9efa0104c69b72c6a9006c4c95e2")
     await ctx.send(embed=embed)
 
 # For fun interactions with the bot
@@ -878,6 +1902,26 @@ async def public_stats(ctx):
     embed.add_field(name="Rarest Card Owned", value=rarest_card_owned, inline=False)
     
     await ctx.send(embed=embed)
+
+async def send_embed_with_retry(channel, embed, view=None, retries=3, delay=2):
+    """Send an embed with retry logic for network errors"""
+    for attempt in range(retries):
+        try:
+            if view:
+                return await channel.send(embed=embed, view=view)
+            else:
+                return await channel.send(embed=embed)
+        except discord.HTTPException as e:
+            if attempt < retries - 1:
+                logging.warning(f"HTTP error when sending embed to {channel.id}, attempt {attempt+1}/{retries}: {e}")
+                await asyncio.sleep(delay)
+            else:
+                logging.error(f"Failed to send embed after {retries} attempts: {e}")
+                raise
+        except Exception as e:
+            logging.error(f"Unexpected error sending embed: {e}")
+            raise
+
 #///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 #other cool things for shutdown and signal handling
 
