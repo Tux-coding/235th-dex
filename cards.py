@@ -34,8 +34,8 @@ cards = [
     {
         "name": "Blau",
         "aliases": ["Blue"],
-        "spawn_image_url": "https://media.discordapp.net/attachments/1322205679028670495/1322289394404687957/RobloxScreenShot20241227_204520218.png?ex=67724fb6&is=6770fe36&hm=b3fc9388163dfb8f6d33ea520cccc373156a6ea8c5b558d370d388a8ec8ae7d8&=&format=webp&quality=lossless&width=396&height=350",
-        "card_image_url": "https://cdn.discordapp.com/attachments/1322202570529177642/1327715434799169536/CC-_3.png?ex=678412db&is=6782c15b&hm=f45c6310e66b243171a68c5c9128bf2be7046ec45659ee3ddb7bf742855cee5f&",
+        "spawn_image_url": "https://i.imgur.com/GAipebf.png",
+        "card_image_url": "https://i.imgur.com/7gWpCBY.png",
         "rarity": 12.5,
         "health": 6050,
         "damage": 2250,
@@ -55,9 +55,9 @@ cards = [
         "name": "Pipopro",
         "aliases": ["Tux"],
         "spawn_image_url": "https://media.discordapp.net/attachments/1322205679028670495/1322977622778576976/artworks-OF3WFPHsapfnZrW8-lDiZAQ-t500x500.png?ex=67737f2d&is=67722dad&hm=1ec22c5b9af4c994af583de216afe05660c777e5437a738750577b9a49cbdf90&=&format=webp&quality=lossless",
-        "card_image_url": "https://cdn.discordapp.com/attachments/1322202570529177642/1322977702105579591/Pipopro.png?ex=67737f3f&is=67722dbf&hm=2cc3c639f2e613963f78ec6dbfc274df6f6a74666d06461e4bfb60fdb5c3568d&",
+        "card_image_url": "https://i.imgur.com/4OAxy8x.png",
         "rarity": 0.75,
-        "health": 15000,
+        "health": 10000,
         "damage": 7500,
         "description": "Was one of the developers before he changed his mind and became a world-class tap dancer, to outdance the dangers of a galaxy far, far away.."
     },
@@ -119,6 +119,7 @@ cards = [
         "rarity": 70,
         "health": 2000,
         "damage": 650,
+        "description": "Not your typical clone has his chip removed and survived in a CIS prison; his last corp died in an ariel bombardment, after this he joined the 235th."
     },
     {
         "name": "Mertho",
@@ -128,6 +129,7 @@ cards = [
         "rarity": 70,
         "health": 1700,
         "damage": 500,
+        "description": "CT-3838, otherwiese known as \"Mertho\" is an irritating jerk, that often ruins missions just because he finds it amusing."
     },
     {
         "name": "Bricker",
@@ -137,6 +139,7 @@ cards = [
         "rarity": 85,
         "health": 1550,
         "damage": 450,
+        "description": "CT-7171, AKA Bricker, is a brave trooper; he respects his superiors and will always listen to orders. He is very good with an AT-RT"
     },
     {
         "name": "Sinner",
@@ -146,6 +149,7 @@ cards = [
         "rarity": 77,
         "health": 2550,
         "damage": 1755,
+        "description": "I aint writing all a that"
     },
     {
         "name": "Voca",
@@ -155,6 +159,7 @@ cards = [
         "rarity": 45,
         "health": 3750,
         "damage": 2050,
+        "description": "A veteran of the 31st Shepherd Battalion, skilled marksman, and kind hearted brother of the 235th Elite Corps."
     },
     {
         "name": "Ren'dar Auron",
@@ -164,6 +169,7 @@ cards = [
         "rarity": 25,
         "health": 6500,
         "damage": 2850,
+        "description": "A Jedi knight, commanding the 93rd Helios legion alongside Hounder, with the left part of the body completely scarred by an explosion. He had to use cybernetic implants in order to stay alive."
     },
     {
         "name": "Skye",
@@ -173,6 +179,7 @@ cards = [
         "rarity": 61,
         "health": 2700,
         "damage": 1500,
+        "description": "Brave soldier who follows orders from his superiors and executes them as well as possible."
     },
     {
         "name": "Je'keshi Vale",
@@ -181,7 +188,8 @@ cards = [
         "card_image_url": "https://cdn.discordapp.com/attachments/1322202570529177642/1327730759452201031/CC-_12.png?ex=67842121&is=6782cfa1&hm=052958065501727e5bc27b03ad171c8617ca998d70a7baecdfa91cebc1562042&",
         "rarity": 7.5,
         "health": 9250,
-        "damage": 5500
+        "damage": 5500,
+        "description": "Femboy jedi general <3",
     },
     {
         "name": "Stars",
@@ -190,7 +198,8 @@ cards = [
         "card_image_url": "https://cdn.discordapp.com/attachments/1322202570529177642/1327723966873210950/CC-_8.png?ex=67841acd&is=6782c94d&hm=139ff0e1661f647c03b15892c4834a8d8e6c8ebcd76b30688df4397366d3279f&", 
         "rarity": 8.5,
         "health": 6250,
-        "damage": 3250   
+        "damage": 3250,
+        "description": "ARC Commander Stars is a member within the GAR, serving alongside Commanders like Reyes, Hounder and Wilson. He currently leads the 31st \"Shepherd\" Battalion in the 235th Elite Corps.",   
     },
     {
         "name": "Ringo",
@@ -200,6 +209,7 @@ cards = [
         "rarity": 68,
         "health": 1750,
         "damage": 900,
+        "description": "Probably one of the least efficient members of the 235th, always finds a way to get in trouble and injure himself. Has a pet croc named Romeo that sometimes comes with him",
     },
     {
         "name": "Rush",
@@ -209,6 +219,7 @@ cards = [
         "rarity": 82,
         "health": 1500,
         "damage": 450,
+        "description": "PFC. \"Rush\" is a clone tropper who serves under the GAR and the 235th Elite Corp, he might be known as the GEneral Carrier",
     },
     {
         "name": "Breaker",
@@ -218,6 +229,7 @@ cards = [
         "rarity": 40,
         "health": 6000,
         "damage": 3000,
+        "description": "\"Breaker\" is an ex Ri and now a hawk squad member, he has a bunch of skills and tactics to be used.",
     },
     {
         "name": "Micro",
@@ -227,6 +239,7 @@ cards = [
         "rarity": 30,
         "health": 6100,
         "damage": 3500,
+        "description": "\"Micro\" is an expert on stealth and specialised in missions. He can aim very well and hits almost every droid. He also is a S!gM@."
     },
     {
         "name": "Zak",
@@ -236,6 +249,7 @@ cards = [
         "rarity": 15,
         "health": 6000,
         "damage": 3000,
+        "description": "\"Zak\" is an ex Ri and now a member of the 82nd \"Marshal\" platoon. He also likes hamburgers and is a very cool dutchman."
     },
     {
         "name": "Hollow",
@@ -245,6 +259,7 @@ cards = [
         "rarity": 59,
         "health": 6000,
         "damage": 3150,
+        "description": "Who's the squad leader? guy that's extremely stacked or a painted normal commando?"
     },
     {
         "name": "Vic",
@@ -254,6 +269,7 @@ cards = [
         "rarity": 65,
         "health": 2150,
         "damage": 1100,
+        "description": "Member of Helios legion, 14th Alshemy Platoon, Platoon Executive, Corporal, and of course, A FRENCH AAAAAH"
     },
     {
         "name": "Apok",
@@ -263,6 +279,7 @@ cards = [
         "rarity": 46,
         "health": 3200,
         "damage": 2150,
+        "description": "Goofy dishwasher in the kitchen crew",
     },
     {
         "name": "Sharpeye",
@@ -296,22 +313,52 @@ cards = [
     },
     {
         "name": "Sigma-squad",
-        "aliases": ["eaglesmademedothis", "whydidiagreetothis", "PAIN", "aaah","sigma squad"],
+        "aliases": ["Iwasforced", "whydidiagreetothis","sigma squad"],
         "spawn_image_url": "https://cdn.discordapp.com/attachments/1322205679028670495/1323215414393700455/RobloxScreenShot20241230_100007909.png?ex=67a086e2&is=679f3562&hm=cf9521fb29329e7ab81f84548e9c0664566adc9dccac4bc549b1d0e8cd70f166&",
         "card_image_url": "https://media.discordapp.net/attachments/1322202570529177642/1323215495637504010/Pipopro_1.png?ex=67a086f6&is=679f3576&hm=a95177683cf7782138009565d2c8952c9d53482146ac5be7d829375fb03becf8&=&format=webp&quality=lossless&width=358&height=502",
         "rarity": 0,
         "health": 1,
-        "attack": 100000000000000000000000000000000000000000000000000000000000000000000,
+        "damage": 10000000000000000000000000000,
         "description": "They might be sigma, but they are definitely not the best squad."
     },
     {
         "name": "Hades",
-        "aliases": ["Hot Topic Hellboy", "Fiery Furnace Fred", "Devils Basement Manager", "Grim Gramps"],
+        "aliases": ["Fiery Furnace Fred", "Grim Gramps"],
         "spawn_image_url": "https://i.imgur.com/ZyrxWzY.png",
         "card_image_url": "https://i.imgur.com/tJQu2dZ.png",
         "rarity": 67,
         "health": 2900,
         "damage": 1700,
         "description": "You know that one guy who thinks he's the main character but really isn't? Well, that's Hades right there!"
+    },
+    {
+        "name": "Mixer",
+        "aliases": ["Blender", "existence", "dutchman" ], #mixer verzin er zelf is een paar leuke
+        "spawn_image_url": "https://i.imgur.com/ULt5mqn.png",
+        "card_image_url": "https://i.imgur.com/BxW3vdm.png",
+        "rarity": 30,
+        "health": 5800,
+        "damage": 2000,
+        "description": "A wild Mixer proves: Existence is mandatory!",
+    },
+    {
+        "name": "Eagles",
+        "aliases": ["eagly"],
+        "spawn_image_url": "https://i.imgur.com/DQRyj4F.png",
+        "card_image_url": "https://i.imgur.com/iBIbwEr.png",
+        "rarity": 30,
+        "health": 5700,
+        "damage": 2100,
+        "description": "ARC-1717, Better known as Eagles, is a persistent and experienced clone trooper. He fought many battles, and he cares about his brothers.",
+    },
+    {
+        "name":"Sanghelios",
+        "aliases": ["Sangheli"],
+        "spawn_image_url": "https://i.imgur.com/JwKNNKh.png",
+        "card_image_url": "https://i.imgur.com/7Yr4VUU.png",
+        "rarity": 31,
+        "health": 6100,
+        "damage": 2000,
+        "description": "Current Director of RI Clone Sergeant Sanghelios of the Republic Intelligence 235th attachement, highly skilled in stealth and disguise along with the essentials for a trooper."
     },
 ]

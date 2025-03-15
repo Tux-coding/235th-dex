@@ -7,7 +7,6 @@
         "Hounder",
         "Wilson",
         "Stinger",
-        "Sandy",
         "Rancor",
         "Cooker",
         "Longshot",
@@ -26,10 +25,10 @@
         "Hollow",
         "Vic",
         "Apok",
-        "Sharpeye",
         "Sparrow",
+        "Breaker",
         "Pipopro",
-        "Breaker"
+        "Sharpeye"
     ],
     "1035607651985403965": [
         "Dicer",
@@ -66,7 +65,10 @@
         "Sigma-squad",
         "Sparrow"
     ],
-    "845973389415284746": [],
+    "845973389415284746": [
+        "Pipopro",
+        "Sigma-squad"
+    ],
     "1096880582547472527": [
         "Longshot",
         "Skye",
@@ -813,5 +815,6 @@
     "1226870596952916081": [
         "Voca",
         "Hollow"
-    ]
+    ],
+    "999736048596816014": []
 }

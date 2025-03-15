@@ -583,9 +583,11 @@ async def print_stats(ctx, *, card_name: str):
     card = next((card for card in cards if card_name.lower() == card["name"].lower() or card_name in [alias.lower() for alias in card.get("aliases", [])]), None)
     if card:
         embed = discord.Embed(title=f"Stats for {card['name']}", description="")
+        embed.add_field(name="Aliases", value=", ".join(card.get("aliases", [])), inline=False)
         embed.add_field(name="Health", value=card["health"], inline=True)
         embed.add_field(name="Damage", value=card["damage"], inline=True)
         embed.add_field(name="Rarity", value=f"{card['rarity']}%", inline=True)
+        embed.add_field(name="Description", value = card["description"], inline=False)
         #embed.add_field(name="Description", value=card["description"], inline=False) add later when all cards have a description
         await ctx.send(embed=embed)
     else:
@@ -782,12 +784,12 @@ async def give_card(ctx, card: str, receiving_user: discord.Member):
     async with battle_lock:  # Use the lock to prevent race conditions
         try:
             sender_cards = player_cards.get(sender_id, [])
-            if card_lower not in map(str.lower, sender_cards):
+            if not any(card_lower == c.lower() or card_lower in [alias.lower() for alias in next((card['aliases'] for card in cards if card['name'].lower() == c.lower()), [])] for c in sender_cards):
                 await ctx.send(f"You don't own the card `{card}`.")
                 return
             
             # Find the exact card name (preserving case)
-            actual_card_name = next((c for c in sender_cards if c.lower() == card_lower), None)
+            actual_card_name = next((c for c in sender_cards if card_lower == c.lower() or card_lower in [alias.lower() for alias in next((card['aliases'] for card in cards if card['name'].lower() == c.lower()), [])]), None)
             if not actual_card_name:
                 await ctx.send(f"Error finding card `{card}` in your inventory.")
                 return
@@ -1201,12 +1203,18 @@ class CardBattle:
             attacking_card = random.choice(attacker_cards)
             defending_card = random.choice(defender_cards)
 
-            # Calculate damage
+            # Calculate damage with a chance for critical hit
+            crit_chance = 0.25
+            crit_multiplier = 1.25
             damage = attacking_card['damage']
+            
+            if random.random() < crit_chance:
+                damage = int(damage * crit_multiplier)
+                log_entry = f"**Turn {turn}:** {attacker_name}'s **{attacking_card['name']}** lands a CRITICAL HIT on {defender_name}'s **{defending_card['name']}** for {damage} damage!"
+            else:
+                log_entry = f"**Turn {turn}:** {attacker_name}'s **{attacking_card['name']}** attacks {defender_name}'s **{defending_card['name']}** for {damage} damage!"
+            
             defending_card['health'] -= damage
-
-            # Log the attack
-            log_entry = f"**Turn {turn}:** {attacker_name}'s **{attacking_card['name']}** attacks {defender_name}'s **{defending_card['name']}** for {damage} damage!"
             battle_log_text.append(log_entry)
 
             # Check if defending card is defeated
@@ -1788,7 +1796,7 @@ async def info(ctx):
 
     embed.add_field(
         name="🏷️ Version",
-        value="1.4 - \"The Battle Update\"", 
+        value="1.4.1 - \"The Battle Update\"", 
         inline=False
     )
 
