@@ -1,17 +1,13 @@
 {
     "573878397952851988": [
-        "Dicer",
-        "Reyes",
         "Sentinel",
         "Blau",
         "Hounder",
-        "Wilson",
         "Stinger",
         "Rancor",
         "Cooker",
         "Longshot",
         "Mertho",
-        "Bricker",
         "Sinner",
         "Voca",
         "Ren'dar Auron",
@@ -27,24 +23,23 @@
         "Apok",
         "Sparrow",
         "Breaker",
+        "Sharpeye",
+        "Bricker",
         "Pipopro",
-        "Sharpeye"
-    ],
-    "1035607651985403965": [
         "Dicer",
         "Reyes",
+        "Wilson"
+    ],
+    "1035607651985403965": [
         "Sentinel",
         "Blau",
         "Hounder",
-        "Pipopro",
-        "Wilson",
         "Stinger",
         "Sandy",
         "Rancor",
         "Cooker",
         "Longshot",
         "Mertho",
-        "Bricker",
         "Sinner",
         "Voca",
         "Ren'dar Auron",
@@ -63,7 +58,12 @@
         "Sparrow",
         "Worst",
         "Sigma-squad",
-        "Sparrow"
+        "Sparrow",
+        "Bricker",
+        "Pipopro",
+        "Dicer",
+        "Wilson",
+        "Reyes"
     ],
     "845973389415284746": [
         "Pipopro",

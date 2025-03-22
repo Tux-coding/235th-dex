@@ -9,13 +9,14 @@ import aiohttp
 import datetime
 import shutil
 
-from typing import List
+from typing import Dict, List, Optional, Set, Tuple
 from collections import Counter
 from aiohttp import client_exceptions
 
 import discord # type: ignore
+from discord import Interaction
 from discord.ext import commands, tasks # type: ignore
-from discord.ui import Button, View, Select, Modal, TextInput #type:ignore 
+from discord.ui import Button, View, Modal, TextInput, Select #type:ignore 
 from dotenv import load_dotenv # type: ignore //please ensure that you have python-dotenv installed (command is "pip install python-dotenv")
 
 # Import the cards list from cards.py
@@ -58,8 +59,10 @@ is_test_mode = spawn_mode == 'test'
 # File to store blacklisted user IDs
 blacklist_file = "blacklist.json"
 
-# Add a lock for battle operations
+# The modal lock collections
 battle_lock = asyncio.Lock()
+trade_lock = asyncio.Lock()
+submit_lock = asyncio.Lock()
 
 class BlacklistManager:
     @staticmethod
@@ -145,8 +148,6 @@ async def show_blacklist(ctx):
 # Player cards view starter
 player_cards = {}
 
-# Lock to ensure only one user can submit at a time
-modal_lock = asyncio.Lock()
 # Load player cards from a JSON file
 def load_player_cards() -> None:
     global player_cards
@@ -268,12 +269,12 @@ class CatchModal(Modal):
         self.add_item(self.card_input)
 
     async def on_submit(self, interaction: discord.Interaction):
-        global modal_lock
+        global submit_lock
         user = interaction.user
 
         # Attempt to acquire the lock with a timeout of 5 seconds
         try:
-            acquired = await asyncio.wait_for(modal_lock.acquire(), timeout=5.0)
+            acquired = await asyncio.wait_for(submit_lock.acquire(), timeout=5.0)
             if not acquired:
                 await interaction.response.send_message("Unable to process your request. Please try again.", ephemeral=True)
                 return
@@ -301,7 +302,7 @@ class CatchModal(Modal):
             else:
                 await interaction.response.send_message(f"{user.mention}; Incorrect name.", ephemeral=False)
         finally:
-            modal_lock.release()
+            submit_lock.release()
 
 class CatchButton(Button):
     def __init__(self, card_name):
@@ -443,6 +444,245 @@ class ProgressView(View):
         
         embed.set_footer(text=f"Page {self.current_page + 1}/{self.missing_pages} (Missing Cards) • Use buttons to navigate")
         return embed
+
+# The trading hall
+class TradeSession:
+    def __init__(self, ctx, initiator, recipient):
+        self.ctx = ctx
+        self.initiator = initiator
+        self.recipient = recipient
+        self.initiator_id = str(initiator.id)
+        self.recipient_id = str(recipient.id)
+        self.initiator_cards: List[str] = []
+        self.recipient_cards: List[str] = []
+        self.initiator_confirmed = False
+        self.recipient_confirmed = False
+        self.trade_message = None
+        self.timeout = 180
+        self.last_activity = time.time()
+        self.active = True
+
+    def reset_activity_timer(self):
+        """Reset the activity timer whenever a user performs an action"""
+        self.last_activity = time.time()
+
+    async def start_trade(self):
+        embed = discord.Embed(
+            title="📦 Card Trade Initiated",
+            description=f"{self.initiator.mention} wants to trade with {self.recipient.mention}!\n\n"
+                      f"Both players can select cards to offer in the trade.",
+            color=discord.Color.gold()
+        )
+        embed.set_footer(text=f"Trade will expire after {self.timeout} seconds of inactivity.")
+
+        view = TradeInviteView(self)
+        self.trade_message = await self.ctx.send(embed=embed, view=view)
+
+        asyncio.create_task(self.monitor_timeout())
+
+    async def monitor_timeout(self):
+        """Monitor for inactivity timeout"""
+        while self.active:
+            await asyncio.sleep(10)
+            if time.time() - self.last_activity > self.timeout:
+                await self.cancel_trade("Trade expired due to inactivity.")
+                return
+
+    async def update_trade_status(self):
+        """Update the trade status embed"""
+        if not self.active:
+            return
+        
+        def format_card_with_rarity(card_name):
+            card_data = next((c for c in cards if c['name'] == card_name), None)
+            if not card_data:
+                return card_name
+            
+            # Lower rarity % means rarer card
+            rarity = card_data.get('rarity', 100)
+            if rarity < 5:  # Very rare cards
+                return f"{card_name} 🌟"
+            elif rarity < 10:  # Rare cards
+                return f"{card_name} ⭐"
+            else:
+                return card_name
+    
+        initiator_cards_str = "None" if not self.initiator_cards else ", ".join(
+            [format_card_with_rarity(card) for card in self.initiator_cards])
+        recipient_cards_str = "None" if not self.recipient_cards else ", ".join(
+            [format_card_with_rarity(card) for card in self.recipient_cards])
+        
+        embed = discord.Embed(
+            title="📦 Trade in Progress",
+            description=f"Trade between {self.initiator.mention} and {self.recipient.mention}",
+            color=discord.Color.gold()
+        )
+
+        embed.add_field(
+            name=f"{self.initiator.display_name}'s Offer:" + (" ✅" if self.initiator_confirmed else ""),
+            value=initiator_cards_str,
+            inline=False
+        )
+        embed.add_field(
+            name=f"{self.recipient.display_name}'s Offer:" + (" ✅" if self.recipient_confirmed else ""),
+            value=recipient_cards_str,
+            inline=False
+        )
+
+        embed.add_field(
+            name="Instructions",
+            value="• Use `!trade_add [card]` to add cards to your offer\n"
+                "• Use `!trade_remove [card]` to remove cards\n"
+                "• Use `!trade_confirm` when you're satisfied with the deal\n"
+                "• Use `!trade_cancel` to cancel the trade",
+            inline=False
+        )
+
+        try:
+            await self.trade_message.edit(embed=embed)
+        except discord.NotFound:
+            self.trade_message = await self.ctx.send(embed=embed)
+        except Exception as e:
+            logging.error(f"Error updating trade status: {e}")
+
+    async def finalize_trade(self):
+        """Complete the trade by exchanging cards"""
+        async with trade_lock:
+            for card in self.initiator_cards:
+                if not user_has_card(self.initiator_id, card):
+                    await self.cancel_trade(f"{self.initiator.mention} no longer has the card `{card}`.")
+                    return
+
+            for card in self.recipient_cards:
+                if not user_has_card(self.recipient_id, card):
+                    await self.cancel_trade(f"{self.recipient.mention} no longer has the card `{card}`.")
+                    return
+            
+            embed = discord.Embed(
+                title="🔍 Final Trade Confirmation",
+                description=f"Please review this trade one last time:",
+                color=discord.Color.gold()
+            )
+
+            embed.add_field(
+                name=f"{self.initiator.display_name} will give:",
+                value=", ".join(self.initiator_cards) if self.initiator_cards else "Nothing",
+                inline=True
+            )
+
+            embed.add_field(
+                name=f"{self.recipient.display_name} will give:",
+                value=", ".join(self.recipient_cards) if self.recipient_cards else "Nothing",
+                inline=True
+            )
+
+            embed.set_footer(text="Trade will complete in 20 seconds. Type !trade_cancel to stop.")
+
+            await self.ctx.send(embed=embed)
+
+            self.finalization_time = time.time()
+            await asyncio.sleep(20)  # Allow 20 seconds for final confirmation
+
+            if not self.active:
+                return
+
+            try:
+                for card in self.initiator_cards:
+                    player_cards[self.initiator_id].remove(card)
+                    player_cards.setdefault(self.recipient_id, []).append(card)
+
+                for card in self.recipient_cards:
+                    player_cards[self.recipient_id].remove(card)
+                    player_cards.setdefault(self.initiator_id, []).append(card)
+
+                save_player_cards()
+
+                embed = discord.Embed(
+                    title="🎉 Trade Completed!",
+                    description="Cards have been successfully exchanged.",
+                    color=discord.Color.green()
+                )
+                
+                initiator_summary = "None" if not self.initiator_cards else ", ".join(self.initiator_cards)
+                recipient_summary = "None" if not self.recipient_cards else ", ".join(self.recipient_cards)
+                
+                embed.add_field(
+                    name=f"{self.initiator.display_name} gave:",
+                    value=initiator_summary,
+                    inline=True
+                )
+                embed.add_field(
+                    name=f"{self.recipient.display_name} gave:",
+                    value=recipient_summary,
+                    inline=True
+                )
+                
+                await self.ctx.send(embed=embed)
+                
+                logging.info(f"Trade completed between {self.initiator.name} and {self.recipient.name}")
+
+                self.active = False
+                
+            except Exception as e:
+                logging.error(f"Error during trade finalization: {e}", exc_info=True)
+                await self.ctx.send("An error occurred during the trade. Please try again later.")
+                self.active = False
+
+    async def cancel_trade(self, reason="Trade cancelled."):
+        """Cancel the trade"""
+        if not self.active:
+            return
+            
+        self.active = False
+        embed = discord.Embed(
+            title="❌ Trade Cancelled",
+            description=reason,
+            color=discord.Color.red()
+        )
+        await self.ctx.send(embed=embed)
+
+        try:
+            if hasattr(self.trade_message, 'edit'):
+                view = TradeInviteView(self)
+                for child in view.children:
+                    child.disabled = True
+                await self.trade_message.edit(view=view)
+        except Exception as e:
+            logging.error(f"Error disabling trade buttons: {e}")
+
+class TradeInviteView(View):
+    def __init__(self, trade_session):
+        super().__init__(timeout=None)
+        self.trade_session = trade_session
+
+    @discord.ui.button(label="Accept Trade", style=discord.ButtonStyle.green)
+    async def accept_trade(self, interaction: discord.Interaction, button: discord.ui.Button):
+        if interaction.user.id != self.trade_session.recipient.id:
+            await interaction.response.send_message("This trade invitation isn't for you!", ephemeral=True)
+            return
+        
+        # Reset activity timer
+        self.trade_session.reset_activity_timer()
+        
+        # Disable buttons
+        for child in self.children:
+            child.disabled = True
+        await interaction.message.edit(view=self)
+        
+        # Show trade accepted message
+        await interaction.response.send_message(f"{interaction.user.mention} has accepted the trade invitation!")
+        
+        # Update trade status
+        await self.trade_session.update_trade_status()
+
+    @discord.ui.button(label="Decline Trade", style=discord.ButtonStyle.red)
+    async def decline_trade(self, interaction: discord.Interaction, button: discord.ui.Button):
+        if interaction.user.id != self.trade_session.recipient.id:
+            await interaction.response.send_message("This trade invitation isn't for you!", ephemeral=True)
+            return
+        
+        await interaction.response.send_message("You declined the trade.")
+        await self.trade_session.cancel_trade(f"{interaction.user.mention} declined the trade.")
 
 # List of allowed server IDs
 allowed_guilds = [int(channel_id), int(test_channel_id)]
@@ -1693,6 +1933,352 @@ async def battle_help(ctx):
     
     await ctx.send(embed=embed)
 
+# The trading hall commands
+@bot.command(name='trade', help="Initiate a trade with another player")
+async def trade_command(ctx, recipient: discord.Member = None):
+    if BlacklistManager.is_blacklisted(str(ctx.author.id)) and str(ctx.author.id) not in authorized_user_ids:
+        await ctx.send("You are blacklisted and cannot use this bot.")
+        return
+
+    if not recipient:
+        await ctx.send("Please specify a user to trade with. Usage: `!trade @user`")
+        return
+        
+    if recipient.id == ctx.author.id:
+        await ctx.send("You can't trade with yourself!")
+        return
+    
+    if recipient.bot:
+        await ctx.send("You can't trade with a bot!")
+        return
+    
+    initiator_id = str(ctx.author.id)
+    recipient_id = str(recipient.id)
+
+    # Check if players have cards
+    if initiator_id not in player_cards or not player_cards[initiator_id]:
+        await ctx.send("You don't have any cards to trade!")
+        return
+    
+    if recipient_id not in player_cards or not player_cards[recipient_id]:
+        await ctx.send(f"{recipient.display_name} doesn't have any cards to trade!")
+        return
+    
+    # Initialize trade sessions tracker if not exist
+    if not hasattr(bot, 'active_trades'):
+        bot.active_trades = {}
+    
+    # Check if users are already in active trades
+    if initiator_id in bot.active_trades:
+        await ctx.send("You're already in an active trade!")
+        return
+        
+    if recipient_id in bot.active_trades:
+        await ctx.send(f"{recipient.display_name} is already in an active trade!")
+        return
+
+    # Create and start trade
+    trade_session = TradeSession(ctx, ctx.author, recipient)
+    
+    # Register the active trade
+    bot.active_trades[initiator_id] = trade_session
+    bot.active_trades[recipient_id] = trade_session
+    
+    await trade_session.start_trade()
+
+@bot.command(name='trade_add', help="Add a card to your trade offer")
+async def trade_add(ctx, *, card_name: str):
+    user_id = str(ctx.author.id)
+    
+    # Check if user is in a trade
+    if not hasattr(bot, 'active_trades') or user_id not in bot.active_trades:
+        await ctx.send("You're not in an active trade!")
+        return
+    
+    trade = bot.active_trades[user_id]
+    
+    # Reset activity timer
+    trade.reset_activity_timer()
+    
+    # Check if the trade is still active
+    if not trade.active:
+        await ctx.send("That trade is no longer active.")
+        if user_id in bot.active_trades:
+            del bot.active_trades[user_id]
+        return
+    
+    # Determine if user is initiator or recipient
+    is_initiator = (user_id == trade.initiator_id)
+    
+    # Check if user has already confirmed
+    if (is_initiator and trade.initiator_confirmed) or (not is_initiator and trade.recipient_confirmed):
+        await ctx.send("You've already confirmed the trade! Use `!trade_unconfirm` to make changes.")
+        return
+    
+    # Check if the user has this card
+    user_cards = player_cards.get(user_id, [])
+    card_lower = card_name.lower()
+    
+    # Find the actual card with matching name (case insensitive) or aliases
+    found_card = None
+    for card in user_cards:
+        card_data = next((c for c in cards if c['name'].lower() == card.lower()), None)
+        if card.lower() == card_lower:
+            found_card = card
+            break
+        elif card_data and 'aliases' in card_data:
+            if card_lower in [alias.lower() for alias in card_data['aliases']]:
+                found_card = card
+                break
+    
+    if not found_card:
+        await ctx.send(f"You don't have a card named `{card_name}`!")
+        return
+    
+    # Add card to appropriate list
+    if is_initiator:
+        if found_card in trade.initiator_cards:
+            await ctx.send(f"You've already added `{found_card}` to the trade!")
+            return
+        trade.initiator_cards.append(found_card)
+    else:
+        if found_card in trade.recipient_cards:
+            await ctx.send(f"You've already added `{found_card}` to the trade!")
+            return
+        trade.recipient_cards.append(found_card)
+    
+    await ctx.send(f"Added `{found_card}` to your trade offer.")
+    await trade.update_trade_status()
+
+@bot.command(name='trade_remove', help="Remove a card from your trade offer")
+async def trade_remove(ctx, *, card_name: str):
+    user_id = str(ctx.author.id)
+    
+    # Check if user is in a trade
+    if not hasattr(bot, 'active_trades') or user_id not in bot.active_trades:
+        await ctx.send("You're not in an active trade!")
+        return
+    
+    trade = bot.active_trades[user_id]
+    
+    # Reset activity timer
+    trade.reset_activity_timer()
+    
+    # Check if the trade is still active
+    if not trade.active:
+        await ctx.send("That trade is no longer active.")
+        if user_id in bot.active_trades:
+            del bot.active_trades[user_id]
+        return
+    
+    # Determine if user is initiator or recipient
+    is_initiator = (user_id == trade.initiator_id)
+    
+    # Check if user has already confirmed
+    if (is_initiator and trade.initiator_confirmed) or (not is_initiator and trade.recipient_confirmed):
+        await ctx.send("You've already confirmed the trade! Use `!trade_unconfirm` to make changes.")
+        return
+    
+    card_lower = card_name.lower()
+    
+    # Get the user's cards in the trade
+    user_trade_cards = trade.initiator_cards if is_initiator else trade.recipient_cards
+    
+    # Find the card to remove
+    card_to_remove = None
+    for card in user_trade_cards:
+        card_data = next((c for c in cards if c['name'].lower() == card.lower()), None)
+        if card.lower() == card_lower:
+            card_to_remove = card
+            break
+        elif card_data and 'aliases' in card_data:
+            if card_lower in [alias.lower() for alias in card_data['aliases']]:
+                card_to_remove = card
+                break
+    
+    if not card_to_remove:
+        await ctx.send(f"You don't have `{card_name}` in your trade offer!")
+        return
+    
+    # Remove the card
+    user_trade_cards.remove(card_to_remove)
+    await ctx.send(f"Removed `{card_to_remove}` from your trade offer.")
+    await trade.update_trade_status()
+
+@bot.command(name='trade_confirm', help="Confirm your side of the trade")
+async def trade_confirm(ctx):
+    user_id = str(ctx.author.id)
+    
+    # Check if user is in a trade
+    if not hasattr(bot, 'active_trades') or user_id not in bot.active_trades:
+        await ctx.send("You're not in an active trade!")
+        return
+    
+    trade = bot.active_trades[user_id]
+    
+    # Reset activity timer
+    trade.reset_activity_timer()
+    
+    # Check if the trade is still active
+    if not trade.active:
+        await ctx.send("That trade is no longer active.")
+        if user_id in bot.active_trades:
+            del bot.active_trades[user_id]
+        return
+    
+    # Determine if user is initiator or recipient
+    is_initiator = (user_id == trade.initiator_id)
+    
+    # Set confirmation flag
+    if is_initiator:
+        trade.initiator_confirmed = True
+    else:
+        trade.recipient_confirmed = True
+    
+    await ctx.send(f"{ctx.author.mention} has confirmed the trade!")
+    await trade.update_trade_status()
+    
+    # Check if both users have confirmed
+    if trade.initiator_confirmed and trade.recipient_confirmed:
+        await trade.finalize_trade()
+        # Clean up
+        if trade.initiator_id in bot.active_trades:
+            del bot.active_trades[trade.initiator_id]
+        if trade.recipient_id in bot.active_trades:
+            del bot.active_trades[trade.recipient_id]
+
+@bot.command(name='trade_unconfirm', help="Remove your confirmation of the trade")
+async def trade_unconfirm(ctx):
+    user_id = str(ctx.author.id)
+    
+    # Check if user is in a trade
+    if not hasattr(bot, 'active_trades') or user_id not in bot.active_trades:
+        await ctx.send("You're not in an active trade!")
+        return
+    
+    trade = bot.active_trades[user_id]
+    
+    # Reset activity timer
+    trade.reset_activity_timer()
+    
+    # Check if the trade is still active
+    if not trade.active:
+        await ctx.send("That trade is no longer active.")
+        if user_id in bot.active_trades:
+            del bot.active_trades[user_id]
+        return
+    
+    # Determine if user is initiator or recipient
+    is_initiator = (user_id == trade.initiator_id)
+    
+    # Check if user has confirmed
+    if (is_initiator and not trade.initiator_confirmed) or (not is_initiator and not trade.recipient_confirmed):
+        await ctx.send("You haven't confirmed the trade yet!")
+        return
+    
+    # Remove confirmation
+    if is_initiator:
+        trade.initiator_confirmed = False
+    else:
+        trade.recipient_confirmed = False
+    
+    await ctx.send(f"{ctx.author.mention} has withdrawn their confirmation.")
+    await trade.update_trade_status()
+
+@bot.command(name='trade_cancel', help="Cancel the current trade")
+async def trade_cancel(ctx):
+    user_id = str(ctx.author.id)
+    
+    # Check if user is in a trade
+    if not hasattr(bot, 'active_trades') or user_id not in bot.active_trades:
+        await ctx.send("You're not in an active trade!")
+        return
+    
+    trade = bot.active_trades[user_id]
+    
+    # Check if the trade is still active
+    if not trade.active:
+        await ctx.send("That trade is no longer active.")
+        if user_id in bot.active_trades:
+            del bot.active_trades[user_id]
+        return
+    
+    # Cancel the trade
+    await trade.cancel_trade(f"Trade cancelled by {ctx.author.mention}")
+    
+    # Clean up
+    if trade.initiator_id in bot.active_trades:
+        del bot.active_trades[trade.initiator_id]
+    if trade.recipient_id in bot.active_trades:
+        del bot.active_trades[trade.recipient_id]
+
+@bot.command(name='trade_status', help="Check the status of your current trade")
+async def trade_status(ctx):
+    user_id = str(ctx.author.id)
+    
+    # Check if user is in a trade
+    if not hasattr(bot, 'active_trades') or user_id not in bot.active_trades:
+        await ctx.send("You're not in an active trade!")
+        return
+    
+    trade = bot.active_trades[user_id]
+    
+    # Reset activity timer
+    trade.reset_activity_timer()
+    
+    # Check if the trade is still active
+    if not trade.active:
+        await ctx.send("That trade is no longer active.")
+        if user_id in bot.active_trades:
+            del bot.active_trades[user_id]
+        return
+    
+    # Just update the trade status
+    await trade.update_trade_status()
+
+@bot.command(name='trade_help', help="Get help with the trade system")
+async def trade_help(ctx):
+    embed = discord.Embed(
+        title="Card Trading Help",
+        description="How to trade cards with other players",
+        color=discord.Color.blue()
+    )
+    
+    embed.add_field(
+        name="Starting a Trade",
+        value="Use `!trade @user` to start trading with another player",
+        inline=False
+    )
+    
+    embed.add_field(
+        name="Adding Cards",
+        value="Use `!trade_add [card name]` to add a card to your trade offer",
+        inline=False
+    )
+    
+    embed.add_field(
+        name="Removing Cards",
+        value="Use `!trade_remove [card name]` to remove a card from your offer",
+        inline=False
+    )
+    
+    embed.add_field(
+        name="Confirming Trade", 
+        value="Use `!trade_confirm` when you're happy with the deal\n"
+              "Both players must confirm for the trade to complete",
+        inline=False
+    )
+    
+    embed.add_field(
+        name="Other Commands",
+        value="• `!trade_unconfirm` - Remove your confirmation\n"
+              "• `!trade_cancel` - Cancel the trade entirely\n"
+              "• `!trade_status` - Check the current status of your trade",
+        inline=False
+    )
+    
+    await ctx.send(embed=embed)
+
 #///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 #other commands not related to the card game
 #///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -1753,6 +2339,20 @@ async def list_commands(ctx):
         ),
         inline=False
     )
+
+    embed.add_field(
+        name="🔄 Trading System",
+        value=(
+            "`!trade [@user]` - Start a card trade with another user\n"
+            "`!trade_add [card name]` - Add a card to your trade offer\n"
+            "`!trade_remove [card name]` - Remove a card from your offer\n"
+            "`!trade_confirm` - Confirm the trade deal\n"
+            "`!trade_unconfirm` - Unconfirm the trade deal\n"
+            "`!trade_status` - Check your current trade\n"
+            "`!trade_help` - Get help with trading"
+        ),
+        inline=False
+    )
     
     # Bot Stats
     embed.add_field(
@@ -1796,7 +2396,7 @@ async def info(ctx):
 
     embed.add_field(
         name="🏷️ Version",
-        value="1.4.1 - \"The Battle Update\"", 
+        value="1.5 - \"The Trading Update\"", 
         inline=False
     )
 
@@ -1820,7 +2420,7 @@ async def info(ctx):
     
     embed.add_field(
         name="📜 Latest Changes",
-        value="• Enhanced battle system\n• Improved card selection UI",
+        value="• Added card trading system\n• Enhanced battle system\n• Bugfixes",
         inline=False
     )
 

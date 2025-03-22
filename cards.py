@@ -255,7 +255,7 @@ cards = [
         "name": "Hollow",
         "aliases": ["Gollow"],
         "spawn_image_url": "https://media.discordapp.net/attachments/1322205679028670495/1324449804008296453/RobloxScreenShot20250102_195006907.png?ex=678df240&is=678ca0c0&hm=bad958251fad83f01cbb88f66e122ac143410c38c8355c88b5acadcffb5314e4&=&format=webp&quality=lossless&width=470&height=350",
-        "card_image_url": "https://media.discordapp.net/attachments/1322202570529177642/1324451870688804874/Just_another_trooper_trying_to_stay_alive._He_doesnt_like_insurgents._His_left_arm_and_left_eye_are_gone_due_to_the_Gulag_29.png?ex=678df42d&is=678ca2ad&hm=80f5e71b4642955de3ec209b8f66bf0a394d64bcfe54d643ab7d7e66bdf4eeef&=&format=webp&quality=lossless&width=479&height=671",
+        "card_image_url": "https://media.discordapp.net/attachments/1322202570529177642/1351281885992456333/CC-_10.png?ex=67dfbd93&is=67de6c13&hm=a9ae35d58811ceb33902c4e5cb42bc70069801ab9961339ee18223c358a178f3&=&format=webp&quality=lossless&width=400&height=560",
         "rarity": 59,
         "health": 6000,
         "damage": 3150,
