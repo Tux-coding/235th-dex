@@ -145,6 +145,44 @@ async def show_blacklist(ctx):
     else:
         await ctx.send("No users are currently blacklisted.")
 
+@bot.before_invoke
+async def check_conditions(ctx):
+    if BlacklistManager.is_blacklisted(str(ctx.author.id)) and str(ctx.author.id) not in authorized_user_ids:
+        await ctx.send("You are blacklisted and cannot use this bot.")
+        raise commands.CheckFailure("User is blacklisted.")
+    
+    if is_test_mode and str(ctx.author.id) not in authorized_user_ids and not ctx.command.name == 'set_spawn_mode':
+        await ctx.send("We are currently updating the bot, please wait until we are finished.")
+        raise commands.CheckFailure("Bot is in test mode.")
+
+def validate_recipient(ctx, recipient):
+    if not recipient:
+        raise commands.UserInputError("Please specify a user. Usage: `!{ctx.command.name} @user`")
+    
+    if recipient.id == ctx.author.id:
+        raise commands.UserInputError("You can't use this command on yourself!")
+
+    if recipient.bot:
+        raise commands.UserInputError("You can't use this command on a bot!")
+    
+    return True
+
+def requires_valid_user():
+    async def predicate(ctx):
+        recipient = None
+        for converter, _ in ctx.command.clean_params.items():
+            if converter.annotation == discord.Member:
+                index = list(ctx.command.clean_params.keys()).index(converter)
+                if len(ctx.args) > index + 1:
+                    recipient = ctx.args[index + 1]
+                break
+        
+        if recipient and isinstance(recipient, discord.Member):
+            return validate_recipient(ctx, recipient)
+        return True
+
+    return commands.check(predicate)
+
 # Player cards view starter
 player_cards = {}
 
@@ -845,6 +883,8 @@ async def on_command_error(ctx, error):
             await ctx.send("Could not find that user. Please @mention a valid user.")
         else:
             await ctx.send(f"Invalid argument provided. {str(error)}")
+    elif isinstance(error, commands.UserInputError):
+        await ctx.send(str(error))
     elif isinstance(error, commands.DisabledCommand):
         await ctx.send("This command is currently disabled.")
     elif isinstance(error, commands.CommandInvokeError):
@@ -859,11 +899,7 @@ async def on_command_error(ctx, error):
     elif isinstance(error, commands.TooManyArguments):
         await ctx.send("Too many arguments provided. Check command usage with `!commands_dex`.")
     elif isinstance(error, commands.CheckFailure):
-        if is_test_mode and str(ctx.author.id) not in authorized_user_ids:
-            await ctx.send("We are currently updating the bot, please wait until we are finished.")
-        elif BlacklistManager.is_blacklisted(str(ctx.author.id)):
-            await ctx.send("You are blacklisted and cannot use this bot.")
-        else:
+        if not any(msg in str(error) for msg in ["blacklisted", "test mode"]):
             await ctx.send("You do not have permission to use this command.")
     elif isinstance(error, commands.UserInputError):
         await ctx.send("There was an error with your input. Please check the command syntax.")
@@ -1016,6 +1052,7 @@ async def view_progress(ctx, user: discord.Member):
     logging.info(f"Admin {ctx.author} viewed collection progress for {user.display_name}")
 
 @bot.command(name='give')
+@requires_valid_user()
 async def give_card(ctx, card: str, receiving_user: discord.Member):
     sender_id = str(ctx.author.id)
     receiver_id = str(receiving_user.id)
@@ -1119,6 +1156,7 @@ async def remove_card(ctx, card: str, user: discord.Member):
         logging.info(f"Admin: {ctx.author} attempted to remove {card} from {user}, but {user} did not possess {card}.")
 
 @bot.command(name='battle', help="Battle another player with your cards.")
+@requires_valid_user()
 async def battle(ctx, opponent: discord.Member = None):
     try:
         if not opponent:
@@ -1934,22 +1972,11 @@ async def battle_help(ctx):
     await ctx.send(embed=embed)
 
 # The trading hall commands
-@bot.command(name='trade', help="Initiate a trade with another player")
+@bot.command(name='trade')
+@requires_valid_user()
 async def trade_command(ctx, recipient: discord.Member = None):
-    if BlacklistManager.is_blacklisted(str(ctx.author.id)) and str(ctx.author.id) not in authorized_user_ids:
-        await ctx.send("You are blacklisted and cannot use this bot.")
-        return
-
     if not recipient:
         await ctx.send("Please specify a user to trade with. Usage: `!trade @user`")
-        return
-        
-    if recipient.id == ctx.author.id:
-        await ctx.send("You can't trade with yourself!")
-        return
-    
-    if recipient.bot:
-        await ctx.send("You can't trade with a bot!")
         return
     
     initiator_id = str(ctx.author.id)
@@ -2396,7 +2423,7 @@ async def info(ctx):
 
     embed.add_field(
         name="🏷️ Version",
-        value="1.5 - \"The Trading Update\"", 
+        value="1.5.1 - \"The Trading Update\"", 
         inline=False
     )
 
@@ -2420,7 +2447,7 @@ async def info(ctx):
     
     embed.add_field(
         name="📜 Latest Changes",
-        value="• Added card trading system\n• Enhanced battle system\n• Bugfixes",
+        value="• Bugfixes\n• Added card trading system\n• Enhanced battle system",
         inline=False
     )
 
@@ -2532,15 +2559,6 @@ async def send_embed_with_retry(channel, embed, view=None, retries=3, delay=2):
 
 #///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 #other cool things for shutdown and signal handling
-
-@bot.before_invoke
-async def check_conditions(ctx):
-    if is_test_mode and str(ctx.author.id) not in authorized_user_ids and not ctx.command.name == 'set_spawn_mode':
-        await ctx.send("We are currently updating the bot, please wait until we are finished.")
-        raise commands.CheckFailure("Bot is in test mode.")
-    if BlacklistManager.is_blacklisted(str(ctx.author.id)) and str(ctx.author.id) not in authorized_user_ids:
-        await ctx.send("You are blacklisted and cannot use this bot.")
-        raise commands.CheckFailure("User is blacklisted.")
 
 # Custom shutdown function
 async def shutdown_bot():

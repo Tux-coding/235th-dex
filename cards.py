@@ -254,7 +254,7 @@ cards = [
     {
         "name": "Hollow",
         "aliases": ["Gollow"],
-        "spawn_image_url": "https://media.discordapp.net/attachments/1322205679028670495/1324449804008296453/RobloxScreenShot20250102_195006907.png?ex=678df240&is=678ca0c0&hm=bad958251fad83f01cbb88f66e122ac143410c38c8355c88b5acadcffb5314e4&=&format=webp&quality=lossless&width=470&height=350",
+        "spawn_image_url": "https://media.discordapp.net/attachments/1322205679028670495/1351281016907501568/RobloxScreenShot20250317_204741670.png?ex=67e502c4&is=67e3b144&hm=8e80b7b92a2c2497177d663d8f7ab0fa1f5259202b6055c25c00ddbeaf5b8c6e&=&format=webp&quality=lossless&width=1145&height=628",
         "card_image_url": "https://media.discordapp.net/attachments/1322202570529177642/1351281885992456333/CC-_10.png?ex=67dfbd93&is=67de6c13&hm=a9ae35d58811ceb33902c4e5cb42bc70069801ab9961339ee18223c358a178f3&=&format=webp&quality=lossless&width=400&height=560",
         "rarity": 59,
         "health": 6000,
