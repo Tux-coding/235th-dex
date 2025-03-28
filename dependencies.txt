@@ -1,0 +1,8 @@
+dependencies that have to be installed, all of these are installed with pip
+
+pillow
+discord.py
+requests
+
+
+there are probably a lot more, will expand later
