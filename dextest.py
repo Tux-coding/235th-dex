@@ -371,17 +371,17 @@ class CatchView(View):
 class ProgressView(View):
     def __init__(self, user_cards, missing_cards, user):
         super().__init__(timeout=None)
-        self.user_cards = user_cards
+        self.user_cards = list(set(user_cards))  # Ensure unique cards only
         self.missing_cards = missing_cards
         self.user = user
         self.current_page = 0
         self.viewing_owned = True  # Start by viewing owned cards
         
         # Calculate pages needed for owned cards
-        self.owned_pages = max(1, (len(user_cards) + 9) // 10)  # At least 1 page
+        self.owned_pages = max(1, (len(self.user_cards) + 9) // 10)  # At least 1 page
         
         # Calculate pages needed for missing cards
-        self.missing_pages = max(1, (len(missing_cards) + 9) // 10)  # At least 1 page
+        self.missing_pages = max(1, (len(self.missing_cards) + 9) // 10)  # At least 1 page
         
         # Total pages across both sections
         self.total_pages = self.owned_pages + self.missing_pages
@@ -447,16 +447,14 @@ class ProgressView(View):
     def create_owned_embed(self):
         embed = discord.Embed(
             title="📚 Card Collection Progress",
-            description=f"Showing your owned cards ({len(self.user_cards)}/{len(self.user_cards) + len(self.missing_cards)} collected)",
+            description=f"Showing your owned unique cards ({len(self.user_cards)}/{len(self.user_cards) + len(self.missing_cards)} unique cards collected)",
             color=discord.Color.green()
         )
-        
         start = self.current_page * 10
         end = min(start + 10, len(self.user_cards))
         
         if self.user_cards:
-            card_counts = Counter(self.user_cards)
-            owned_cards = "\n".join([f"• {card} x{count}" if count > 1 else f"• {card}" for card, count in card_counts.items()][start:end])
+            owned_cards = "\n".join([f"\u2022 {card}" for card in self.user_cards[start:end]])
             embed.add_field(name="📋 Your Cards", value=owned_cards, inline=False)
         else:
             embed.add_field(name="📋 Your Cards", value="You don't have any cards yet.", inline=False)
@@ -2383,8 +2381,8 @@ async def list_commands(ctx):
     
     # Bot Stats
     embed.add_field(
-        name="📊 Bot Stats",
-        value="`!stats_full` - Show general statistics about the card game",
+        name="📊 Leaderboard",
+        value="`!leaderboard` - Show general statistics about the card game",
         inline=False
     )
     
@@ -2511,7 +2509,7 @@ async def gud_boy(ctx):
     await ctx.send(embed=embed)
 
 # Public !stats command
-@bot.command(name='stats_full', help="Show general statistics about the card game.")
+@bot.command(name='leaderboard', help="Show general statistics about the card game.")
 async def public_stats(ctx):
     total_users = len(player_cards)
     total_cards_collected = sum(len(cards) for user_id, cards in player_cards.items() if user_id not in authorized_user_ids)
@@ -2519,6 +2517,10 @@ async def public_stats(ctx):
     # Top Collectors
     collectors = [(user_id, len(cards)) for user_id, cards in player_cards.items() if user_id not in authorized_user_ids]
     top_collectors = sorted(collectors, key=lambda x: x[1], reverse=True)[:5]
+    
+    # Unique Cards Leaderboard
+    unique_collectors = [(user_id, len(set(cards))) for user_id, cards in player_cards.items() if user_id not in authorized_user_ids]
+    top_unique_collectors = sorted(unique_collectors, key=lambda x: x[1], reverse=True)[:5]
     
     # Most Collected Card
     all_cards = [card for cards in player_cards.values() for card in cards]
@@ -2533,6 +2535,7 @@ async def public_stats(ctx):
     embed.add_field(name="Total Users", value=total_users, inline=False)
     embed.add_field(name="Total Cards Collected", value=total_cards_collected, inline=False)
     embed.add_field(name="Top Collectors", value="\n".join([f"<@{user_id}>: {count} cards" for user_id, count in top_collectors]), inline=False)
+    embed.add_field(name="Top Unique Card Collecters", value="\n".join([f"<@{user_id}>: {count} unique cards" for user_id, count in top_unique_collectors]), inline=False)
     embed.add_field(name="Most Collected Card", value=most_collected_card, inline=False)
     embed.add_field(name="Rarest Card Owned", value=rarest_card_owned, inline=False)
     
