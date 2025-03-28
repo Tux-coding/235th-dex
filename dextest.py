@@ -371,14 +371,15 @@ class CatchView(View):
 class ProgressView(View):
     def __init__(self, user_cards, missing_cards, user):
         super().__init__(timeout=None)
-        self.user_cards = list(set(user_cards))  # Ensure unique cards only
+        self.user_cards = user_cards  
+        self.unique_user_cards = list(set(user_cards)) #remove duplicates
         self.missing_cards = missing_cards
         self.user = user
         self.current_page = 0
         self.viewing_owned = True  # Start by viewing owned cards
         
         # Calculate pages needed for owned cards
-        self.owned_pages = max(1, (len(self.user_cards) + 9) // 10)  # At least 1 page
+        self.owned_pages = max(1, (len(self.unique_user_cards) + 9) // 10)  # At least 1 page
         
         # Calculate pages needed for missing cards
         self.missing_pages = max(1, (len(self.missing_cards) + 9) // 10)  # At least 1 page
@@ -447,14 +448,17 @@ class ProgressView(View):
     def create_owned_embed(self):
         embed = discord.Embed(
             title="📚 Card Collection Progress",
-            description=f"Showing your owned unique cards ({len(self.user_cards)}/{len(self.user_cards) + len(self.missing_cards)} unique cards collected)",
+            description=f"Showing your owned unique cards ({len(set(self.unique_user_cards))}/{len(set(self.unique_user_cards)) + len(self.missing_cards)} unique cards collected)",
             color=discord.Color.green()
         )
         start = self.current_page * 10
         end = min(start + 10, len(self.user_cards))
         
         if self.user_cards:
-            owned_cards = "\n".join([f"\u2022 {card}" for card in self.user_cards[start:end]])
+            # Count occurrences of each card
+            card_counts = Counter(self.user_cards)
+            owned_cards = "\n".join([f"\u2022 {card} x{count}" if count > 1 else f"\u2022 {card}" 
+                                     for card, count in card_counts.items()][start:end])
             embed.add_field(name="📋 Your Cards", value=owned_cards, inline=False)
         else:
             embed.add_field(name="📋 Your Cards", value="You don't have any cards yet.", inline=False)
