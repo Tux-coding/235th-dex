@@ -6,7 +6,7 @@ cards = [
         "aliases": ["Gamester"],
         "spawn_image_url": "https://media.discordapp.net/attachments/1322205679028670495/1322205863611600896/RobloxScreenShot20241227_145936188.png?ex=677201eb&is=6770b06b&hm=f74d9e756dd8ae25b0c65b6fbdfd169c1c08679912c956c068f75c50171e9b95&=&format=webp&quality=lossless",
         "card_image_url": "https://i.imgur.com/HkUXPJ7.png",
-        "rarity": 8.5,  
+        "rarity": 0,  
         "health": 6500,
         "damage": 3500,
         "description": "Retired :-)"
