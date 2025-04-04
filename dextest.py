@@ -933,6 +933,7 @@ async def on_ready():
     validate_card_data()
     print(f'We have logged in as {bot.user}')
     logging.info("Logging is configured correctly.")
+
     
     # Send online message to both channels
     channels = [bot.get_channel(int(channel_id)), bot.get_channel(int(test_channel_id))]
@@ -963,7 +964,7 @@ async def on_ready():
 
     spawn_card.start()
     backup_player_data.start()  # Start the backup task
-
+    
 # see_card command to see a specific card
 @bot.command(name='see_card')
 async def see_card(ctx, *, card_name: str):
@@ -2567,38 +2568,8 @@ async def send_embed_with_retry(channel, embed, view=None, retries=3, delay=2):
             logging.error(f"Unexpected error sending embed: {e}")
             raise
 
-@bot.command(name="modify")
-async def modify(ctx, img_url: str):
-    # 1. Download the image
-    response = requests.get(img_url)
-    img = Image.open(BytesIO(response.content))
-
-    # 2. Add centered text
-    draw = ImageDraw.Draw(img)
-    text = "Hello, Discord!"
-    font = ImageFont.load_default()
-    text_width, text_height = draw.textsize(text, font=font)
-    x = (img.width - text_width) // 2
-    y = (img.height - text_height) // 2
-    draw.text((x, y), text, fill="white", font=font)
-
-    # 3. Save the modified image to bytes
-    img_bytes = BytesIO()
-    img.save(img_bytes, format="PNG")  # Save as PNG to avoid compression issues
-    img_bytes.seek(0)  # Reset file pointer to beginning
-
-    # 4. Create a Discord file object
-    file = discord.File(img_bytes, filename="modified_image.png")
-
-    # 5. Create an embed with the image
-    embed = discord.Embed(title="Modified Image", color=discord.Color.blue())
-    embed.set_image(url="attachment://modified_image.png")
-
-    # 6. Send the embed with the file
-    await ctx.send(embed=embed, file=file)
-#///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-#other cool things for shutdown and signal handling
-
+#trying to do some cool get image stuff
+#////////////////////////////////////////////////////////////////////////
 # Custom shutdown function
 async def shutdown_bot():
     channels = [bot.get_channel(int(channel_id)), bot.get_channel(int(test_channel_id))]
