@@ -183,6 +183,27 @@ def requires_valid_user():
 
     return commands.check(predicate)
 
+def generate_unique_card(base_card):
+    variation_range = 0.2 # 20% more or less
+    health_variation = random.uniform(-variation_range, variation_range)
+    damage_variation = random.uniform(-variation_range, variation_range)
+
+    return {
+        "name": base_card["name"],
+        "health_variation": round(health_variation * 100),
+        "damage_variation": round(damage_variation * 100)
+    }
+
+def calculate_card_stats(base_card, unique_code):
+    health = base_card["health"] * (1 + unique_code["health_variation"] / 100)
+    damage = base_card["damage"] * (1 + unique_code["damage_variation"] / 100)
+
+    return {
+        "name": base_card["name"],
+        "health": round(health),
+        "damage": round(damage)
+    }
+
 # Player cards view starter
 player_cards = {}
 
@@ -291,8 +312,11 @@ async def backup_player_data():
 def user_has_card(user_id: str, card_name: str) -> bool:
     card_name = card_name.lower()
     for card in player_cards.get(user_id, []):
-        card_aliases = next((c.get('aliases', []) for c in cards if c['name'].lower() == card.lower()), [])
-        if card_name == card.lower() or card_name in [alias.lower() for alias in card_aliases]:
+        # Check if card is a string (old format) or dict (new format)
+        card_actual_name = card["name"].lower() if isinstance(card, dict) else card.lower()
+        card_aliases = next((c.get('aliases', []) for c in cards if c['name'].lower() == card_actual_name), [])
+        
+        if card_name == card_actual_name or card_name in [alias.lower() for alias in card_aliases]:
             return True
     return False
 
@@ -329,7 +353,9 @@ class CatchModal(Modal):
             input_name = self.card_input.value.lower()
             if input_name == self.card_name.lower() or input_name in [alias.lower() for alias in next(card['aliases'] for card in cards if card['name'].lower() == self.card_name.lower())]:
                 user_id = str(user.id)
-                player_cards.setdefault(user_id, []).append(self.card_name)
+                base_card = next(card for card in cards if card["name"].lower() == self.card_name.lower())
+                unique_card = generate_unique_card(base_card)
+                player_cards.setdefault(user_id, []).append(unique_card)
                 save_player_cards()
                 await interaction.response.send_message(f"{user.mention} caught the card: {self.card_name}!", ephemeral=False)
                 self.view.card_claimed = True
@@ -372,7 +398,16 @@ class ProgressView(View):
     def __init__(self, user_cards, missing_cards, user):
         super().__init__(timeout=None)
         self.user_cards = user_cards  
-        self.unique_user_cards = list(set(user_cards)) #remove duplicates
+        
+        # Get unique cards by name
+        unique_card_names = set()
+        self.unique_user_cards = []
+        for card in user_cards:
+            card_name = card["name"] if isinstance(card, dict) else card
+            if card_name not in unique_card_names:
+                unique_card_names.add(card_name)
+                self.unique_user_cards.append(card)
+        
         self.missing_cards = missing_cards
         self.user = user
         self.current_page = 0
@@ -448,17 +483,28 @@ class ProgressView(View):
     def create_owned_embed(self):
         embed = discord.Embed(
             title="📚 Card Collection Progress",
-            description=f"Showing your owned unique cards ({len(set(self.unique_user_cards))}/{len(set(self.unique_user_cards)) + len(self.missing_cards)} unique cards collected)",
+            description=f"Showing your owned unique cards ({len(self.unique_user_cards)}/{len(self.unique_user_cards) + len(self.missing_cards)} unique cards collected)",
             color=discord.Color.green()
         )
         start = self.current_page * 10
         end = min(start + 10, len(self.user_cards))
         
         if self.user_cards:
-            # Count occurrences of each card
-            card_counts = Counter(self.user_cards)
-            owned_cards = "\n".join([f"\u2022 {card} x{count}" if count > 1 else f"\u2022 {card}" 
-                                     for card, count in card_counts.items()][start:end])
+            # Count occurrences of each card by name
+            card_counts = {}
+            for card in self.user_cards:
+                card_name = card["name"] if isinstance(card, dict) else card
+                card_counts[card_name] = card_counts.get(card_name, 0) + 1
+            
+            # Format card entries for display
+            card_entries = []
+            for card_name, count in list(card_counts.items())[start:end]:
+                if count > 1:
+                    card_entries.append(f"\u2022 {card_name} x{count}")
+                else:
+                    card_entries.append(f"\u2022 {card_name}")
+            
+            owned_cards = "\n".join(card_entries)
             embed.add_field(name="📋 Your Cards", value=owned_cards, inline=False)
         else:
             embed.add_field(name="📋 Your Cards", value="You don't have any cards yet.", inline=False)
@@ -586,17 +632,26 @@ class TradeSession:
             logging.error(f"Error updating trade status: {e}")
 
     async def finalize_trade(self):
-        """Complete the trade by exchanging cards"""
         async with trade_lock:
             for card in self.initiator_cards:
-                if not user_has_card(self.initiator_id, card):
-                    await self.cancel_trade(f"{self.initiator.mention} no longer has the card `{card}`.")
+                if card not in player_cards[self.initiator_id]:
+                    await self.cancel_trade(f"{self.initiator.mention} no longer has the card `{card['name']}`.")
                     return
 
             for card in self.recipient_cards:
-                if not user_has_card(self.recipient_id, card):
-                    await self.cancel_trade(f"{self.recipient.mention} no longer has the card `{card}`.")
+                if card not in player_cards[self.recipient_id]:
+                    await self.cancel_trade(f"{self.recipient.mention} no longer has the card `{card['name']}`.")
                     return
+                
+            for card in self.initiator_cards:
+                player_cards[self.initiator_id].remove(card)
+                player_cards.setdefault(self.recipient_id, []).append(card)
+            
+            for card in self.recipient_cards:
+                player_cards[self.recipient_id].remove(card)
+                player_cards.setdefault(self.initiator_id, []).append(card)
+
+            save_player_cards()
             
             embed = discord.Embed(
                 title="🔍 Final Trade Confirmation",
@@ -863,12 +918,10 @@ async def print_stats(ctx, *, card_name: str):
     card = next((card for card in cards if card_name.lower() == card["name"].lower() or card_name in [alias.lower() for alias in card.get("aliases", [])]), None)
     if card:
         embed = discord.Embed(title=f"Stats for {card['name']}", description="")
-        embed.add_field(name="Aliases", value=", ".join(card.get("aliases", [])), inline=False)
         embed.add_field(name="Health", value=card["health"], inline=True)
         embed.add_field(name="Damage", value=card["damage"], inline=True)
         embed.add_field(name="Rarity", value=f"{card['rarity']}%", inline=True)
         embed.add_field(name="Description", value = card["description"], inline=False)
-        #embed.add_field(name="Description", value=card["description"], inline=False) add later when all cards have a description
         await ctx.send(embed=embed)
     else:
         await ctx.send("Card not found.")
@@ -964,16 +1017,42 @@ async def on_ready():
 # see_card command to see a specific card
 @bot.command(name='see_card')
 async def see_card(ctx, *, card_name: str):
-    user_id = str(ctx.author.id)  # Ensure user ID is a string
-    
+    user_id = str(ctx.author.id)
     if user_id in player_cards and player_cards[user_id]:
         card_name = card_name.strip().lower()
-        user_card = next((card for card in player_cards[user_id] if card.lower() == card_name or card_name in [alias.lower() for alias in next(c.get('aliases', []) for c in cards if c['name'].lower() == card.lower())]), None)
+        
+        # Find the card in user's collection, handling both string and dict formats
+        user_card = None
+        for card in player_cards[user_id]:
+            if isinstance(card, dict):
+                # New format (dict with variations)
+                if card["name"].lower() == card_name:
+                    user_card = card
+                    break
+            else:
+                # Old format (just string card name)
+                if card.lower() == card_name:
+                    # Convert old format to new format with default variations
+                    base_card = next((c for c in cards if c["name"].lower() == card_name), None)
+                    if base_card:
+                        user_card = {
+                            "name": card,
+                            "health_variation": 0,  # No variation for old cards
+                            "damage_variation": 0
+                        }
+                        break
+                        
         if user_card:
-            selected_card = next(card for card in cards if card["name"].lower() == card_name or card_name in [alias.lower() for alias in card.get("aliases", [])])
-            embed = discord.Embed(title=f"Here's your {selected_card['name']}", description="")
-            embed.set_image(url=selected_card["card_image_url"])
-            await ctx.send(embed=embed)
+            base_card = next((card for card in cards if card["name"].lower() == card_name), None)
+            if base_card:
+                card_stats = calculate_card_stats(base_card, user_card)
+                embed = discord.Embed(title=f"Here's your {card_stats['name']}", description="")
+                embed.add_field(name="Health", value=card_stats["health"], inline=True)
+                embed.add_field(name="Damage", value=card_stats["damage"], inline=True)
+                embed.set_image(url=base_card["card_image_url"])
+                await ctx.send(embed=embed)
+            else:
+                await ctx.send(f"Error: Card {card_name} exists in your inventory but not in the base cards list.")
         else:
             await ctx.send("You don't have this card.")
     else:
@@ -985,7 +1064,17 @@ async def progress(ctx):
     user_id = str(ctx.author.id)
     total_cards = len(cards)
     user_cards = player_cards.get(user_id, [])
-    missing_cards = [card['name'] for card in cards if card['name'] not in user_cards]
+    
+    # Get all unique card names from user's inventory
+    user_card_names = set()
+    for card in user_cards:
+        if isinstance(card, dict):
+            user_card_names.add(card["name"])
+        else:
+            user_card_names.add(card)
+    
+    # Find missing cards
+    missing_cards = [card['name'] for card in cards if card['name'] not in user_card_names]
 
     view = ProgressView(user_cards, missing_cards, ctx.author)
     view.message = await ctx.send(embed=view.create_embed(), view=view)
@@ -1545,17 +1634,12 @@ class CardBattle:
         )
         await self.ctx.send(embed=victory_embed)
 
-    def _copy_card_for_battle(self, card_name):
-        original_card = next((c for c in cards if c['name'] == card_name), None)
-        if original_card:
-            return {
-                'name': original_card['name'],
-                'health': original_card['health'],
-                'damage': original_card.get('damage', original_card.get('attack', 1))
-            }
-        # Fallback in case the card isn't found
+    def _copy_card_for_battle(self, card_data):
+        base_card = next((c for c in cards if c['name'] == card_data["name"]), None)
+        if base_card:
+            return calculate_card_stats(base_card, card_data)
         return {
-            'name': card_name,
+            'name': card_data["name"],
             'health': 1,
             'damage': 1
         }
@@ -2574,7 +2658,14 @@ async def shutdown_bot():
     for channel in channels:
         if channel:
             try:
-                await channel.send("235th dex going offline")
+                if channel.id == int(test_channel_id):
+                    if spawn_mode == 'both':
+                        developer_mentions = " ".join([f"<@{user_id}>" for user_id in authorized_user_ids])
+                        await channel.send(f"{developer_mentions} Bot going offline, please renew server if needed.")
+                    else:
+                        await channel.send("235th dex going offline")
+                else:
+                    await channel.send("235th dex going offline")
                 logging.info(f"Sent disconnect message to channel {channel.id}")
             except Exception as e:
                 logging.error(f"Failed to send message to channel {channel.id}: {e}")

@@ -28,7 +28,17 @@
         "Pipopro",
         "Dicer",
         "Reyes",
-        "Wilson"
+        "Wilson",
+        {
+            "name": "Worst",
+            "health_variation": 14,
+            "damage_variation": -18
+        },
+        {
+            "name": "Worst",
+            "health_variation": -13,
+            "damage_variation": 14
+        }
     ],
     "1035607651985403965": [
         "Sentinel",
