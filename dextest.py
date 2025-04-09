@@ -170,9 +170,9 @@ def validate_recipient(ctx, recipient):
 def requires_valid_user():
     async def predicate(ctx):
         recipient = None
-        for converter, _ in ctx.command.clean_params.items():
-            if converter.annotation == discord.Member:
-                index = list(ctx.command.clean_params.keys()).index(converter)
+        for param_name, param in ctx.command.clean_params.items():
+            if param.annotation == discord.Member:
+                index = list(ctx.command.clean_params.keys()).index(param_name)
                 if len(ctx.args) > index + 1:
                     recipient = ctx.args[index + 1]
                 break
@@ -2574,7 +2574,14 @@ async def shutdown_bot():
     for channel in channels:
         if channel:
             try:
-                await channel.send("235th dex going offline")
+                if channel.id == int(test_channel_id):
+                    if spawn_mode == 'both':
+                        developer_mentions = " ".join([f"<@{user_id}>" for user_id in authorized_user_ids])
+                        await channel.send(f"{developer_mentions} Main bot going offline, please renew server if needed.")
+                    else:
+                        await channel.send("235th dex going offline")
+                else:
+                    await channel.send("235th dex going offline")
                 logging.info(f"Sent disconnect message to channel {channel.id}")
             except Exception as e:
                 logging.error(f"Failed to send message to channel {channel.id}: {e}")
