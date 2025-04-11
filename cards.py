@@ -6,7 +6,7 @@ cards = [
         "aliases": ["Gamester"],
         "spawn_image_url": "https://media.discordapp.net/attachments/1322205679028670495/1322205863611600896/RobloxScreenShot20241227_145936188.png?ex=677201eb&is=6770b06b&hm=f74d9e756dd8ae25b0c65b6fbdfd169c1c08679912c956c068f75c50171e9b95&=&format=webp&quality=lossless",
         "card_image_url": "https://i.imgur.com/HkUXPJ7.png",
-        "rarity": 0,  
+        "rarity": 8.5,  
         "health": 6500,
         "damage": 3500,
         "description": "Retired :-)"
@@ -34,8 +34,8 @@ cards = [
     {
         "name": "Blau",
         "aliases": ["Blue"],
-        "spawn_image_url": "https://i.imgur.com/GAipebf.png",
-        "card_image_url": "https://i.imgur.com/7gWpCBY.png",
+        "spawn_image_url": "https://media.discordapp.net/attachments/1322205679028670495/1322289394404687957/RobloxScreenShot20241227_204520218.png?ex=67724fb6&is=6770fe36&hm=b3fc9388163dfb8f6d33ea520cccc373156a6ea8c5b558d370d388a8ec8ae7d8&=&format=webp&quality=lossless&width=396&height=350",
+        "card_image_url": "https://cdn.discordapp.com/attachments/1322202570529177642/1327715434799169536/CC-_3.png?ex=678412db&is=6782c15b&hm=f45c6310e66b243171a68c5c9128bf2be7046ec45659ee3ddb7bf742855cee5f&",
         "rarity": 12.5,
         "health": 6050,
         "damage": 2250,
@@ -55,7 +55,7 @@ cards = [
         "name": "Pipopro",
         "aliases": ["Tux"],
         "spawn_image_url": "https://media.discordapp.net/attachments/1322205679028670495/1322977622778576976/artworks-OF3WFPHsapfnZrW8-lDiZAQ-t500x500.png?ex=67737f2d&is=67722dad&hm=1ec22c5b9af4c994af583de216afe05660c777e5437a738750577b9a49cbdf90&=&format=webp&quality=lossless",
-        "card_image_url": "https://i.imgur.com/4OAxy8x.png",
+        "card_image_url": "https://cdn.discordapp.com/attachments/1322202570529177642/1322977702105579591/Pipopro.png?ex=67737f3f&is=67722dbf&hm=2cc3c639f2e613963f78ec6dbfc274df6f6a74666d06461e4bfb60fdb5c3568d&",
         "rarity": 0.75,
         "health": 10000,
         "damage": 7500,
@@ -254,8 +254,8 @@ cards = [
     {
         "name": "Hollow",
         "aliases": ["Gollow"],
-        "spawn_image_url": "https://media.discordapp.net/attachments/1322205679028670495/1351281016907501568/RobloxScreenShot20250317_204741670.png?ex=67e502c4&is=67e3b144&hm=8e80b7b92a2c2497177d663d8f7ab0fa1f5259202b6055c25c00ddbeaf5b8c6e&=&format=webp&quality=lossless&width=1145&height=628",
-        "card_image_url": "https://media.discordapp.net/attachments/1322202570529177642/1351281885992456333/CC-_10.png?ex=67dfbd93&is=67de6c13&hm=a9ae35d58811ceb33902c4e5cb42bc70069801ab9961339ee18223c358a178f3&=&format=webp&quality=lossless&width=400&height=560",
+        "spawn_image_url": "https://media.discordapp.net/attachments/1322205679028670495/1324449804008296453/RobloxScreenShot20250102_195006907.png?ex=678df240&is=678ca0c0&hm=bad958251fad83f01cbb88f66e122ac143410c38c8355c88b5acadcffb5314e4&=&format=webp&quality=lossless&width=470&height=350",
+        "card_image_url": "https://media.discordapp.net/attachments/1322202570529177642/1324451870688804874/Just_another_trooper_trying_to_stay_alive._He_doesnt_like_insurgents._His_left_arm_and_left_eye_are_gone_due_to_the_Gulag_29.png?ex=678df42d&is=678ca2ad&hm=80f5e71b4642955de3ec209b8f66bf0a394d64bcfe54d643ab7d7e66bdf4eeef&=&format=webp&quality=lossless&width=479&height=671",
         "rarity": 59,
         "health": 6000,
         "damage": 3150,
@@ -313,7 +313,7 @@ cards = [
     },
     {
         "name": "Sigma-squad",
-        "aliases": ["Iwasforced", "whydidiagreetothis","sigma squad"],
+        "aliases": ["eaglesmademedothis", "whydidiagreetothis","sigma squad"],
         "spawn_image_url": "https://cdn.discordapp.com/attachments/1322205679028670495/1323215414393700455/RobloxScreenShot20241230_100007909.png?ex=67a086e2&is=679f3562&hm=cf9521fb29329e7ab81f84548e9c0664566adc9dccac4bc549b1d0e8cd70f166&",
         "card_image_url": "https://media.discordapp.net/attachments/1322202570529177642/1323215495637504010/Pipopro_1.png?ex=67a086f6&is=679f3576&hm=a95177683cf7782138009565d2c8952c9d53482146ac5be7d829375fb03becf8&=&format=webp&quality=lossless&width=358&height=502",
         "rarity": 0,
@@ -330,35 +330,5 @@ cards = [
         "health": 2900,
         "damage": 1700,
         "description": "You know that one guy who thinks he's the main character but really isn't? Well, that's Hades right there!"
-    },
-    {
-        "name": "Mixer",
-        "aliases": ["Blender", "existence", "dutchman" ], #mixer verzin er zelf is een paar leuke
-        "spawn_image_url": "https://i.imgur.com/ULt5mqn.png",
-        "card_image_url": "https://i.imgur.com/BxW3vdm.png",
-        "rarity": 30,
-        "health": 5800,
-        "damage": 2000,
-        "description": "A wild Mixer proves: Existence is mandatory!",
-    },
-    {
-        "name": "Eagles",
-        "aliases": ["eagly"],
-        "spawn_image_url": "https://i.imgur.com/DQRyj4F.png",
-        "card_image_url": "https://i.imgur.com/iBIbwEr.png",
-        "rarity": 30,
-        "health": 5700,
-        "damage": 2100,
-        "description": "ARC-1717, Better known as Eagles, is a persistent and experienced clone trooper. He fought many battles, and he cares about his brothers.",
-    },
-    {
-        "name":"Sanghelios",
-        "aliases": ["Sangheli"],
-        "spawn_image_url": "https://i.imgur.com/JwKNNKh.png",
-        "card_image_url": "https://i.imgur.com/7Yr4VUU.png",
-        "rarity": 31,
-        "health": 6100,
-        "damage": 2000,
-        "description": "Current Director of RI Clone Sergeant Sanghelios of the Republic Intelligence 235th attachement, highly skilled in stealth and disguise along with the essentials for a trooper."
     },
 ]
