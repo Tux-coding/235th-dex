@@ -2325,33 +2325,92 @@ async def gud_boy(ctx):
 
 @bot.command(name='leaderboard', help="Show general statistics about the card game.")
 async def public_stats(ctx):
-    total_users = len(player_cards)
-    total_cards_collected = sum(len(cards) for user_id, cards in player_cards.items() if user_id not in authorized_user_ids)
+    # Skip authorized users from leaderboards to prevent admin cards from skewing stats
+    regular_users = {user_id: cards for user_id, cards in player_cards.items() 
+                    if user_id not in authorized_user_ids}
     
-    # Top Collectors
-    collectors = [(user_id, len(cards)) for user_id, cards in player_cards.items() if user_id not in authorized_user_ids]
+    total_users = len(regular_users)
+    total_cards_collected = sum(len(cards) for cards in regular_users.values())
+    
+    # Handle case when there are no cards yet
+    if not regular_users or total_cards_collected == 0:
+        embed = discord.Embed(
+            title="235th Dex Statistics", 
+            description="Not enough data to display statistics yet!",
+            color=discord.Color.blue()
+        )
+        await ctx.send(embed=embed)
+        return
+    
+    # Top Collectors (by total cards)
+    collectors = [(user_id, len(cards)) for user_id, cards in regular_users.items()]
     top_collectors = sorted(collectors, key=lambda x: x[1], reverse=True)[:5]
     
     # Unique Cards Leaderboard
-    unique_collectors = [(user_id, len(set(cards))) for user_id, cards in player_cards.items() if user_id not in authorized_user_ids]
+    unique_collectors = [(user_id, len(set(cards))) for user_id, cards in regular_users.items()]
     top_unique_collectors = sorted(unique_collectors, key=lambda x: x[1], reverse=True)[:5]
     
     # Most Collected Card
-    all_cards = [card for cards in player_cards.values() for card in cards]
-    most_collected_card = Counter(all_cards).most_common(1)[0][0]
+    all_cards = [card for cards in regular_users.values() for card in cards]
+    card_counts = Counter(all_cards)
     
-    # Rarest Card Owned
+    # Get most collected card (with safeguard if no cards exist)
+    most_collected_card = card_counts.most_common(1)[0][0] if card_counts else "None"
+    most_collected_count = card_counts.get(most_collected_card, 0)
+    
+    # Rarest Card Owned based on rarity value
     card_rarity = {card['name']: card['rarity'] for card in cards}
-    owned_cards = set(all_cards)
-    rarest_card_owned = min(owned_cards, key=lambda card: card_rarity.get(card, float('inf')))
+    unique_owned_cards = set(all_cards)
     
-    embed = discord.Embed(title="235th Dex Statistics")
-    embed.add_field(name="Total Users", value=total_users, inline=False)
-    embed.add_field(name="Total Cards Collected", value=total_cards_collected, inline=False)
-    embed.add_field(name="Top Collectors", value="\n".join([f"<@{user_id}>: {count} cards" for user_id, count in top_collectors]), inline=False)
-    embed.add_field(name="Top Unique Card Collecters", value="\n".join([f"<@{user_id}>: {count} unique cards" for user_id, count in top_unique_collectors]), inline=False)
-    embed.add_field(name="Most Collected Card", value=most_collected_card, inline=False)
-    embed.add_field(name="Rarest Card Owned", value=rarest_card_owned, inline=False)
+    if unique_owned_cards:
+        try:
+            rarest_card_owned = min(unique_owned_cards, key=lambda card: card_rarity.get(card, float('inf')))
+            rarest_card_rarity = card_rarity.get(rarest_card_owned, "Unknown")
+        except (ValueError, KeyError):
+            rarest_card_owned = "Error determining rarest card"
+            rarest_card_rarity = "Unknown"
+    else:
+        rarest_card_owned = "None"
+        rarest_card_rarity = "N/A"
+    
+    embed = discord.Embed(
+        title="📊 235th Dex Leaderboard",
+        description="Global statistics for the card game",
+        color=discord.Color.gold()
+    )
+    
+    embed.add_field(
+        name="📈 User Stats",
+        value=f"**Total Players**: {total_users}\n**Total Cards Collected**: {total_cards_collected}",
+        inline=False
+    )
+    
+    # Top Collectors (format with card counts)
+    if top_collectors:
+        top_collectors_text = "\n".join([f"{idx+1}. <@{user_id}>: **{count}** cards" 
+                                for idx, (user_id, count) in enumerate(top_collectors)])
+        embed.add_field(name="🏆 Top Collectors (Total Cards)", value=top_collectors_text, inline=True)
+    else:
+        embed.add_field(name="🏆 Top Collectors", value="No data yet", inline=True)
+    
+    # Top Unique Collectors
+    if top_unique_collectors:
+        unique_collectors_text = "\n".join([f"{idx+1}. <@{user_id}>: **{count}** unique cards" 
+                                    for idx, (user_id, count) in enumerate(top_unique_collectors)])
+        embed.add_field(name="🌟 Top Collectors (Unique Cards)", value=unique_collectors_text, inline=True)
+    else:
+        embed.add_field(name="🌟 Top Unique Collectors", value="No data yet", inline=True)
+    
+    # Card Stats section
+    card_stats = [
+        f"**Most Collected Card**: {most_collected_card} ({most_collected_count}× collected)",
+        f"**Rarest Card Owned**: {rarest_card_owned} ({rarest_card_rarity}% rarity)"
+    ]
+    embed.add_field(name="🃏 Card Stats", value="\n".join(card_stats), inline=False)
+    
+    # Set footer with timestamp
+    current_time = datetime.datetime.now().strftime("%Y-%m-%d %H:%M")
+    embed.set_footer(text=f"Stats as of {current_time}")
     
     await ctx.send(embed=embed)
 
