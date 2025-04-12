@@ -26,7 +26,7 @@ cards = [
         "aliases": ["Senti"],
         "spawn_image_url": "https://media.discordapp.net/attachments/1322205679028670495/1322284693164523520/RobloxScreenShot20241227_202621517.png?ex=67724b55&is=6770f9d5&hm=79e9f8374ffa7b0138f938a11d7916b45ee79b2afdf1fc6c8197c27349b46684&=&format=webp&quality=lossless&width=377&height=350",
         "card_image_url": "https://media.discordapp.net/attachments/1322202570529177642/1323317997414121665/Just_another_trooper_trying_to_stay_alive._He_doesnt_like_insurgents._His_left_arm_and_left_eye_are_gone_due_to_the_Gulag.png?ex=6774136c&is=6772c1ec&hm=f4d4550607203a12eaa72d7b6a0086efb64bf3d8c623650d713dbf7a96bc242d&=&format=webp&quality=lossless&width=479&height=671",
-        "rarity": 23,
+        "rarity": 0,
         "health": 1650,
         "attack": 550,
         "description": "Just another trooper trying to stay alive. He doesn't like insurgents. His left arm and left eye are gone due to the Gulag."
@@ -76,7 +76,7 @@ cards = [
         "aliases": ["Pricker", "Ironhide"],
         "spawn_image_url": "https://media.discordapp.net/attachments/1322205679028670495/1323379787766698116/RobloxScreenShot20241230_205740938.png?ex=67744cf8&is=6772fb78&hm=ffe51d5793e02353736175578a9a6158e243b285a65649e695ba924a710c3c83&=&format=webp&quality=lossless&width=375&height=350",
         "card_image_url": "https://media.discordapp.net/attachments/1322202570529177642/1323383213451640862/Just_another_trooper_trying_to_stay_alive._He_doesnt_like_insurgents._His_left_arm_and_left_eye_are_gone_due_to_the_Gulag_13.png?ex=67745029&is=6772fea9&hm=c08cafd74fea97dcd3c7c6847ab940b55249ed62f0585149ca03e05c13ed6ea7&=&format=webp&quality=lossless&width=479&height=671",
-        "rarity": 75,
+        "rarity": 0,
         "health": 2150,
         "attack": 950,
         "description": "Dead..."
@@ -226,7 +226,7 @@ cards = [
         "aliases": ["Hurry"],
         "spawn_image_url": "https://media.discordapp.net/attachments/1322205679028670495/1328442857547235368/RobloxScreenShot20250113_201710741.png?ex=67876112&is=67860f92&hm=8f4fcde3e4deda60ddc8e3e2d95c2a4a418fd7b540556e6ca6c67681cc9138b1&=&format=webp&quality=lossless",
         "card_image_url": "https://media.discordapp.net/attachments/1322202570529177642/1328443617282494615/Kopie_van_Just_another_trooper_trying_to_stay_alive._He_doesnt_like_insurgents._His_left_arm_and_left_eye_are_gone_due_to_the_Gulag.png?ex=678761c7&is=67861047&hm=24861f0d3535e56d30d6fafa7a6aed0f5f9c9abd1fcae16742072ce550c8563d&=&format=webp&quality=lossless&width=479&height=671",
-        "rarity": 82,
+        "rarity": 0,
         "health": 1500,
         "attack": 450,
         "description": "PFC. \"Rush\" is a clone tropper who serves under the GAR and the 235th Elite Corp, he might be known as the GEneral Carrier",
@@ -306,7 +306,7 @@ cards = [
         "aliases": ["Bird", "flappy bird"],
         "spawn_image_url": "https://i.imgur.com/XOMm3Hk.png",
         "card_image_url": "https://i.imgur.com/SKzXcaz.png",
-        "rarity": 60,
+        "rarity": 0,
         "health": 2600,
         "attack": 1700,
         "description": "The best ever pilot in all of spitfire (says sparrow himself) breaker and fragger hate him."
@@ -343,7 +343,7 @@ cards = [
     },
     {
         "name": "Mixer",
-        "aliases": ["Blender", "existence", "dutchman" ], #mixer verzin er zelf is een paar leuke
+        "aliases": ["Blender", "existence", "dutchman"],
         "spawn_image_url": "https://i.imgur.com/ULt5mqn.png",
         "card_image_url": "https://i.imgur.com/BxW3vdm.png",
         "rarity": 30,
