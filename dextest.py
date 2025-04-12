@@ -526,6 +526,12 @@ class TradeSession:
             await asyncio.sleep(10)
             if time.time() - self.last_activity > self.timeout:
                 await self.cancel_trade("Trade expired due to inactivity.")
+
+                if hasattr(bot, 'active_trades'):
+                    if self.initiator_id in bot.active_trades:
+                        del bot.active_trades[self.initiator_id]
+                    if self.recipient_id in bot.active_trades:
+                        del bot.active_trades[self.recipient_id]
                 return
 
     async def update_trade_status(self):
@@ -571,17 +577,16 @@ class TradeSession:
 
         embed.add_field(
             name="Instructions",
-            value="• Use `!trade_add [card]` to add cards to your offer\n"
-                "• Use `!trade_remove [card]` to remove cards\n"
-                "• Use `!trade_confirm` when you're satisfied with the deal\n"
-                "• Use `!trade_cancel` to cancel the trade",
+            value="• Use `!trade add [card]` to add cards to your offer\n"
+                  "• Use `!trade remove [card]` to remove cards\n"
+                  "• Use `!trade confirm` when you're satisfied with the deal\n"
+                  "• Use `!trade cancel` to cancel the trade",
             inline=False
         )
 
         try:
-            await self.trade_message.edit(embed=embed)
-        except discord.NotFound:
-            self.trade_message = await self.ctx.send(embed=embed)
+            new_message = await self.ctx.send(embed=embed)
+            self.trade_message = new_message
         except Exception as e:
             logging.error(f"Error updating trade status: {e}")
 
@@ -616,7 +621,7 @@ class TradeSession:
                 inline=True
             )
 
-            embed.set_footer(text="Trade will complete in 20 seconds. Type !trade_cancel to stop.")
+            embed.set_footer(text="Trade will complete in 20 seconds. Type !trade cancel to stop.")
 
             await self.ctx.send(embed=embed)
 
@@ -1058,7 +1063,7 @@ async def view_progress(ctx, user: discord.Member):
 
 @bot.command(name='give')
 @requires_valid_user()
-async def give_card(ctx, card: str, receiving_user: discord.Member):
+async def give_card(ctx, receiving_user: discord.Member, *, card: str):
     sender_id = str(ctx.author.id)
     receiver_id = str(receiving_user.id)
     card_lower = card.lower()
@@ -1160,221 +1165,267 @@ async def remove_card(ctx, card: str, user: discord.Member):
         await ctx.send(f"{user.mention} does not have the card `{card}`.")
         logging.info(f"Admin: {ctx.author} attempted to remove {card} from {user}, but {user} did not possess {card}.")
 
-@bot.command(name='battle', help="Battle another player with your cards.")
+@bot.command(name='battle', help="Battle system - use !battle help for more info")
 @requires_valid_user()
-async def battle(ctx, opponent: discord.Member = None):
-    try:
-        if not opponent:
-            await ctx.send("Please specify an opponent to battle with. Usage: `!battle @user`")
-            return
+async def battle(ctx, *args):
+    if not args:
+        await ctx.send("Please specify an opponent to battle with. Usage: `!battle @user`")
+        return
+    
+    # First check if the first argument is a user mention
+    if ctx.message.mentions and args[0].startswith("<@"):
+        opponent = ctx.message.mentions[0]
+        try:
+            if opponent.id == ctx.author.id:
+                await ctx.send("You can't battle yourself!")
+                return
             
-        if opponent.id == ctx.author.id:
-            await ctx.send("You can't battle yourself!")
-            return
-        
-        if opponent.bot:
-            await ctx.send("You can't battle a bot!")
-            return
-        
-        challenger_id = str(ctx.author.id)
-        opponent_id = str(opponent.id)
-
-        # Check if players have cards
-        if challenger_id not in player_cards or not player_cards[challenger_id]:
-            await ctx.send("You don't have any cards to battle with!")
-            return
-        
-        if opponent_id not in player_cards or not player_cards[opponent_id]:
-            await ctx.send(f"{opponent.display_name} doesn't have any cards to battle with!")
-            return
-        
-        # Initialize trackers if not exist
-        if not hasattr(bot, 'ongoing_battles'):
-            bot.ongoing_battles = set()
-        
-        if not hasattr(bot, 'active_battles'):
-            bot.active_battles = []
-
-        # Check if players are in battles
-        if challenger_id in bot.ongoing_battles:
-            await ctx.send("You're already in a battle!")
-            return
+            if opponent.bot:
+                await ctx.send("You can't battle a bot!")
+                return
             
-        if opponent_id in bot.ongoing_battles:
-            await ctx.send(f"{opponent.display_name} is already in a battle!")
+            challenger_id = str(ctx.author.id)
+            opponent_id = str(opponent.id)
+
+            # Check if players have cards
+            if challenger_id not in player_cards or not player_cards[challenger_id]:
+                await ctx.send("You don't have any cards to battle with!")
+                return
+            
+            if opponent_id not in player_cards or not player_cards[opponent_id]:
+                await ctx.send(f"{opponent.display_name} doesn't have any cards to battle with!")
+                return
+            
+            # Initialize trackers if not exist
+            if not hasattr(bot, 'ongoing_battles'):
+                bot.ongoing_battles = set()
+            
+            if not hasattr(bot, 'active_battles'):
+                bot.active_battles = []
+
+            # Check if players are in battles
+            if challenger_id in bot.ongoing_battles:
+                await ctx.send("You're already in a battle!")
+                return
+                
+            if opponent_id in bot.ongoing_battles:
+                await ctx.send(f"{opponent.display_name} is already in a battle!")
+                return
+
+            # Add both players to ongoing battles
+            bot.ongoing_battles.add(challenger_id)
+            bot.ongoing_battles.add(opponent_id)
+            
+            # Create and start battle
+            battle = CardBattle(ctx, ctx.author, opponent)
+            bot.active_battles.append(battle)
+            await battle.start_battle()
+            
+        except discord.NotFound:
+            await ctx.send("Could not find the specified user.")
+        except discord.Forbidden:
+            await ctx.send("I don't have permission to interact with one of the players.")
+        except Exception as e:
+            logging.error(f"Battle error: {e}", exc_info=True)
+            await ctx.send("An error occurred while setting up the battle.")
+        finally:
+            # Clean up in case of error
+            if 'challenger_id' in locals() and 'opponent_id' in locals():
+                bot.ongoing_battles.discard(challenger_id)
+                bot.ongoing_battles.discard(opponent_id)
+                if 'battle' in locals() and battle in getattr(bot, 'active_battles', []):
+                    bot.active_battles.remove(battle)
+        return
+    
+    # If not a user mention, check for subcommands
+    action = args[0].lower()
+    
+    if action == "help":
+        embed = discord.Embed(
+            title="Card Battle Help",
+            description="How to battle with your cards",
+            color=discord.Color.blue()
+        )
+        
+        embed.add_field(
+            name="Starting a Battle",
+            value="Use `!battle @user` to challenge another player",
+            inline=False
+        )
+        
+        embed.add_field(
+            name="Selecting Cards",
+            value="After the opponent accepts, both players can select cards with:\n"
+                "• Use dropdown menus in the selection dialog OR\n"
+                "• Type `!battle add [card name]` to add a specific card\n"
+                "You can select up to 3 cards.",
+            inline=False
+        )
+        
+        embed.add_field(
+            name="Confirming Selection", 
+            value="After adding cards with `!battle add`, use `!battle ready` to confirm your selection",
+            inline=False
+        )
+        
+        embed.add_field(
+            name="Battle Process",
+            value="Cards will automatically take turns attacking until one side has no cards left.",
+            inline=False
+        )
+        
+        await ctx.send(embed=embed)
+    
+    elif action == "add" and len(args) > 1:
+        # Join the remaining args as the card name
+        card_name = " ".join(args[1:])
+        user_id = str(ctx.author.id)
+        
+        # Check if the user is in a battle
+        if not hasattr(bot, 'ongoing_battles') or user_id not in bot.ongoing_battles:
+            await ctx.send("You're not in an active battle!")
             return
-
-        # Add both players to ongoing battles
-        bot.ongoing_battles.add(challenger_id)
-        bot.ongoing_battles.add(opponent_id)
         
-        # Create and start battle
-        battle = CardBattle(ctx, ctx.author, opponent)
-        bot.active_battles.append(battle)
-        await battle.start_battle()
+        # Find the active battle for this user
+        active_battle = None
+        for battle in getattr(bot, 'active_battles', []):
+            if battle.challenger_id == user_id:
+                active_battle = battle
+                player_type = "challenger"
+                break
+            elif battle.opponent_id == user_id:
+                active_battle = battle
+                player_type = "opponent"
+                break
         
-    except discord.NotFound:
-        await ctx.send("Could not find the specified user.")
-    except discord.Forbidden:
-        await ctx.send("I don't have permission to interact with one of the players.")
-    except Exception as e:
-        logging.error(f"Battle error: {e}", exc_info=True)
-        await ctx.send("An error occurred while setting up the battle.")
-    finally:
-        # Clean up in case of error
-        bot.ongoing_battles.discard(challenger_id)
-        bot.ongoing_battles.discard(opponent_id)
-        if 'battle' in locals() and battle in getattr(bot, 'active_battles', []):
-            bot.active_battles.remove(battle)
-
-@bot.command(name='battle_ready', help="Confirm your battle card selection")
-async def battle_ready(ctx):
-    user_id = str(ctx.author.id)
-    
-    # Check if the user is in a battle
-    if not hasattr(bot, 'ongoing_battles') or user_id not in bot.ongoing_battles:
-        await ctx.send("You're not in an active battle!")
-        return
-    
-    # Find the active battle for this user
-    active_battle = None
-    for battle in getattr(bot, 'active_battles', []):
-        if battle.challenger_id == user_id:
-            active_battle = battle
-            player_type = "challenger"
-            break
-        elif battle.opponent_id == user_id:
-            active_battle = battle
-            player_type = "opponent"
-            break
-    
-    if not active_battle:
-        await ctx.send("Couldn't find your active battle.")
-        return
-    
-    # Check if cards were selected
-    selection_attr = f"{player_type}_cards"
-    current_selection = getattr(active_battle, selection_attr, [])
-    
-    if not current_selection:
-        await ctx.send("You haven't selected any cards yet! Use `!battle_add [card name]` to add cards.")
-        return
-    
-    # Mark as ready
-    setattr(active_battle, f"{player_type}_selected", True)
-    await ctx.send(f"You're ready for battle with: {', '.join(current_selection)}! Waiting for your opponent...")
-
-@bot.command(name='battle_add', help="Add a specific card to your active battle")
-async def battle_add(ctx, *, card_name: str):
-    user_id = str(ctx.author.id)
-    
-    # Check if the user is in a battle
-    if not hasattr(bot, 'ongoing_battles') or user_id not in bot.ongoing_battles:
-        await ctx.send("You're not in an active battle!")
-        return
-    
-    # Find the active battle for this user
-    active_battle = None
-    for battle in getattr(bot, 'active_battles', []):
-        if battle.challenger_id == user_id:
-            active_battle = battle
-            player_type = "challenger"
-            break
-        elif battle.opponent_id == user_id:
-            active_battle = battle
-            player_type = "opponent"
-            break
-    
-    if not active_battle:
-        await ctx.send("Couldn't find your active battle.")
-        return
-    
-    # Reset activity timer when adding a card via command
-    active_battle.reset_activity_timer()
-    
-    # Check if the user has already submitted their cards
-    if (player_type == "challenger" and active_battle.challenger_selected) or \
-       (player_type == "opponent" and active_battle.opponent_selected):
-        await ctx.send("You've already submitted your card selection!")
-        return
-    
-    # Check if the user has this card
-    user_cards = player_cards.get(user_id, [])
-    card_lower = card_name.lower()
-    
-    # Find the actual card with matching name (case insensitive) or aliases
-    found_card = None
-    for card in user_cards:
-        card_data = next((c for c in cards if c['name'].lower() == card.lower()), None)
-        if card.lower() == card_lower:
-            found_card = card
-            break
-        elif card_data and 'aliases' in card_data:
-            if card_lower in [alias.lower() for alias in card_data['aliases']]:
+        if not active_battle:
+            await ctx.send("Couldn't find your active battle.")
+            return
+        
+        # Reset activity timer when adding a card via command
+        active_battle.reset_activity_timer()
+        
+        # Check if the user has already submitted their cards
+        if (player_type == "challenger" and active_battle.challenger_selected) or \
+        (player_type == "opponent" and active_battle.opponent_selected):
+            await ctx.send("You've already submitted your card selection!")
+            return
+        
+        # Check if the user has this card
+        user_cards = player_cards.get(user_id, [])
+        card_lower = card_name.lower()
+        
+        # Find the actual card with matching name (case insensitive) or aliases
+        found_card = None
+        for card in user_cards:
+            card_data = next((c for c in cards if c['name'].lower() == card.lower()), None)
+            if card.lower() == card_lower:
                 found_card = card
                 break
-    
-    if not found_card:
-        await ctx.send(f"You don't have a card named `{card_name}`!")
-        return
-    
-    # Check if the card is already in the battle selection
-    selection_attr = f"{player_type}_cards"
-    current_selection = getattr(active_battle, selection_attr, [])
-    
-    if found_card in current_selection:
-        await ctx.send(f"`{found_card}` is already in your battle selection!")
-        return
-    
-    # Check if user has reached the card limit
-    if len(current_selection) >= 3:
-        await ctx.send("You've already selected the maximum number of cards (3)!")
-        return
-    
-    # Add the card to the battle selection
-    current_selection.append(found_card)
-    setattr(active_battle, selection_attr, current_selection)
-    
-    # Provide feedback
-    if len(current_selection) == 3:
-        await ctx.send(f"Added `{found_card}` to your battle selection. Your team is complete! Cards: {', '.join(current_selection)}\n\nReady to fight? Type `!battle_ready` to confirm your selection.")
-    else:
-        await ctx.send(f"Added `{found_card}` to your battle selection. You have selected {len(current_selection)}/3 cards: {', '.join(current_selection)}")
-
-@bot.command(name='battle_cards', help="See your currently selected battle cards")
-async def battle_cards(ctx):
-    user_id = str(ctx.author.id)
-    
-    # Check if the user is in a battle
-    if not hasattr(bot, 'ongoing_battles') or user_id not in bot.ongoing_battles:
-        await ctx.send("You're not in an active battle!")
-        return
-    
-    # Find the active battle for this user
-    active_battle = None
-    for battle in getattr(bot, 'active_battles', []):
-        if battle.challenger_id == user_id:
-            active_battle = battle
-            player_type = "challenger"
-            break
-        elif battle.opponent_id == user_id:
-            active_battle = battle
-            player_type = "opponent"
-            break
-    
-    if not active_battle:
-        await ctx.send("Couldn't find your active battle.")
-        return
+            elif card_data and 'aliases' in card_data:
+                if card_lower in [alias.lower() for alias in card_data['aliases']]:
+                    found_card = card
+                    break
         
-    # Get selected cards
-    selection_attr = f"{player_type}_cards"
-    current_selection = getattr(active_battle, selection_attr, [])
+        if not found_card:
+            await ctx.send(f"You don't have a card named `{card_name}`!")
+            return
+        
+        # Check if the card is already in the battle selection
+        selection_attr = f"{player_type}_cards"
+        current_selection = getattr(active_battle, selection_attr, [])
+        
+        if found_card in current_selection:
+            await ctx.send(f"`{found_card}` is already in your battle selection!")
+            return
+        
+        # Check if user has reached the card limit
+        if len(current_selection) >= 3:
+            await ctx.send("You've already selected the maximum number of cards (3)!")
+            return
+        
+        # Add the card to the battle selection
+        current_selection.append(found_card)
+        setattr(active_battle, selection_attr, current_selection)
+        
+        # Provide feedback
+        if len(current_selection) == 3:
+            await ctx.send(f"Added `{found_card}` to your battle selection. Your team is complete! Cards: {', '.join(current_selection)}\n\nReady to fight? Type `!battle ready` to confirm your selection.")
+        else:
+            await ctx.send(f"Added `{found_card}` to your battle selection. You have selected {len(current_selection)}/3 cards: {', '.join(current_selection)}")
     
-    if not current_selection:
-        await ctx.send("You haven't selected any cards yet! Use `!battle_add [card name]` to add cards.")
+    elif action == "cards":
+        user_id = str(ctx.author.id)
+        
+        # Check if the user is in a battle
+        if not hasattr(bot, 'ongoing_battles') or user_id not in bot.ongoing_battles:
+            await ctx.send("You're not in an active battle!")
+            return
+        
+        # Find the active battle for this user
+        active_battle = None
+        for battle in getattr(bot, 'active_battles', []):
+            if battle.challenger_id == user_id:
+                active_battle = battle
+                player_type = "challenger"
+                break
+            elif battle.opponent_id == user_id:
+                active_battle = battle
+                player_type = "opponent"
+                break
+        
+        if not active_battle:
+            await ctx.send("Couldn't find your active battle.")
+            return
+            
+        # Get selected cards
+        selection_attr = f"{player_type}_cards"
+        current_selection = getattr(active_battle, selection_attr, [])
+        
+        if not current_selection:
+            await ctx.send("You haven't selected any cards yet! Use `!battle add [card name]` to add cards.")
+        else:
+            cards_str = "\n".join([f"• {card}" for card in current_selection])
+            await ctx.send(f"Your selected battle cards ({len(current_selection)}/3):\n{cards_str}")
+    
+    elif action == "ready":
+        user_id = str(ctx.author.id)
+        
+        # Check if the user is in a battle
+        if not hasattr(bot, 'ongoing_battles') or user_id not in bot.ongoing_battles:
+            await ctx.send("You're not in an active battle!")
+            return
+        
+        # Find the active battle for this user
+        active_battle = None
+        for battle in getattr(bot, 'active_battles', []):
+            if battle.challenger_id == user_id:
+                active_battle = battle
+                player_type = "challenger"
+                break
+            elif battle.opponent_id == user_id:
+                active_battle = battle
+                player_type = "opponent"
+                break
+        
+        if not active_battle:
+            await ctx.send("Couldn't find your active battle.")
+            return
+        
+        # Check if cards were selected
+        selection_attr = f"{player_type}_cards"
+        current_selection = getattr(active_battle, selection_attr, [])
+        
+        if not current_selection:
+            await ctx.send("You haven't selected any cards yet! Use `!battle add [card name]` to add cards.")
+            return
+        
+        # Mark as ready
+        setattr(active_battle, f"{player_type}_selected", True)
+        await ctx.send(f"You're ready for battle with: {', '.join(current_selection)}! Waiting for your opponent...")
+    
     else:
-        cards_str = "\n".join([f"• {card}" for card in current_selection])
-        await ctx.send(f"Your selected battle cards ({len(current_selection)}/3):\n{cards_str}")
+        await ctx.send(f"Unknown battle command: `{action}`. Use `!battle help` for usage information.")
 
 class CardBattle:
     def __init__(self, ctx, challenger, opponent):
@@ -1554,13 +1605,13 @@ class CardBattle:
             return {
                 'name': original_card['name'],
                 'health': original_card['health'],
-                'damage': original_card.get('attack', original_card.get('attack', 1))
+                'attack': original_card.get('attack', 1)
             }
         # Fallback in case the card isn't found
         return {
             'name': card_name,
             'health': 1,
-            'damage': 1
+            'attack': 1
         }
     
 class BattleInviteView(View):
@@ -1939,336 +1990,311 @@ class RemoveCardView(discord.ui.View):
                 except Exception as e:
                     logging.error(f"Failed to send updated card selection: {e}")
 
-@bot.command(name='battle_help', help="Explains how to battle with cards")
-async def battle_help(ctx):
-    embed = discord.Embed(
-        title="Card Battle Help",
-        description="How to battle with your cards",
-        color=discord.Color.blue()
-    )
-    
-    embed.add_field(
-        name="Starting a Battle",
-        value="Use `!battle @user` to challenge another player",
-        inline=False
-    )
-    
-    embed.add_field(
-        name="Selecting Cards",
-        value="After the opponent accepts, both players can select cards with:\n"
-              "• Use dropdown menus in the selection dialog OR\n"
-              "• Type `!battle_add [card name]` to add a specific card\n"
-              "You can select up to 3 cards.",
-        inline=False
-    )
-    
-    embed.add_field(
-        name="Confirming Selection", 
-        value="After adding cards with `!battle_add`, use `!battle_ready` to confirm your selection",
-        inline=False
-    )
-    
-    embed.add_field(
-        name="Battle Process",
-        value="Cards will automatically take turns attacking until one side has no cards left.",
-        inline=False
-    )
-    
-    await ctx.send(embed=embed)
-
 # The trading hall commands
-@bot.command(name='trade')
+@bot.command(name='trade', help="Trading system - use !trade help for more info")
 @requires_valid_user()
-async def trade_command(ctx, recipient: discord.Member = None):
-    if not recipient:
-        await ctx.send("Please specify a user to trade with. Usage: `!trade @user`")
+async def trade(ctx, *args):
+    # If no arguments, show help
+    if not args:
+        await trade_help(ctx)
         return
     
-    initiator_id = str(ctx.author.id)
-    recipient_id = str(recipient.id)
+    # First check if the first argument is a user mention
+    if ctx.message.mentions and args[0].startswith("<@"):
+        recipient = ctx.message.mentions[0]
+        initiator_id = str(ctx.author.id)
+        recipient_id = str(recipient.id)
 
-    # Check if players have cards
-    if initiator_id not in player_cards or not player_cards[initiator_id]:
-        await ctx.send("You don't have any cards to trade!")
-        return
-    
-    if recipient_id not in player_cards or not player_cards[recipient_id]:
-        await ctx.send(f"{recipient.display_name} doesn't have any cards to trade!")
-        return
-    
-    # Initialize trade sessions tracker if not exist
-    if not hasattr(bot, 'active_trades'):
-        bot.active_trades = {}
-    
-    # Check if users are already in active trades
-    if initiator_id in bot.active_trades:
-        await ctx.send("You're already in an active trade!")
-        return
+        # Check if players have cards
+        if initiator_id not in player_cards or not player_cards[initiator_id]:
+            await ctx.send("You don't have any cards to trade!")
+            return
         
-    if recipient_id in bot.active_trades:
-        await ctx.send(f"{recipient.display_name} is already in an active trade!")
-        return
+        if recipient_id not in player_cards or not player_cards[recipient_id]:
+            await ctx.send(f"{recipient.display_name} doesn't have any cards to trade!")
+            return
+        
+        # Initialize trade sessions tracker if not exist
+        if not hasattr(bot, 'active_trades'):
+            bot.active_trades = {}
+        
+        # Check if users are already in active trades
+        if initiator_id in bot.active_trades:
+            await ctx.send("You're already in an active trade!")
+            return
+            
+        if recipient_id in bot.active_trades:
+            await ctx.send(f"{recipient.display_name} is already in an active trade!")
+            return
 
-    # Create and start trade
-    trade_session = TradeSession(ctx, ctx.author, recipient)
-    
-    # Register the active trade
-    bot.active_trades[initiator_id] = trade_session
-    bot.active_trades[recipient_id] = trade_session
-    
-    await trade_session.start_trade()
-
-@bot.command(name='trade_add', help="Add a card to your trade offer")
-async def trade_add(ctx, *, card_name: str):
-    user_id = str(ctx.author.id)
-    
-    # Check if user is in a trade
-    if not hasattr(bot, 'active_trades') or user_id not in bot.active_trades:
-        await ctx.send("You're not in an active trade!")
+        # Create and start trade
+        trade_session = TradeSession(ctx, ctx.author, recipient)
+        
+        # Register the active trade
+        bot.active_trades[initiator_id] = trade_session
+        bot.active_trades[recipient_id] = trade_session
+        
+        await trade_session.start_trade()
         return
     
-    trade = bot.active_trades[user_id]
+    # If not a user mention, check for subcommands
+    action = args[0].lower()
     
-    # Reset activity timer
-    trade.reset_activity_timer()
+    if action == "help":
+        await trade_help(ctx)
     
-    # Check if the trade is still active
-    if not trade.active:
-        await ctx.send("That trade is no longer active.")
-        if user_id in bot.active_trades:
-            del bot.active_trades[user_id]
-        return
-    
-    # Determine if user is initiator or recipient
-    is_initiator = (user_id == trade.initiator_id)
-    
-    # Check if user has already confirmed
-    if (is_initiator and trade.initiator_confirmed) or (not is_initiator and trade.recipient_confirmed):
-        await ctx.send("You've already confirmed the trade! Use `!trade_unconfirm` to make changes.")
-        return
-    
-    # Check if the user has this card
-    user_cards = player_cards.get(user_id, [])
-    card_lower = card_name.lower()
-    
-    # Find the actual card with matching name (case insensitive) or aliases
-    found_card = None
-    for card in user_cards:
-        card_data = next((c for c in cards if c['name'].lower() == card.lower()), None)
-        if card.lower() == card_lower:
-            found_card = card
-            break
-        elif card_data and 'aliases' in card_data:
-            if card_lower in [alias.lower() for alias in card_data['aliases']]:
+    elif action == "add" and len(args) > 1:
+        # Join the remaining args as the card name
+        card_name = " ".join(args[1:])
+        user_id = str(ctx.author.id)
+        
+        # Check if user is in a trade
+        if not hasattr(bot, 'active_trades') or user_id not in bot.active_trades:
+            await ctx.send("You're not in an active trade!")
+            return
+        
+        trade = bot.active_trades[user_id]
+        
+        # Reset activity timer
+        trade.reset_activity_timer()
+        
+        # Check if the trade is still active
+        if not trade.active:
+            await ctx.send("That trade is no longer active.")
+            if user_id in bot.active_trades:
+                del bot.active_trades[user_id]
+            return
+        
+        # Determine if user is initiator or recipient
+        is_initiator = (user_id == trade.initiator_id)
+        
+        # Check if user has already confirmed
+        if (is_initiator and trade.initiator_confirmed) or (not is_initiator and trade.recipient_confirmed):
+            await ctx.send("You've already confirmed the trade! Use `!trade unconfirm` to make changes.")
+            return
+        
+        # Check if the user has this card
+        user_cards = player_cards.get(user_id, [])
+        card_lower = card_name.lower()
+        
+        # Find the actual card with matching name (case insensitive) or aliases
+        found_card = None
+        for card in user_cards:
+            card_data = next((c for c in cards if c['name'].lower() == card.lower()), None)
+            if card.lower() == card_lower:
                 found_card = card
                 break
-    
-    if not found_card:
-        await ctx.send(f"You don't have a card named `{card_name}`!")
-        return
-    
-    # Add card to appropriate list
-    if is_initiator:
-        if found_card in trade.initiator_cards:
-            await ctx.send(f"You've already added `{found_card}` to the trade!")
+            elif card_data and 'aliases' in card_data:
+                if card_lower in [alias.lower() for alias in card_data['aliases']]:
+                    found_card = card
+                    break
+        
+        if not found_card:
+            await ctx.send(f"You don't have a card named `{card_name}`!")
             return
-        trade.initiator_cards.append(found_card)
-    else:
-        if found_card in trade.recipient_cards:
-            await ctx.send(f"You've already added `{found_card}` to the trade!")
+        
+        # Add card to appropriate list
+        if is_initiator:
+            if found_card in trade.initiator_cards:
+                await ctx.send(f"You've already added `{found_card}` to the trade!")
+                return
+            trade.initiator_cards.append(found_card)
+        else:
+            if found_card in trade.recipient_cards:
+                await ctx.send(f"You've already added `{found_card}` to the trade!")
+                return
+            trade.recipient_cards.append(found_card)
+        
+        await ctx.send(f"Added `{found_card}` to your trade offer.")
+        await trade.update_trade_status()
+    
+    elif action == "remove" and len(args) > 1:
+        # Join the remaining args as the card name
+        card_name = " ".join(args[1:])
+        user_id = str(ctx.author.id)
+        
+        # Check if user is in a trade
+        if not hasattr(bot, 'active_trades') or user_id not in bot.active_trades:
+            await ctx.send("You're not in an active trade!")
             return
-        trade.recipient_cards.append(found_card)
-    
-    await ctx.send(f"Added `{found_card}` to your trade offer.")
-    await trade.update_trade_status()
-
-@bot.command(name='trade_remove', help="Remove a card from your trade offer")
-async def trade_remove(ctx, *, card_name: str):
-    user_id = str(ctx.author.id)
-    
-    # Check if user is in a trade
-    if not hasattr(bot, 'active_trades') or user_id not in bot.active_trades:
-        await ctx.send("You're not in an active trade!")
-        return
-    
-    trade = bot.active_trades[user_id]
-    
-    # Reset activity timer
-    trade.reset_activity_timer()
-    
-    # Check if the trade is still active
-    if not trade.active:
-        await ctx.send("That trade is no longer active.")
-        if user_id in bot.active_trades:
-            del bot.active_trades[user_id]
-        return
-    
-    # Determine if user is initiator or recipient
-    is_initiator = (user_id == trade.initiator_id)
-    
-    # Check if user has already confirmed
-    if (is_initiator and trade.initiator_confirmed) or (not is_initiator and trade.recipient_confirmed):
-        await ctx.send("You've already confirmed the trade! Use `!trade_unconfirm` to make changes.")
-        return
-    
-    card_lower = card_name.lower()
-    
-    # Get the user's cards in the trade
-    user_trade_cards = trade.initiator_cards if is_initiator else trade.recipient_cards
-    
-    # Find the card to remove
-    card_to_remove = None
-    for card in user_trade_cards:
-        card_data = next((c for c in cards if c['name'].lower() == card.lower()), None)
-        if card.lower() == card_lower:
-            card_to_remove = card
-            break
-        elif card_data and 'aliases' in card_data:
-            if card_lower in [alias.lower() for alias in card_data['aliases']]:
+        
+        trade = bot.active_trades[user_id]
+        
+        # Reset activity timer
+        trade.reset_activity_timer()
+        
+        # Check if the trade is still active
+        if not trade.active:
+            await ctx.send("That trade is no longer active.")
+            if user_id in bot.active_trades:
+                del bot.active_trades[user_id]
+            return
+        
+        # Determine if user is initiator or recipient
+        is_initiator = (user_id == trade.initiator_id)
+        
+        # Check if user has already confirmed
+        if (is_initiator and trade.initiator_confirmed) or (not is_initiator and trade.recipient_confirmed):
+            await ctx.send("You've already confirmed the trade! Use `!trade unconfirm` to make changes.")
+            return
+        
+        card_lower = card_name.lower()
+        
+        # Get the user's cards in the trade
+        user_trade_cards = trade.initiator_cards if is_initiator else trade.recipient_cards
+        
+        # Find the card to remove
+        card_to_remove = None
+        for card in user_trade_cards:
+            card_data = next((c for c in cards if c['name'].lower() == card.lower()), None)
+            if card.lower() == card_lower:
                 card_to_remove = card
                 break
+            elif card_data and 'aliases' in card_data:
+                if card_lower in [alias.lower() for alias in card_data['aliases']]:
+                    card_to_remove = card
+                    break
+        
+        if not card_to_remove:
+            await ctx.send(f"You don't have `{card_name}` in your trade offer!")
+            return
+        
+        # Remove the card
+        user_trade_cards.remove(card_to_remove)
+        await ctx.send(f"Removed `{card_to_remove}` from your trade offer.")
+        await trade.update_trade_status()
     
-    if not card_to_remove:
-        await ctx.send(f"You don't have `{card_name}` in your trade offer!")
-        return
+    elif action == "confirm":
+        user_id = str(ctx.author.id)
+        
+        # Check if user is in a trade
+        if not hasattr(bot, 'active_trades') or user_id not in bot.active_trades:
+            await ctx.send("You're not in an active trade!")
+            return
+        
+        trade = bot.active_trades[user_id]
+        
+        # Reset activity timer
+        trade.reset_activity_timer()
+        
+        # Check if the trade is still active
+        if not trade.active:
+            await ctx.send("That trade is no longer active.")
+            if user_id in bot.active_trades:
+                del bot.active_trades[user_id]
+            return
+        
+        # Determine if user is initiator or recipient
+        is_initiator = (user_id == trade.initiator_id)
+        
+        # Set confirmation flag
+        if is_initiator:
+            trade.initiator_confirmed = True
+        else:
+            trade.recipient_confirmed = True
+        
+        await ctx.send(f"{ctx.author.mention} has confirmed the trade!")
+        await trade.update_trade_status()
+        
+        # Check if both users have confirmed
+        if trade.initiator_confirmed and trade.recipient_confirmed:
+            await trade.finalize_trade()
+            # Clean up
+            if trade.initiator_id in bot.active_trades:
+                del bot.active_trades[trade.initiator_id]
+            if trade.recipient_id in bot.active_trades:
+                del bot.active_trades[trade.recipient_id]
     
-    # Remove the card
-    user_trade_cards.remove(card_to_remove)
-    await ctx.send(f"Removed `{card_to_remove}` from your trade offer.")
-    await trade.update_trade_status()
-
-@bot.command(name='trade_confirm', help="Confirm your side of the trade")
-async def trade_confirm(ctx):
-    user_id = str(ctx.author.id)
+    elif action == "unconfirm":
+        user_id = str(ctx.author.id)
+        
+        # Check if user is in a trade
+        if not hasattr(bot, 'active_trades') or user_id not in bot.active_trades:
+            await ctx.send("You're not in an active trade!")
+            return
+        
+        trade = bot.active_trades[user_id]
+        
+        # Reset activity timer
+        trade.reset_activity_timer()
+        
+        # Check if the trade is still active
+        if not trade.active:
+            await ctx.send("That trade is no longer active.")
+            if user_id in bot.active_trades:
+                del bot.active_trades[user_id]
+            return
+        
+        # Determine if user is initiator or recipient
+        is_initiator = (user_id == trade.initiator_id)
+        
+        # Check if user has confirmed
+        if (is_initiator and not trade.initiator_confirmed) or (not is_initiator and not trade.recipient_confirmed):
+            await ctx.send("You haven't confirmed the trade yet!")
+            return
+        
+        # Remove confirmation
+        if is_initiator:
+            trade.initiator_confirmed = False
+        else:
+            trade.recipient_confirmed = False
+        
+        await ctx.send(f"{ctx.author.mention} has withdrawn their confirmation.")
+        await trade.update_trade_status()
     
-    # Check if user is in a trade
-    if not hasattr(bot, 'active_trades') or user_id not in bot.active_trades:
-        await ctx.send("You're not in an active trade!")
-        return
-    
-    trade = bot.active_trades[user_id]
-    
-    # Reset activity timer
-    trade.reset_activity_timer()
-    
-    # Check if the trade is still active
-    if not trade.active:
-        await ctx.send("That trade is no longer active.")
-        if user_id in bot.active_trades:
-            del bot.active_trades[user_id]
-        return
-    
-    # Determine if user is initiator or recipient
-    is_initiator = (user_id == trade.initiator_id)
-    
-    # Set confirmation flag
-    if is_initiator:
-        trade.initiator_confirmed = True
-    else:
-        trade.recipient_confirmed = True
-    
-    await ctx.send(f"{ctx.author.mention} has confirmed the trade!")
-    await trade.update_trade_status()
-    
-    # Check if both users have confirmed
-    if trade.initiator_confirmed and trade.recipient_confirmed:
-        await trade.finalize_trade()
+    elif action == "cancel":
+        user_id = str(ctx.author.id)
+        
+        # Check if user is in a trade
+        if not hasattr(bot, 'active_trades') or user_id not in bot.active_trades:
+            await ctx.send("You're not in an active trade!")
+            return
+        
+        trade = bot.active_trades[user_id]
+        
+        # Check if the trade is still active
+        if not trade.active:
+            await ctx.send("That trade is no longer active.")
+            if user_id in bot.active_trades:
+                del bot.active_trades[user_id]
+            return
+        
+        # Cancel the trade
+        await trade.cancel_trade(f"Trade cancelled by {ctx.author.mention}")
+        
         # Clean up
         if trade.initiator_id in bot.active_trades:
             del bot.active_trades[trade.initiator_id]
         if trade.recipient_id in bot.active_trades:
             del bot.active_trades[trade.recipient_id]
-
-@bot.command(name='trade_unconfirm', help="Remove your confirmation of the trade")
-async def trade_unconfirm(ctx):
-    user_id = str(ctx.author.id)
     
-    # Check if user is in a trade
-    if not hasattr(bot, 'active_trades') or user_id not in bot.active_trades:
-        await ctx.send("You're not in an active trade!")
-        return
+    elif action == "status":
+        user_id = str(ctx.author.id)
+        
+        # Check if user is in a trade
+        if not hasattr(bot, 'active_trades') or user_id not in bot.active_trades:
+            await ctx.send("You're not in an active trade!")
+            return
+        
+        trade = bot.active_trades[user_id]
+        
+        # Reset activity timer
+        trade.reset_activity_timer()
+        
+        # Check if the trade is still active
+        if not trade.active:
+            await ctx.send("That trade is no longer active.")
+            if user_id in bot.active_trades:
+                del bot.active_trades[user_id]
+            return
+        
+        # Just update the trade status
+        await trade.update_trade_status()
     
-    trade = bot.active_trades[user_id]
-    
-    # Reset activity timer
-    trade.reset_activity_timer()
-    
-    # Check if the trade is still active
-    if not trade.active:
-        await ctx.send("That trade is no longer active.")
-        if user_id in bot.active_trades:
-            del bot.active_trades[user_id]
-        return
-    
-    # Determine if user is initiator or recipient
-    is_initiator = (user_id == trade.initiator_id)
-    
-    # Check if user has confirmed
-    if (is_initiator and not trade.initiator_confirmed) or (not is_initiator and not trade.recipient_confirmed):
-        await ctx.send("You haven't confirmed the trade yet!")
-        return
-    
-    # Remove confirmation
-    if is_initiator:
-        trade.initiator_confirmed = False
     else:
-        trade.recipient_confirmed = False
-    
-    await ctx.send(f"{ctx.author.mention} has withdrawn their confirmation.")
-    await trade.update_trade_status()
+        await ctx.send(f"Unknown trade command: `{action}`. Use `!trade help` for usage information.")
 
-@bot.command(name='trade_cancel', help="Cancel the current trade")
-async def trade_cancel(ctx):
-    user_id = str(ctx.author.id)
-    
-    # Check if user is in a trade
-    if not hasattr(bot, 'active_trades') or user_id not in bot.active_trades:
-        await ctx.send("You're not in an active trade!")
-        return
-    
-    trade = bot.active_trades[user_id]
-    
-    # Check if the trade is still active
-    if not trade.active:
-        await ctx.send("That trade is no longer active.")
-        if user_id in bot.active_trades:
-            del bot.active_trades[user_id]
-        return
-    
-    # Cancel the trade
-    await trade.cancel_trade(f"Trade cancelled by {ctx.author.mention}")
-    
-    # Clean up
-    if trade.initiator_id in bot.active_trades:
-        del bot.active_trades[trade.initiator_id]
-    if trade.recipient_id in bot.active_trades:
-        del bot.active_trades[trade.recipient_id]
-
-@bot.command(name='trade_status', help="Check the status of your current trade")
-async def trade_status(ctx):
-    user_id = str(ctx.author.id)
-    
-    # Check if user is in a trade
-    if not hasattr(bot, 'active_trades') or user_id not in bot.active_trades:
-        await ctx.send("You're not in an active trade!")
-        return
-    
-    trade = bot.active_trades[user_id]
-    
-    # Reset activity timer
-    trade.reset_activity_timer()
-    
-    # Check if the trade is still active
-    if not trade.active:
-        await ctx.send("That trade is no longer active.")
-        if user_id in bot.active_trades:
-            del bot.active_trades[user_id]
-        return
-    
-    # Just update the trade status
-    await trade.update_trade_status()
-
-@bot.command(name='trade_help', help="Get help with the trade system")
+# Keep the existing trade_help function
 async def trade_help(ctx):
     embed = discord.Embed(
         title="Card Trading Help",
@@ -2284,28 +2310,28 @@ async def trade_help(ctx):
     
     embed.add_field(
         name="Adding Cards",
-        value="Use `!trade_add [card name]` to add a card to your trade offer",
+        value="Use `!trade add [card name]` to add a card to your trade offer",
         inline=False
     )
     
     embed.add_field(
         name="Removing Cards",
-        value="Use `!trade_remove [card name]` to remove a card from your offer",
+        value="Use `!trade remove [card name]` to remove a card from your offer",
         inline=False
     )
     
     embed.add_field(
         name="Confirming Trade", 
-        value="Use `!trade_confirm` when you're happy with the deal\n"
+        value="Use `!trade confirm` when you're happy with the deal\n"
               "Both players must confirm for the trade to complete",
         inline=False
     )
     
     embed.add_field(
         name="Other Commands",
-        value="• `!trade_unconfirm` - Remove your confirmation\n"
-              "• `!trade_cancel` - Cancel the trade entirely\n"
-              "• `!trade_status` - Check the current status of your trade",
+        value="• `!trade unconfirm` - Remove your confirmation\n"
+              "• `!trade cancel` - Cancel the trade entirely\n"
+              "• `!trade status` - Check the current status of your trade",
         inline=False
     )
     
@@ -2354,7 +2380,7 @@ async def list_commands(ctx):
             "`!see_card [card name]` - View a card you've caught\n"
             "`!progress` - Show your card collection progress\n"
             "`!stats [card name]` - Show stats for a specific card\n"
-            "`!give [card name] [@user]` - Give a card to another user"
+            "`!give @user [card name]` - Give a card to another user"
         ),
         inline=False
     )
@@ -2363,25 +2389,26 @@ async def list_commands(ctx):
     embed.add_field(
         name="⚔️ Battle System",
         value=(
-            "`!battle [@user]` - Challenge another user to a battle\n"
-            "`!battle_add [card name]` - Add a card to your battle team\n"
-            "`!battle_cards` - See your currently selected cards\n"
-            "`!battle_ready` - Confirm your card selection\n"
-            "`!battle_help` - Get help with the battle system"
+            "`!battle @user` - Challenge another user to a battle\n"
+            "`!battle add [card name]` - Add a card to your battle team\n"
+            "`!battle cards` - See your currently selected cards\n"
+            "`!battle ready` - Confirm your card selection\n"
+            "`!battle help` - Get help with the battle system"
         ),
         inline=False
     )
 
+    # Trading Commands
     embed.add_field(
         name="🔄 Trading System",
         value=(
-            "`!trade [@user]` - Start a card trade with another user\n"
-            "`!trade_add [card name]` - Add a card to your trade offer\n"
-            "`!trade_remove [card name]` - Remove a card from your offer\n"
-            "`!trade_confirm` - Confirm the trade deal\n"
-            "`!trade_unconfirm` - Unconfirm the trade deal\n"
-            "`!trade_status` - Check your current trade\n"
-            "`!trade_help` - Get help with trading"
+            "`!trade @user` - Start a card trade with another user\n"
+            "`!trade add [card name]` - Add a card to your trade offer\n"
+            "`!trade remove [card name]` - Remove a card from your offer\n"
+            "`!trade confirm` - Confirm the trade deal\n"
+            "`!trade unconfirm` - Unconfirm the trade deal\n"
+            "`!trade status` - Check your current trade\n"
+            "`!trade help` - Get help with trading"
         ),
         inline=False
     )
@@ -2428,7 +2455,7 @@ async def info(ctx):
 
     embed.add_field(
         name="🏷️ Version",
-        value="1.5.1 - \"The Trading Update\"", 
+        value="1.5.3 - \"The Battling and Trading Update\"", 
         inline=False
     )
 
