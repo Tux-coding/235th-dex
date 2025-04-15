@@ -28,6 +28,7 @@ from cards import cards
 #=================================================================
 # CONFIG & GLOBALS
 #=================================================================
+
 # Configuring logging
 logging.basicConfig(level=logging.INFO, format='%(asctime)s:%(levelname)s:%(name)s: %(message)s')
 
@@ -53,6 +54,7 @@ trade_lock = asyncio.Lock()
 submit_lock = asyncio.Lock()
 is_test_mode = spawn_mode == 'test'
 blacklist_file = "blacklist.json"
+start_time = datetime.datetime.now()  # Ensure this is initialized at the start of the program
 
 backup_folder = "backup_folder"
 os.makedirs(backup_folder, exist_ok=True)
@@ -163,15 +165,15 @@ def select_random_card():
 
 def count_lines_of_code() -> int:
     project_dir = '/home/container'
-    total_lines = 0
+    total_lines_of_code = 0
 
     for root, _, files in os.walk(project_dir):
         for file in files:
             if file.endswith('test.py') or file.endswith('cards.py'):
                 file_path = os.path.join(root, file)
                 with open(file_path, 'r') as f:
-                    total_lines += sum(1 for _ in f)
-    return total_lines
+                    total_lines_of_code += sum(1 for _ in f)
+    return total_lines_of_code
 
 async def send_embed_with_retry(channel, embed, view=None, retries=3, delay=2):
     """Send an embed with retry logic for network errors"""
@@ -2251,12 +2253,11 @@ async def list_commands(ctx):
 
 @bot.command(name='info_dex', aliases=['dex_info', 'bot_info'], help="General info about the dex")
 async def info(ctx):
-    # Store bot launch time
-    if not hasattr(bot, 'launch_time'):
-        bot.launch_time = datetime.datetime.now()
+    # get total lines of code
+    total_lines_of_code = count_lines_of_code()
 
     # Calculate uptime
-    uptime = datetime.datetime.now() - bot.launch_time
+    uptime = datetime.datetime.now() - start_time
     days, remainder = divmod(int(uptime.total_seconds()), 86400)
     hours, remainder = divmod(remainder, 3600)
     minutes, _ = divmod(remainder, 60) 
@@ -2289,7 +2290,7 @@ async def info(ctx):
 
     embed.add_field(
         name="📈 System Stats",
-        value=f"• Users: {total_users}\n• Cards: {total_cards_collected}\n• Uptime: {uptime_str}",
+        value=f"• Users: {total_users}\n• Cards catched: {total_cards_collected}\n• Uptime: {uptime_str} \n• Total lines of code: {total_lines_of_code}",
         inline=True
     )
 
@@ -2306,7 +2307,7 @@ async def info(ctx):
     )
 
     # Add timestamp
-    embed.set_footer(text=f"Last updated: {datetime.datetime.now().strftime('%d-%m-%Y %H:%M')}")
+    embed.set_footer(text=f"Last restarted: {datetime.datetime.now().strftime('%d-%m-%Y %H:%M')}")
 
     await ctx.send(embed=embed)
 
@@ -2419,6 +2420,9 @@ async def public_stats(ctx):
 #=================================================================
 @bot.event
 async def on_ready():
+
+
+    # Do some commands stuff
     global spawned_messages
     load_player_cards()  # Load player cards when the bot starts
     validate_card_data()
@@ -2454,6 +2458,7 @@ async def on_ready():
 
     spawn_card.start()
     backup_player_data.start()  # Start the backup task
+
 
 @bot.event
 async def on_command_error(ctx, error):
