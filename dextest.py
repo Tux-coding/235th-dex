@@ -39,6 +39,25 @@ channel_id = os.getenv('CHANNEL_ID')
 test_channel_id = os.getenv('TEST_CHANNEL_ID')
 spawn_mode = os.getenv('SPAWN_MODE', 'both').lower()
 
+missing_vars = []
+if not token:
+    missing_vars.append('DISCORD_TOKEN')
+if not channel_id:
+    missing_vars.append("CHANNEL_ID")
+if not test_channel_id:
+    missing_vars.append("TEST_CHANNEL_ID")
+
+if missing_vars:
+    logging.error(f"Missing required environment variables: {', '.join(missing_vars)}")
+    exit(1)
+
+try:
+    int(channel_id)
+    int(test_channel_id)
+except ValueError:
+    logging.error("Channel IDs must be valid integers")
+    exit(1)
+
 # Bot setup
 intents = discord.Intents.default()
 intents.message_content = True
@@ -54,7 +73,9 @@ trade_lock = asyncio.Lock()
 submit_lock = asyncio.Lock()
 is_test_mode = spawn_mode == 'test'
 blacklist_file = "blacklist.json"
-start_time = datetime.datetime.now()  # Ensure this is initialized at the start of the program
+start_time = datetime.datetime.now()
+user_stats = {}
+trade_stats = {}
 
 backup_folder = "backup_folder"
 os.makedirs(backup_folder, exist_ok=True)
@@ -164,15 +185,18 @@ def select_random_card():
     return card
 
 def count_lines_of_code() -> int:
-    project_dir = '/home/container'
+    project_dir = os.path.dirname(os.path.abspath(__file__))
     total_lines_of_code = 0
 
     for root, _, files in os.walk(project_dir):
         for file in files:
             if file.endswith('test.py') or file.endswith('cards.py'):
                 file_path = os.path.join(root, file)
-                with open(file_path, 'r') as f:
-                    total_lines_of_code += sum(1 for _ in f)
+                try:
+                    with open(file_path, 'r', encoding='utf-8') as f:
+                        total_lines_of_code += sum(1 for _ in f)
+                except Exception as e:
+                    logging.error(f"Error counting lines in {file_path}: {e}")
     return total_lines_of_code
 
 async def send_embed_with_retry(channel, embed, view=None, retries=3, delay=2):
@@ -186,13 +210,36 @@ async def send_embed_with_retry(channel, embed, view=None, retries=3, delay=2):
         except discord.HTTPException as e:
             if attempt < retries - 1:
                 logging.warning(f"HTTP error when sending embed to {channel.id}, attempt {attempt+1}/{retries}: {e}")
-                await asyncio.sleep(delay)
+                await asyncio.sleep(delay * (2 ** attempt))
             else:
                 logging.error(f"Failed to send embed after {retries} attempts: {e}")
+                raise
+        except aiohttp.ClientConnectionError as e:
+            logging.error(f"Connection error when sending embed: {e}")
+            if attempt < retries - 1:
+                await asyncio.sleep(delay * 3)
+            else:
                 raise
         except Exception as e:
             logging.error(f"Unexpected error sending embed: {e}")
             raise
+
+def update_user_stats(user_id: str, stat_type: str, value: int = 1):
+    """Update user statistics tracking"""
+    if user_id not in user_stats:
+        user_stats[user_id] = {
+            'battles_fought': 0,
+            'battles_won': 0,
+            'trades_completed': 0,
+            'cards_caught': 0
+        }
+    user_stats[user_id][stat_type] += value
+
+def update_trade_stats(card_name: str):
+    """Update card trade statistics"""
+    if card_name not in trade_stats:
+        trade_stats[card_name] = 0
+    trade_stats[card_name] += 1
 
 #=================================================================
 # DATA MANAGEMENT
@@ -246,6 +293,15 @@ class BlacklistManager:
 def load_player_cards() -> None:
     global player_cards
     try:
+        # Try to import the cards module first to ensure it's available
+        try:
+            import cards
+            logging.info(f"Cards module loaded with {len(cards.cards)} cards")
+        except ImportError as e:
+            logging.error(f"Failed to import cards module: {e}")
+            # Create a minimal placeholder for cards if import fails
+            cards.cards = []
+            
         if os.path.exists('player_cards.json') and os.path.getsize('player_cards.json') > 0:
             with open('player_cards.json', 'r', encoding='utf-8') as f:
                 player_cards = json.load(f)
@@ -261,35 +317,44 @@ def load_player_cards() -> None:
         logging.error(f"Error decoding JSON from player cards file: {e}")
         # Try to recover from the most recent backup
         recover_from_backup()
-    except PermissionError:
-        logging.error("Permission denied when trying to access player cards file")
-        player_cards = {}
-        recover_from_backup()
     except Exception as e:
         logging.error(f"Unexpected error loading player cards: {e}")
         recover_from_backup()
 
 def save_player_cards() -> None:
     max_retries = 3
+
     for attempt in range(max_retries):
         try:
-            with open('player_cards.json', 'w') as f:
+            temp_file = 'player_cards_temp.json'
+            with open(temp_file, 'w') as f:
                 json.dump(player_cards, f, indent=4)
-            return  # Successfully saved, exit function
+
+            shutil.move(temp_file, 'player_cards.json')
+            return
         except PermissionError:
             if attempt < max_retries - 1:
                 logging.warning(f"Permission denied when saving player cards. Retry {attempt + 1}/{max_retries}...")
                 time.sleep(2)  # Wait before retrying
             else:
                 logging.error("Persistent permission denied when saving player cards after multiple attempts")
-                # Create an emergency backup with a different filename
+                emergency_path = f'player_cards_emergency_{int(time.time())}.json'
                 try:
-                    emergency_path = f'player_cards_emergency_{int(time.time())}.json'
                     with open(emergency_path, 'w') as f:
                         json.dump(player_cards, f, indent=4)
                     logging.info(f"Created emergency backup at {emergency_path}")
                 except Exception as e:
                     logging.error(f"Failed to create emergency backup: {e}")
+        except OSError as e:
+            logging.error(f"OS error when saving player cards: {e}")
+            if "No space left on device" in str(e):
+                logging.critical("Disk space issue detected when saving player data!")
+                try:
+                    with open('player_cards_minimal.json', 'w') as f:
+                        json.dump(player_cards, f)
+                except Exception as e2:
+                    logging.error(f"Failed even minimal save: {e2}")
+            time.sleep(1)
         except Exception as e:
             logging.error(f"Error saving player cards: {e}")
             break  # Exit on non-permission errors
@@ -316,7 +381,7 @@ def recover_from_backup():
 
 def create_backup():
     try:
-        timestamp = datetime.datetime.now().strftime("%Y%m%d_%H%M%S")
+        timestamp = datetime.datetime.now().strftime("%H%M%S_%d%m%y")
         backup_filename = f"player_cards_backup_{timestamp}.json"
         backup_filepath = os.path.join(backup_folder, backup_filename)
         shutil.copy('player_cards.json', backup_filepath)
@@ -354,6 +419,7 @@ class CatchModal(Modal):
     async def on_submit(self, interaction: discord.Interaction):
         global submit_lock
         user = interaction.user
+        user_id = str(user.id)
 
         # Attempt to acquire the lock with a timeout of 5 seconds
         try:
@@ -376,6 +442,7 @@ class CatchModal(Modal):
                 user_id = str(user.id)
                 player_cards.setdefault(user_id, []).append(self.card_name)
                 save_player_cards()
+                update_user_stats(user_id, 'cards_caught')
                 await interaction.response.send_message(f"{user.mention} caught the card: {self.card_name}!", ephemeral=False)
                 self.view.card_claimed = True
                 for item in self.view.children:
@@ -680,10 +747,15 @@ class TradeSession:
                 for card in self.initiator_cards:
                     player_cards[self.initiator_id].remove(card)
                     player_cards.setdefault(self.recipient_id, []).append(card)
+                    update_trade_stats(card)
 
                 for card in self.recipient_cards:
                     player_cards[self.recipient_id].remove(card)
                     player_cards.setdefault(self.initiator_id, []).append(card)
+                    update_trade_stats(card)
+                
+                update_user_stats(self.initiator_id, 'trades_completed')
+                update_user_stats(self.recipient_id, 'trades_completed')
 
                 save_player_cards()
 
@@ -935,9 +1007,14 @@ class CardBattle:
         if not opponent_battle_cards:
             winner = self.challenger
             loser = self.opponent
+            update_user_stats(self.challenger_id, 'battles_won')
         else:
             winner = self.opponent
             loser = self.challenger
+            update_user_stats(self.opponent_id, 'battles_won')
+        
+        update_user_stats(self.challenger_id, 'battles_fought')
+        update_user_stats(self.opponent_id, 'battles_fought')
 
         # Victory message
         victory_embed = discord.Embed(
@@ -1409,68 +1486,134 @@ async def remove_card(ctx, card: str, user: discord.Member):
         await ctx.send(f"{user.mention} does not have the card `{card}`.")
         logging.info(f"Admin: {ctx.author} attempted to remove {card} from {user}, but {user} did not possess {card}.")
 
-@bot.command(name='view_progress', help="Admin command to view another user's collection progress")
+@bot.command(name='view_user', aliases=['user_info', 'view_progress'], help="Admin command to view detailed user information")
 @commands.check(is_authorized)
-async def view_progress(ctx, user: discord.Member):
+async def view_user(ctx, user: discord.Member):
     """
-    Allows authorized users to view the card collection progress of any user.
-    Usage: !view_progress @username
+    Comprehensive admin tool to view all information about a user including:
+    - Collection progress
+    - Battle statistics
+    - Trading activity
+    - User account details
+    Usage: !view_user @username
     """
+    # Re-import cards to avoid variable shadowing issues
+    from cards import cards
+    
     target_user_id = str(user.id)
-    total_cards = len(cards)
+    total_cards_count = len(cards)
     user_cards = player_cards.get(target_user_id, [])
     
-    if not user_cards:
-        await ctx.send(f"{user.display_name} hasn't collected any cards yet.")
-        return
-    
-    # Count total unique cards (no duplicates)
-    unique_cards = set(user_cards)
-    # Get card duplicates info
-    card_counts = Counter(user_cards)
-    # Calculate duplicates
-    total_duplicates = len(user_cards) - len(unique_cards)
-    
-    # Find missing cards
-    missing_cards = [card['name'] for card in cards if card['name'] not in user_cards]
-    
-    # Find rarest card owned by rarity value
-    card_rarity = {card['name']: card['rarity'] for card in cards}
-    if user_cards:
-        rarest_card = min(set(user_cards), key=lambda card: card_rarity.get(card, float('inf')))
-        most_duplicated_card = card_counts.most_common(1)[0][0] if total_duplicates > 0 else "None"
-    else:
-        rarest_card = "None"
-        most_duplicated_card = "None"
-    
-    # Create the embed
+    # Create main embed with user info
     embed = discord.Embed(
-        title=f"📊 Card Collection Stats for {user.display_name}",
-        description=f"Collection progress: {len(unique_cards)}/{total_cards} unique cards ({len(unique_cards)/total_cards*100:.1f}%)",
+        title=f"👤 User Information: {user.display_name}",
+        description=f"Detailed information for user ID: {target_user_id}",
         color=discord.Color.blue()
     )
     
-    # Add collection stats
-    embed.add_field(name="Total Cards", value=f"{len(user_cards)} (including duplicates)", inline=True)
-    embed.add_field(name="Unique Cards", value=f"{len(unique_cards)}", inline=True)
-    embed.add_field(name="Duplicates", value=f"{total_duplicates}", inline=True)
+    # Add account details
+    created_at = user.created_at.strftime("%d-%m-%Y")
+    joined_at = user.joined_at.strftime("%d-%m-%Y") if user.joined_at else "Unknown"
     
-    # Add interesting stats
-    embed.add_field(name="Rarest Card Owned", value=rarest_card, inline=True)
-    embed.add_field(name="Most Duplicated", value=f"{most_duplicated_card} ({card_counts[most_duplicated_card]}x)" if most_duplicated_card != "None" else "None", inline=True)
-    embed.add_field(name="Missing Cards", value=f"{len(missing_cards)}", inline=True)
+    embed.add_field(
+        name="📋 Account Details",
+        value=f"• Discord Name: {user.name}\n"
+              f"• Display Name: {user.display_name}\n"
+              f"• Account Created: {created_at}\n"
+              f"• Server Joined: {joined_at}\n"
+              f"• Bot Status: {'🚫 Blacklisted' if BlacklistManager.is_blacklisted(target_user_id) else '✅ In good standing'}",
+        inline=False
+    )
     
-    # Create collection view for the specified user
-    view = ProgressView(user_cards, missing_cards, ctx.author)  # Note: controls belong to command invoker
+    # Add card collection stats
+    if not user_cards:
+        embed.add_field(
+            name="🃏 Card Collection",
+            value="This user hasn't collected any cards yet.",
+            inline=False
+        )
+    else:
+        # Count total unique cards (no duplicates)
+        unique_cards = set(user_cards)
+        # Get card duplicates info
+        card_counts = Counter(user_cards)
+        # Calculate duplicates
+        total_duplicates = len(user_cards) - len(unique_cards)
+        
+        # Find rarest card owned by rarity value
+        card_rarity = {card_info['name']: card_info['rarity'] for card_info in cards}
+        try:
+            rarest_card = min(set(user_cards), key=lambda card_name: card_rarity.get(card_name, float('inf')))
+            rarest_card_value = f"{rarest_card} ({card_rarity.get(rarest_card, '?')}% rarity)"
+            
+            most_duplicated_card = card_counts.most_common(1)[0][0] if total_duplicates > 0 else "None"
+            most_duplicated_value = f"{most_duplicated_card} ({card_counts[most_duplicated_card]}x)" if most_duplicated_card != "None" else "None"
+        except (ValueError, KeyError):
+            rarest_card_value = "Unable to determine"
+            most_duplicated_value = "Unable to determine"
+        
+        # Count cards by rarity tiers
+        common_cards = sum(1 for card in unique_cards if card_rarity.get(card, 100) >= 20)
+        uncommon_cards = sum(1 for card in unique_cards if 10 <= card_rarity.get(card, 100) < 20)
+        rare_cards = sum(1 for card in unique_cards if 5 <= card_rarity.get(card, 100) < 10)
+        very_rare_cards = sum(1 for card in unique_cards if card_rarity.get(card, 100) < 5)
+        
+        collection_info = (
+            f"• Progress: **{len(unique_cards)}/{total_cards_count}** unique cards ({len(unique_cards)/total_cards_count*100:.1f}%)\n"
+            f"• Total Cards: **{len(user_cards)}** (including {total_duplicates} duplicates)\n"
+            f"• Card Rarity: {common_cards} common, {uncommon_cards} uncommon, {rare_cards} rare, {very_rare_cards} very rare\n"
+            f"• Rarest Owned: {rarest_card_value}\n"
+            f"• Most Duplicated: {most_duplicated_value}"
+        )
+        
+        embed.add_field(name="🃏 Card Collection", value=collection_info, inline=False)
     
-    # Send the statistics and view
-    embed.set_footer(text="Use the buttons below to navigate cards")
-    message = await ctx.send(embed=embed)
+    # Add battle statistics if available
+    if target_user_id in user_stats:
+        stats = user_stats[target_user_id]
+        battles_fought = stats.get('battles_fought', 0)
+        battles_won = stats.get('battles_won', 0)
+        win_rate = (battles_won / battles_fought * 100) if battles_fought > 0 else 0
+        
+        battle_info = (
+            f"• Battles Fought: **{battles_fought}**\n"
+            f"• Battles Won: **{battles_won}**\n"
+            f"• Win Rate: **{win_rate:.1f}%**\n"
+            f"• Cards Caught: **{stats.get('cards_caught', 0)}**\n"
+            f"• Trades Completed: **{stats.get('trades_completed', 0)}**"
+        )
+        
+        embed.add_field(name="⚔️ Battle Statistics", value=battle_info, inline=False)
+    else:
+        embed.add_field(name="⚔️ Battle Statistics", value="No battle data recorded for this user.", inline=False)
     
-    # Send the detailed card view in a second message
-    view.message = await ctx.send(embed=view.create_embed(), view=view)
+    # Admin actions section
+    admin_actions = (
+        f"• `!givecard [card] @{user.name}` - Give a card to user\n"
+        f"• `!removecard [card] @{user.name}` - Remove a card from user\n"
+    )
     
-    logging.info(f"Admin {ctx.author} viewed collection progress for {user.display_name}")
+    if BlacklistManager.is_blacklisted(target_user_id):
+        admin_actions += f"• `!unblacklist {target_user_id}` - Remove user from blacklist"
+    else:
+        admin_actions += f"• `!blacklist {target_user_id}` - Add user to blacklist"
+    
+    embed.add_field(name="🔧 Admin Actions", value=admin_actions, inline=False)
+    
+    # Send the main info embed
+    await ctx.send(embed=embed)
+    
+    # If user has cards, send the detailed card view in a second message
+    if user_cards:
+        # Find missing cards
+        missing_cards = [card_info['name'] for card_info in cards if card_info['name'] not in user_cards]
+        
+        # Create collection view for the specified user
+        view = ProgressView(user_cards, missing_cards, ctx.author)  # Controls belong to command invoker
+        await ctx.send("📚 **Card Collection Details:**", embed=view.create_embed(), view=view)
+    
+    # Log the action
+    logging.info(f"Admin {ctx.author} viewed detailed information for {user.display_name} (ID: {target_user_id})")
 
 @bot.command(name='shutdown', help="Shut down the bot.")
 @commands.check(is_authorized)
@@ -2278,7 +2421,7 @@ async def info(ctx):
 
     embed.add_field(
         name="🏷️ Version",
-        value="1.5.4 - \"Another Battling and Trading Update\"", 
+        value="1.5.5 - \"The Random Stuff Update\"", 
         inline=False
     )
 
@@ -2324,9 +2467,12 @@ async def gud_boy(ctx):
     embed.set_image(url="https://cdn.discordapp.com/attachments/1258772746897461458/1340729833889464422/image0.gif?ex=67c92c35&is=67c7dab5&hm=0b58bb55cc24fbeb9e74f77ed4eedaf4d48ba68f61e82922b9632c6a61f7713b&")
     await ctx.send(embed=embed)
 
-@bot.command(name='leaderboard', help="Show general statistics about the card game.")
-async def public_stats(ctx):
-    # Skip authorized users from leaderboards to prevent admin cards from skewing stats
+@bot.command(name='leaderboard', help="Show various leaderboards and statistics")
+async def leaderboard(ctx, category: str = "general"):
+    from cards import cards
+    category = category.lower()
+
+    # Skip authorized users from leaderboards
     regular_users = {user_id: cards for user_id, cards in player_cards.items() 
                     if user_id not in authorized_user_ids}
     
@@ -2343,74 +2489,375 @@ async def public_stats(ctx):
         await ctx.send(embed=embed)
         return
     
-    # Top Collectors (by total cards)
-    collectors = [(user_id, len(cards)) for user_id, cards in regular_users.items()]
-    top_collectors = sorted(collectors, key=lambda x: x[1], reverse=True)[:5]
+    if category == "general":
+        # Top Collectors (by total cards)
+        collectors = [(user_id, len(cards)) for user_id, cards in regular_users.items()]
+        top_collectors = sorted(collectors, key=lambda x: x[1], reverse=True)[:5]
+        
+        # Unique Cards Leaderboard
+        unique_collectors = [(user_id, len(set(cards))) for user_id, cards in regular_users.items()]
+        top_unique_collectors = sorted(unique_collectors, key=lambda x: x[1], reverse=True)[:5]
+        
+        # Most Collected Card
+        all_cards = [card for cards in regular_users.values() for card in cards]
+        card_counts = Counter(all_cards)
+        
+        # Get most collected card (with safeguard if no cards exist)
+        most_collected_card = card_counts.most_common(1)[0][0] if card_counts else "None"
+        most_collected_count = card_counts.get(most_collected_card, 0)
+        
+        # Rarest Card Owned based on rarity value
+        card_rarity = {card['name']: card['rarity'] for card in cards}
+        unique_owned_cards = set(all_cards)
+        
+        if unique_owned_cards:
+            try:
+                rarest_card_owned = min(unique_owned_cards, key=lambda card: card_rarity.get(card, float('inf')))
+                rarest_card_rarity = card_rarity.get(rarest_card_owned, "Unknown")
+            except (ValueError, KeyError):
+                rarest_card_owned = "Error determining rarest card"
+                rarest_card_rarity = "Unknown"
+        else:
+            rarest_card_owned = "None"
+            rarest_card_rarity = "N/A"
+        
+        embed = discord.Embed(
+            title="📊 235th Dex Leaderboard",
+            description="Global statistics for the card game",
+            color=discord.Color.gold()
+        )
+        
+        embed.add_field(
+            name="📈 User Stats",
+            value=f"**Total Players**: {total_users}\n**Total Cards Collected**: {total_cards_collected}",
+            inline=False
+        )
+        
+        # Top Collectors (format with card counts)
+        if top_collectors:
+            top_collectors_text = "\n".join([f"{idx+1}. <@{user_id}>: **{count}** cards" 
+                                    for idx, (user_id, count) in enumerate(top_collectors)])
+            embed.add_field(name="🏆 Top Collectors (Total Cards)", value=top_collectors_text, inline=True)
+        else:
+            embed.add_field(name="🏆 Top Collectors", value="No data yet", inline=True)
+        
+        # Top Unique Collectors
+        if top_unique_collectors:
+            unique_collectors_text = "\n".join([f"{idx+1}. <@{user_id}>: **{count}** unique cards" 
+                                        for idx, (user_id, count) in enumerate(top_unique_collectors)])
+            embed.add_field(name="🌟 Top Collectors (Unique Cards)", value=unique_collectors_text, inline=True)
+        else:
+            embed.add_field(name="🌟 Top Unique Collectors", value="No data yet", inline=True)
+        
+        # Card Stats section
+        card_stats = [
+            f"**Most Collected Card**: {most_collected_card} ({most_collected_count}× collected)",
+            f"**Rarest Card Owned**: {rarest_card_owned} ({rarest_card_rarity}% rarity)"
+        ]
+        embed.add_field(name="🃏 Card Stats", value="\n".join(card_stats), inline=False)
     
-    # Unique Cards Leaderboard
-    unique_collectors = [(user_id, len(set(cards))) for user_id, cards in regular_users.items()]
-    top_unique_collectors = sorted(unique_collectors, key=lambda x: x[1], reverse=True)[:5]
+    elif category == "total":
+        # Total Cards Leaderboard (including duplicates)
+        collectors = [(user_id, len(cards)) for user_id, cards in regular_users.items()]
+        top_collectors = sorted(collectors, key=lambda x: x[1], reverse=True)[:10]
+        
+        embed = discord.Embed(
+            title="🏆 Total Cards Leaderboard",
+            description="Players ranked by total number of cards owned (including duplicates)",
+            color=discord.Color.gold()
+        )
+        
+        if top_collectors:
+            leaderboard_text = ""
+            for idx, (user_id, count) in enumerate(top_collectors):
+                # Add medal emoji for top 3
+                if idx == 0:
+                    prefix = "🥇"
+                elif idx == 1:
+                    prefix = "🥈"
+                elif idx == 2:
+                    prefix = "🥉"
+                else:
+                    prefix = f"{idx+1}."
+                
+                leaderboard_text += f"{prefix} <@{user_id}>: **{count}** cards\n"
+            
+            embed.add_field(name="Leaderboard", value=leaderboard_text, inline=False)
+        else:
+            embed.add_field(name="Leaderboard", value="No data available yet", inline=False)
     
-    # Most Collected Card
-    all_cards = [card for cards in regular_users.values() for card in cards]
-    card_counts = Counter(all_cards)
+    elif category == "unique":
+        # Unique Cards Leaderboard
+        unique_collectors = [(user_id, len(set(cards))) for user_id, cards in regular_users.items()]
+        top_unique = sorted(unique_collectors, key=lambda x: x[1], reverse=True)[:10]
+        
+        # Calculate completion percentage for each player
+        total_available_cards = len(cards)
+        completion_data = [(user_id, count, round((count / total_available_cards) * 100, 1)) 
+                          for user_id, count in top_unique]
+        
+        embed = discord.Embed(
+            title="🌟 Unique Cards Leaderboard",
+            description=f"Players ranked by number of unique cards collected (out of {total_available_cards} total)",
+            color=discord.Color.blue()
+        )
+        
+        if top_unique:
+            leaderboard_text = ""
+            for idx, (user_id, count, percentage) in enumerate(completion_data):
+                # Add medal emoji for top 3
+                if idx == 0:
+                    prefix = "🥇"
+                elif idx == 1:
+                    prefix = "🥈"
+                elif idx == 2:
+                    prefix = "🥉"
+                else:
+                    prefix = f"{idx+1}."
+                
+                leaderboard_text += f"{prefix} <@{user_id}>: **{count}** unique cards (**{percentage}%** complete)\n"
+            
+            embed.add_field(name="Leaderboard", value=leaderboard_text, inline=False)
+        else:
+            embed.add_field(name="Leaderboard", value="No data available yet", inline=False)
     
-    # Get most collected card (with safeguard if no cards exist)
-    most_collected_card = card_counts.most_common(1)[0][0] if card_counts else "None"
-    most_collected_count = card_counts.get(most_collected_card, 0)
+    elif category == "rarest":
+        # Rarest Cards Leaderboard
+        # First, get all card rarities
+        card_rarity = {card['name']: card['rarity'] for card in cards}
+        
+        # Get the 10 rarest cards based on rarity value (lower is rarer)
+        rarest_cards = sorted([(name, rarity) for name, rarity in card_rarity.items()], 
+                             key=lambda x: x[1])[:10]
+        
+        # Find owners for each rare card
+        rarest_cards_with_owners = []
+        for card_name, rarity in rarest_cards:
+            owners = []
+            for user_id, user_cards in regular_users.items():
+                if card_name in user_cards:
+                    owners.append(user_id)
+            rarest_cards_with_owners.append((card_name, rarity, owners))
+        
+        embed = discord.Embed(
+            title="💎 Rarest Cards Leaderboard",
+            description="The rarest cards and their lucky owners",
+            color=discord.Color.purple()
+        )
+        
+        if rarest_cards_with_owners:
+            for idx, (card_name, rarity, owners) in enumerate(rarest_cards_with_owners):
+                if owners:
+                    # Limit the number of owners shown to prevent too long messages
+                    displayed_owners = owners[:5]
+                    owner_text = ", ".join([f"<@{owner}>" for owner in displayed_owners])
+                    if len(owners) > 5:
+                        owner_text += f" and {len(owners) - 5} more"
+                else:
+                    owner_text = "No owners yet"
+                
+                embed.add_field(
+                    name=f"{idx+1}. {card_name} ({rarity}% rarity)",
+                    value=f"**Owners**: {owner_text}",
+                    inline=False
+                )
+        else:
+            embed.add_field(name="Rarest Cards", value="No data available yet", inline=False)
     
-    # Rarest Card Owned based on rarity value
-    card_rarity = {card['name']: card['rarity'] for card in cards}
-    unique_owned_cards = set(all_cards)
+    elif category == "activity":
+        # Most Active Users Leaderboard
+        # First check if user_stats exists and has data
+        if not hasattr(bot, 'user_stats') or not user_stats:
+            embed = discord.Embed(
+                title="⚡ Activity Leaderboard",
+                description="No activity data has been recorded yet!",
+                color=discord.Color.orange()
+            )
+            await ctx.send(embed=embed)
+            return
+        
+        # Filter authorized users from stats
+        filtered_stats = {user_id: stats for user_id, stats in user_stats.items() 
+                         if user_id not in authorized_user_ids}
+        
+        # Calculate total activity score (sum of all activities)
+        activity_scores = []
+        for user_id, stats in filtered_stats.items():
+            total_score = stats.get('battles_fought', 0) + stats.get('trades_completed', 0) + stats.get('cards_caught', 0)
+            activity_scores.append((user_id, total_score, stats))
+        
+        # Sort by total activity score
+        top_active_users = sorted(activity_scores, key=lambda x: x[1], reverse=True)[:10]
+        
+        embed = discord.Embed(
+            title="⚡ Activity Leaderboard",
+            description="Players ranked by their overall activity",
+            color=discord.Color.orange()
+        )
+        
+        if top_active_users:
+            leaderboard_text = ""
+            for idx, (user_id, score, stats) in enumerate(top_active_users):
+                # Add medal emoji for top 3
+                if idx == 0:
+                    prefix = "🥇"
+                elif idx == 1:
+                    prefix = "🥈"
+                elif idx == 2:
+                    prefix = "🥉"
+                else:
+                    prefix = f"{idx+1}."
+                
+                battles = stats.get('battles_fought', 0)
+                wins = stats.get('battles_won', 0)
+                trades = stats.get('trades_completed', 0)
+                cards = stats.get('cards_caught', 0)
+                
+                leaderboard_text += f"{prefix} <@{user_id}>: **{score}** points\n" \
+                                   f"  ┣ Battles: {battles} ({wins} wins)\n" \
+                                   f"  ┣ Trades: {trades}\n" \
+                                   f"  ┗ Cards Caught: {cards}\n"
+            
+            embed.add_field(name="Most Active Players", value=leaderboard_text, inline=False)
+        else:
+            embed.add_field(name="Most Active Players", value="No activity data yet", inline=False)
     
-    if unique_owned_cards:
-        try:
-            rarest_card_owned = min(unique_owned_cards, key=lambda card: card_rarity.get(card, float('inf')))
-            rarest_card_rarity = card_rarity.get(rarest_card_owned, "Unknown")
-        except (ValueError, KeyError):
-            rarest_card_owned = "Error determining rarest card"
-            rarest_card_rarity = "Unknown"
+    elif category == "traded":
+        # Most Traded Cards Leaderboard
+        # First check if trade_stats exists and has data
+        if not hasattr(bot, 'trade_stats') or not trade_stats:
+            embed = discord.Embed(
+                title="🔄 Most Traded Cards",
+                description="No trade data has been recorded yet!",
+                color=discord.Color.teal()
+            )
+            await ctx.send(embed=embed)
+            return
+        
+        # Get top traded cards
+        top_traded = sorted(trade_stats.items(), key=lambda x: x[1], reverse=True)[:10]
+        
+        embed = discord.Embed(
+            title="🔄 Most Traded Cards",
+            description="Cards that change hands most frequently",
+            color=discord.Color.teal()
+        )
+        
+        if top_traded:
+            leaderboard_text = ""
+            for idx, (card_name, count) in enumerate(top_traded):
+                # Add medal emoji for top 3
+                if idx == 0:
+                    prefix = "🥇"
+                elif idx == 1:
+                    prefix = "🥈"
+                elif idx == 2:
+                    prefix = "🥉"
+                else:
+                    prefix = f"{idx+1}."
+                
+                leaderboard_text += f"{prefix} **{card_name}**: {count} trades\n"
+            
+            embed.add_field(name="Trade Leaderboard", value=leaderboard_text, inline=False)
+        else:
+            embed.add_field(name="Trade Leaderboard", value="No trade data yet", inline=False)
+    
+    elif category == "battles":
+        # Battle Champions Leaderboard
+        # First check if user_stats exists and has data
+        if not hasattr(bot, 'user_stats') or not user_stats:
+            embed = discord.Embed(
+                title="⚔️ Battle Champions",
+                description="No battle data has been recorded yet!",
+                color=discord.Color.red()
+            )
+            await ctx.send(embed=embed)
+            return
+        
+        # Filter authorized users from stats
+        filtered_stats = {user_id: stats for user_id, stats in user_stats.items() 
+                         if user_id not in authorized_user_ids}
+        
+        # Calculate win rates and total battles
+        battle_stats = []
+        for user_id, stats in filtered_stats.items():
+            battles = stats.get('battles_fought', 0)
+            wins = stats.get('battles_won', 0)
+            win_rate = (wins / battles) * 100 if battles > 0 else 0
+            
+            # Only include users who have fought at least 3 battles
+            if battles >= 3:
+                battle_stats.append((user_id, wins, battles, round(win_rate, 1)))
+        
+        # Sort by wins, then by win rate
+        top_battlers = sorted(battle_stats, key=lambda x: (x[1], x[3]), reverse=True)[:10]
+        
+        embed = discord.Embed(
+            title="⚔️ Battle Champions",
+            description="Players ranked by battle victories",
+            color=discord.Color.red()
+        )
+        
+        if top_battlers:
+            leaderboard_text = ""
+            for idx, (user_id, wins, battles, win_rate) in enumerate(top_battlers):
+                # Add medal emoji for top 3
+                if idx == 0:
+                    prefix = "🥇"
+                elif idx == 1:
+                    prefix = "🥈"
+                elif idx == 2:
+                    prefix = "🥉"
+                else:
+                    prefix = f"{idx+1}."
+                
+                leaderboard_text += f"{prefix} <@{user_id}>: **{wins}** wins ({battles} battles, {win_rate}% win rate)\n"
+            
+            embed.add_field(name="Top Battlers", value=leaderboard_text, inline=False)
+        else:
+            embed.add_field(name="Top Battlers", value="No battle champions yet", inline=False)
+    
+    elif category == "help":
+        # Leaderboard Help
+        embed = discord.Embed(
+            title="📊 Leaderboard Help",
+            description="View different types of leaderboards and statistics",
+            color=discord.Color.blue()
+        )
+        
+        embed.add_field(
+            name="Available Leaderboard Types",
+            value=(
+                "• `!leaderboard general` - General statistics (default)\n"
+                "• `!leaderboard total` - Total cards leaderboard\n"
+                "• `!leaderboard unique` - Unique cards leaderboard\n"
+                "• `!leaderboard rarest` - Rarest cards and their owners\n"
+                "• `!leaderboard activity` - Most active players\n"
+                "• `!leaderboard traded` - Most frequently traded cards\n"
+                "• `!leaderboard battles` - Battle champions\n"
+                "• `!leaderboard help` - Show this help message"
+            ),
+            inline=False
+        )
+    
     else:
-        rarest_card_owned = "None"
-        rarest_card_rarity = "N/A"
-    
-    embed = discord.Embed(
-        title="📊 235th Dex Leaderboard",
-        description="Global statistics for the card game",
-        color=discord.Color.gold()
-    )
-    
-    embed.add_field(
-        name="📈 User Stats",
-        value=f"**Total Players**: {total_users}\n**Total Cards Collected**: {total_cards_collected}",
-        inline=False
-    )
-    
-    # Top Collectors (format with card counts)
-    if top_collectors:
-        top_collectors_text = "\n".join([f"{idx+1}. <@{user_id}>: **{count}** cards" 
-                                for idx, (user_id, count) in enumerate(top_collectors)])
-        embed.add_field(name="🏆 Top Collectors (Total Cards)", value=top_collectors_text, inline=True)
-    else:
-        embed.add_field(name="🏆 Top Collectors", value="No data yet", inline=True)
-    
-    # Top Unique Collectors
-    if top_unique_collectors:
-        unique_collectors_text = "\n".join([f"{idx+1}. <@{user_id}>: **{count}** unique cards" 
-                                    for idx, (user_id, count) in enumerate(top_unique_collectors)])
-        embed.add_field(name="🌟 Top Collectors (Unique Cards)", value=unique_collectors_text, inline=True)
-    else:
-        embed.add_field(name="🌟 Top Unique Collectors", value="No data yet", inline=True)
-    
-    # Card Stats section
-    card_stats = [
-        f"**Most Collected Card**: {most_collected_card} ({most_collected_count}× collected)",
-        f"**Rarest Card Owned**: {rarest_card_owned} ({rarest_card_rarity}% rarity)"
-    ]
-    embed.add_field(name="🃏 Card Stats", value="\n".join(card_stats), inline=False)
+        # Invalid category
+        embed = discord.Embed(
+            title="📊 Leaderboard",
+            description=f"Unknown leaderboard type: `{category}`",
+            color=discord.Color.red()
+        )
+        
+        embed.add_field(
+            name="Available Types", 
+            value=(
+                "Use `!leaderboard help` to see available options"
+            ),
+            inline=False
+        )
     
     # Set footer with timestamp
-    current_time = datetime.datetime.now().strftime("%Y-%m-%d %H:%M")
+    current_time = datetime.datetime.now().strftime("%d-%m-%Y %H:%M")
     embed.set_footer(text=f"Stats as of {current_time}")
     
     await ctx.send(embed=embed)
@@ -2420,8 +2867,6 @@ async def public_stats(ctx):
 #=================================================================
 @bot.event
 async def on_ready():
-
-
     # Do some commands stuff
     global spawned_messages
     load_player_cards()  # Load player cards when the bot starts

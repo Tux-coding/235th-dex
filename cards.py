@@ -244,12 +244,12 @@ cards = [
     {
         "name": "Micro",
         "aliases": ["Macro"],
-        "spawn_image_url": "https://media.discordapp.net/attachments/1322205679028670495/1328436322905620510/RobloxScreenShot20250113_195110065.png?ex=678803bc&is=6786b23c&hm=893e4062e2ff369eea65b1db416f3adeadf14894776774b44b3ee3e41e0a4a8a&=&format=webp&quality=lossless&width=525&height=350",
-        "card_image_url": "https://media.discordapp.net/attachments/1322202570529177642/1328446048921976922/CC-.png?ex=6787640b&is=6786128b&hm=68d9429e31af06d9e8d0459864ca1aed71174aa23391c565d1859aa9368500b6&=&format=webp&quality=lossless&width=479&height=671",
+        "spawn_image_url": "https://i.imgur.com/ErL8Kjh.png",
+        "card_image_url": "https://i.imgur.com/DJSQrkn.png",
         "rarity": 30,
         "health": 6100,
         "attack": 3500,
-        "description": "\"Micro\" is an expert on stealth and specialised in missions. He can aim very well and hits almost every droid. He also is a S!gM@."
+        "description": "Current squad lead of Deimos squad. Micro is a pretty nice guy. His skills in mechatronics and strategy, aswell as his RC status, make him an useful asset on the battlefield. If you see him, say hi!",
     },
     {
         "name": "Zak",
@@ -314,12 +314,12 @@ cards = [
     {
         "name": "Worst",
         "aliases": ["rookworst", ],
-        "spawn_image_url": "https://i.imgur.com/hGmZJFv.png",
-        "card_image_url": "https://i.imgur.com/5uvUBdW.png",
+        "spawn_image_url": "https://i.imgur.com/FlAdao6.png",
+        "card_image_url": "https://i.imgur.com/dKHEbxI.png",
         "rarity": 86,
         "health": 1500,
         "attack": 750,
-        "description": "After a training disaster, his sergeant called him 'Worst' a failing marksman."
+        "description": "Rossonero"
     },
     {
         "name": "Sigma-squad",
@@ -362,7 +362,7 @@ cards = [
         "description": "ARC-1717, Better known as Eagles, is a persistent and experienced clone trooper. He fought many battles, and he cares about his brothers.",
     },
     {
-        "name":"Sanghelios",
+        "name": "Sanghelios",
         "aliases": ["Sangheli"],
         "spawn_image_url": "https://i.imgur.com/JwKNNKh.png",
         "card_image_url": "https://i.imgur.com/7Yr4VUU.png",
@@ -370,5 +370,15 @@ cards = [
         "health": 6100,
         "attack": 2000,
         "description": "Current Director of RI Clone Sergeant Sanghelios of the Republic Intelligence 235th attachement, highly skilled in stealth and disguise along with the essentials for a trooper."
+    },
+    {
+        "name": "Max",
+        "aliases": ["Min"],
+        "spawn_image_url": "https://i.imgur.com/rCvUPw8.png",
+        "card_image_url": "https://i.imgur.com/0pSkUcd.png",
+        "rarity": 71,
+        "health": 2800,
+        "attack": 1650,
+        "description": "A corporal of the 235th Elite Corps with two skull logos on his helmet."
     },
 ]
