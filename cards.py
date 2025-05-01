@@ -244,8 +244,8 @@ cards = [
     {
         "name": "Micro",
         "aliases": ["Macro"],
-        "spawn_image_url": "https://i.imgur.com/ErL8Kjh.png",
-        "card_image_url": "https://i.imgur.com/DJSQrkn.png",
+        "spawn_image_url": "https://i.imgur.com/1O0IBg2.png",
+        "card_image_url": "https://i.imgur.com/8cCw0JD.png",
         "rarity": 30,
         "health": 6100,
         "attack": 3500,
@@ -314,8 +314,8 @@ cards = [
     {
         "name": "Worst",
         "aliases": ["rookworst", ],
-        "spawn_image_url": "https://i.imgur.com/FlAdao6.png",
-        "card_image_url": "https://i.imgur.com/dKHEbxI.png",
+        "spawn_image_url": "https://i.imgur.com/VwPnCxu.png",
+        "card_image_url": "https://i.imgur.com/7UkRnRo.png",
         "rarity": 86,
         "health": 1500,
         "attack": 750,
@@ -374,8 +374,8 @@ cards = [
     {
         "name": "Max",
         "aliases": ["Min"],
-        "spawn_image_url": "https://i.imgur.com/rCvUPw8.png",
-        "card_image_url": "https://i.imgur.com/0pSkUcd.png",
+        "spawn_image_url": "https://i.imgur.com/6QP8Mg8.png",
+        "card_image_url": "https://i.imgur.com/lnUTCRo.png",
         "rarity": 71,
         "health": 2800,
         "attack": 1650,

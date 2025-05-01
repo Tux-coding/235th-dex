@@ -3076,8 +3076,7 @@ async def shutdown_bot():
             try:
                 if channel.id == int(test_channel_id):
                     if spawn_mode == 'both':
-                        developer_mentions = " ".join([f"<@{user_id}>" for user_id in authorized_user_ids])
-                        await channel.send(f"{developer_mentions} Main bot going offline, please renew server if needed.")
+                        await channel.send(" @573878397952851988, Main bot going offline, please renew server if needed.")
                     else:
                         await channel.send("235th dex going offline")
                 else:
