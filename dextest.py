@@ -35,15 +35,16 @@ logging.basicConfig(level=logging.INFO, format='%(asctime)s:%(levelname)s:%(name
 # Loading environment variables
 load_dotenv()
 token = os.getenv('DISCORD_TOKEN')
-channel_id = os.getenv('CHANNEL_ID')
+channel_ids_str = os.getenv('CHANNEL_IDS', '')
+channel_ids = [id.strip() for id in channel_ids_str.split(',') if id.strip()]
 test_channel_id = os.getenv('TEST_CHANNEL_ID')
 spawn_mode = os.getenv('SPAWN_MODE', 'both').lower()
 
 missing_vars = []
 if not token:
     missing_vars.append('DISCORD_TOKEN')
-if not channel_id:
-    missing_vars.append("CHANNEL_ID")
+if not channel_ids:
+    missing_vars.append("CHANNEL_IDS")
 if not test_channel_id:
     missing_vars.append("TEST_CHANNEL_ID")
 
@@ -52,7 +53,7 @@ if missing_vars:
     exit(1)
 
 try:
-    int(channel_id)
+    [int(channel_id) for channel_id in channel_ids]
     int(test_channel_id)
 except ValueError:
     logging.error("Channel IDs must be valid integers")
@@ -67,7 +68,7 @@ bot = commands.Bot(command_prefix='!', intents=intents)
 player_cards = {}
 last_spawned_card = None
 spawned_messages = []
-allowed_guilds = [int(channel_id), int(test_channel_id)]
+allowed_guilds = [int(test_channel_id)] + [int(channel_id) for channel_id in channel_ids]
 battle_lock = asyncio.Lock()
 trade_lock = asyncio.Lock()
 submit_lock = asyncio.Lock()
@@ -162,11 +163,12 @@ def get_spawn_channels():
             logging.error(f"Test channel {test_channel_id} not found.")
     
     if spawn_mode == 'both':
-        main_channel = bot.get_channel(int(channel_id))
-        if main_channel:
-            channels.append(main_channel)
-        else:
-            logging.error(f"Main channel {channel_id} not found.")
+        for channel_id in channel_ids:
+            channel = bot.get_channel(int(channel_id))
+            if channel:
+                channels.append(channel)
+            else:
+                logging.error(f"Channel {channel_id} not found.")
     
     return channels
 
@@ -381,6 +383,10 @@ def recover_from_backup():
 
 def create_backup():
     try:
+        if not os.path.exists(backup_folder):
+            os.makedirs(backup_folder)
+            logging.info(f"Created backup folder: {backup_folder}")
+
         timestamp = datetime.datetime.now().strftime("%H%M%S_%d%m%y")
         backup_filename = f"player_cards_backup_{timestamp}.json"
         backup_filepath = os.path.join(backup_folder, backup_filename)
@@ -401,7 +407,11 @@ def create_backup():
 @tasks.loop(hours=8)
 async def backup_player_data():
     logging.info("Running scheduled backup of player data")
-    create_backup()
+    try:
+        create_backup()
+        logging.info("Backup completed successfully")
+    except Exception as e:
+        logging.error(f"Backup failed: {e}", exc_info=True)
 
 #=================================================================
 # UI COMPONENTS
@@ -1405,6 +1415,16 @@ async def show_blacklist(ctx):
     else:
         await ctx.send("No users are currently blacklisted.")
 
+@bot.command(name='force_backup')
+@commands.check(is_authorized)
+async def force_backup(ctx):
+    try:
+        create_backup()
+        await ctx.send("Backup created successfully.")
+    except Exception as e:
+        await ctx.send(f"Backup failed: {str(e)}")
+        logging.error(f"Manual backup failed: {e}", exc_info=True)
+
 @bot.command(name='set_spawn_mode', help="Set the spawn mode to 'both', 'test', or 'none'.")
 @commands.check(is_authorized)
 async def set_spawn_mode(ctx, mode: str):
@@ -1425,9 +1445,23 @@ async def spawn_card_command(ctx, *, args: str):
     
     # Check if 'test' is in the arguments
     use_test_channel = False
+    channel_index = None
+    
+    # Parse arguments to check for test flag or channel index
     if args.endswith(' test'):
         use_test_channel = True
         card_name = args[:-5].strip()  # Remove ' test' from the end
+    elif ' in ' in args and args.split(' in ')[1].isdigit():
+        parts = args.split(' in ')
+        card_name = parts[0].strip()
+        try:
+            channel_index = int(parts[1].strip())
+            if channel_index < 0 or channel_index >= len(channel_ids):
+                await ctx.send(f"Invalid channel index. Please use a number between 0 and {len(channel_ids)-1}.")
+                return
+        except ValueError:
+            await ctx.send("Invalid channel index format. Use 'spawn_card [card_name] in [channel_index]'")
+            return
     else:
         card_name = args
     
@@ -1438,12 +1472,16 @@ async def spawn_card_command(ctx, *, args: str):
 
     card = next((card for card in cards if card_name == card["name"].lower() or card_name in [alias.lower() for alias in card.get("aliases", [])]), None)
     if card:
-        # Choose the channel based on the 'test' parameter
+        # Choose the channel based on the parameters
         if use_test_channel:
             channel = bot.get_channel(int(test_channel_id))
             channel_name = "test channel"
+        elif channel_index is not None:
+            channel = bot.get_channel(int(channel_ids[channel_index]))
+            channel_name = f"channel #{channel_index}"
         else:
-            channel = bot.get_channel(int(channel_id))
+            # Default to the first main channel if not specified
+            channel = bot.get_channel(int(channel_ids[0]))
             channel_name = "main channel"
 
         if channel:
@@ -2874,10 +2912,11 @@ async def on_ready():
     print(f'We have logged in as {bot.user}')
     logging.info("Logging is configured correctly.")
     
-    # Send online message to both channels
-    channels = [bot.get_channel(int(channel_id)), bot.get_channel(int(test_channel_id))]
-    logging.info(f"Attempting to send online message to channels: {channel_id}, {test_channel_id}")
-    for channel in channels:
+    # Send online message to all channels
+    all_channels = [bot.get_channel(int(test_channel_id))] + [bot.get_channel(int(id)) for id in channel_ids]
+    logging.info(f"Attempting to send online message to {len(all_channels)} channels")
+    
+    for channel in all_channels:
         if channel:
             try:
                 await channel.send("235th dex is online! Type !commands_dex to see the available commands.")
@@ -3018,24 +3057,58 @@ async def spawn_card():
             return
 
         # Select a card that's different from the last one
-        card = select_random_card()
-        
+        card1 = select_random_card()
+        card2 = None
 
-        spawn_titles = ["A wild card has appeared!", "Think fast, chucklenuts!", "Look at this beauty, what might it be?", "Houston, we have a card!", "Card alert!", "Card incoming!", "Be fast!","Catch it if you can!", "Card on the loose!", "Card on 12'oclock!"]
-        spawn_title = random.choice(spawn_titles)
-        logging.info(f"Selected card: {card['name']}")
-        embed = discord.Embed(title= spawn_title, description="Click the button below to catch it!")
-        embed.set_image(url=card['spawn_image_url'])
+        retry_count = 0
+        max_retries = 10
+
+        while retry_count < max_retries:
+            card2 = weighted_random_choice(cards)
+            if card2['name'] != card1['name']:
+                break
+            retry_count += 1
+
+        # Log the selected cards for verification
+        logging.info(f"Selected cards: {card1['name']} and {card2['name']}")
         
-        # Send to all valid channels
-        for channel in channels:
+        # Different titles for each card
+        spawn_titles = ["A wild card has appeared!", "Think fast, chucklenuts!", 
+                       "Look at this beauty, what might it be?", "Houston, we have a card!", 
+                       "Card alert!", "Card incoming!", "Be fast!", "Catch it if you can!", 
+                       "Card on the loose!", "Card on 12'oclock!"]
+
+        # For each channel, select a unique card
+        used_cards = set()  # Track cards we've already used
+        
+        for channel_index, channel in enumerate(channels):
             try:
-                msg = await channel.send(embed=embed, view=CatchView(card['name']), allowed_mentions=discord.AllowedMentions.none())
+                # Select a card that hasn't been used yet in this spawn cycle
+                retry_count = 0
+                max_retries = 10
+                
+                card = weighted_random_choice(cards)
+                while card['name'] in used_cards and retry_count < max_retries:
+                    card = weighted_random_choice(cards)
+                    retry_count += 1
+                
+                used_cards.add(card['name'])
+                spawn_title = random.choice(spawn_titles)
+                
+                # Create the embed for this card
+                embed = discord.Embed(title=spawn_title, description="Click the button below to catch it!")
+                embed.set_image(url=card['spawn_image_url'])
+                
+                # Send the card to this specific channel
+                msg = await channel.send(embed=embed, view=CatchView(card['name']), 
+                                        allowed_mentions=discord.AllowedMentions.none())
                 spawned_messages.append(msg)
-                logging.info(f"Card spawned in channel {channel.id}")
+                
+                logging.info(f"Card spawned in channel {channel.id}: {card['name']}")
+                
             except discord.Forbidden:
                 logging.error(f"Missing permissions to send messages in channel {channel.id}")
-            except discord.HTTPException as e:
+            except discord.HTTPException as e:  
                 logging.error(f"Failed to send card to channel {channel.id}: {e}")
             except Exception as e:
                 logging.error(f"Unexpected error sending card to channel {channel.id}: {e}")
@@ -3044,7 +3117,7 @@ async def spawn_card():
         logging.error(f"An error occurred during card spawn: {e}", exc_info=True)
         for channel in channels:
             try:
-                await channel.send("An error occurred while spawning a card. The game will continue shortly.")
+                await channel.send("An error occurred while spawning cards.")
             except:
                 pass
 #=================================================================
@@ -3054,7 +3127,7 @@ if not token: # If it can't find the token, error message and exit will occur
     logging.error("DISCORD_TOKEN missing!") 
     exit(1)
 
-if not channel_id: # If it can't find the ID, error message and exit will occur
+if not channel_ids: # If it can't find the ID, error message and exit will occur
     logging.error("CHANNEL_ID missing!") 
     exit(1)
 
@@ -3069,14 +3142,15 @@ signal.signal(signal.SIGTERM, handle_shutdown_signal)
 
 # Custom shutdown function
 async def shutdown_bot():
-    channels = [bot.get_channel(int(channel_id)), bot.get_channel(int(test_channel_id))]
-    logging.info(f"Attempting to send disconnect message to channels: {channel_id}, {test_channel_id}")
-    for channel in channels:
+    all_channels = [bot.get_channel(int(test_channel_id))] + [bot.get_channel(int(id)) for id in channel_ids]
+    logging.info(f"Attempting to send disconnect message to {len(all_channels)} channels")
+    
+    for channel in all_channels:
         if channel:
             try:
                 if channel.id == int(test_channel_id):
                     if spawn_mode == 'both':
-                        await channel.send(" @573878397952851988, Main bot going offline, please renew server if needed.")
+                        await channel.send(f"<@573878397952851988>, Main bot going offline, please renew server if needed.")
                     else:
                         await channel.send("235th dex going offline")
                 else:
@@ -3086,6 +3160,7 @@ async def shutdown_bot():
                 logging.error(f"Failed to send message to channel {channel.id}: {e}")
         else:
             logging.error(f"Channel not found.")
+    
     logging.info("235th dex going offline")
     create_backup()
     await bot.close()
