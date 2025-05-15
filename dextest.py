@@ -494,7 +494,7 @@ class ProgressView(View):
     def __init__(self, user_cards, missing_cards, user):
         super().__init__(timeout=None)
         self.user_cards = user_cards  
-        self.unique_user_cards = list(set(user_cards)) #remove duplicates
+        self.unique_user_cards = list(set(user_cards)) # Remove duplicates
         self.missing_cards = missing_cards
         self.user = user
         self.current_page = 0
@@ -520,7 +520,13 @@ class ProgressView(View):
     def update_buttons(self):
         self.clear_items()
         
-        # Previous page button
+        # First page button (only show if not on first page)
+        if self.current_page > 0:
+            first_button = Button(label="First Page", style=discord.ButtonStyle.secondary, emoji="⏮️")
+            first_button.callback = self.first_page
+            self.add_item(first_button)
+        
+        # Previous page button (only show if not on first page)
         if self.current_page > 0:
             prev_button = Button(label="Previous", style=discord.ButtonStyle.primary, emoji="⬅️")
             prev_button.callback = self.previous_page
@@ -532,12 +538,19 @@ class ProgressView(View):
         toggle_button.callback = self.toggle_view
         self.add_item(toggle_button)
         
-        # Next page button
+        # Next page button (only show if not on last page)
         if (self.viewing_owned and self.current_page < self.owned_pages - 1) or \
            (not self.viewing_owned and self.current_page < self.missing_pages - 1):
             next_button = Button(label="Next", style=discord.ButtonStyle.primary, emoji="➡️")
             next_button.callback = self.next_page
             self.add_item(next_button)
+        
+        # Last page button (only show if not on last page)
+        current_max_pages = self.owned_pages if self.viewing_owned else self.missing_pages
+        if self.current_page < current_max_pages - 1:
+            last_button = Button(label="Last Page", style=discord.ButtonStyle.secondary, emoji="⏭️")
+            last_button.callback = self.last_page
+            self.add_item(last_button)
 
     async def toggle_view(self, interaction: discord.Interaction):
         if interaction.user != self.user:
@@ -546,6 +559,15 @@ class ProgressView(View):
             
         self.viewing_owned = not self.viewing_owned
         self.current_page = 0  # Reset to first page when toggling view
+        self.update_buttons()
+        await interaction.response.edit_message(embed=self.create_embed(), view=self)
+
+    async def first_page(self, interaction: discord.Interaction):
+        if interaction.user != self.user:
+            await interaction.response.send_message("You can't control this menu, sorry!", ephemeral=True)
+            return
+            
+        self.current_page = 0
         self.update_buttons()
         await interaction.response.edit_message(embed=self.create_embed(), view=self)
 
@@ -564,6 +586,20 @@ class ProgressView(View):
             return
             
         self.current_page += 1
+        self.update_buttons()
+        await interaction.response.edit_message(embed=self.create_embed(), view=self)
+        
+    async def last_page(self, interaction: discord.Interaction):
+        if interaction.user != self.user:
+            await interaction.response.send_message("You can't control this menu, sorry!", ephemeral=True)
+            return
+        
+        # Set to last page based on current view
+        if self.viewing_owned:
+            self.current_page = self.owned_pages - 1
+        else:
+            self.current_page = self.missing_pages - 1
+            
         self.update_buttons()
         await interaction.response.edit_message(embed=self.create_embed(), view=self)
             
@@ -2459,7 +2495,7 @@ async def info(ctx):
 
     embed.add_field(
         name="🏷️ Version",
-        value="1.5.5 - \"The Random Stuff Update\"", 
+        value="1.5.6 - \"The Random Stuff Update\"", 
         inline=False
     )
 
