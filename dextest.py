@@ -387,17 +387,17 @@ def create_backup():
             os.makedirs(backup_folder)
             logging.info(f"Created backup folder: {backup_folder}")
 
-        timestamp = datetime.datetime.now().strftime("%H%M%S_%d%m%y")
+        timestamp = datetime.datetime.now().strftime("%Y%m%d_%H%M%S")
         backup_filename = f"player_cards_backup_{timestamp}.json"
         backup_filepath = os.path.join(backup_folder, backup_filename)
         shutil.copy('player_cards.json', backup_filepath)
         logging.info(f"Created backup: {backup_filename} in {backup_filepath}")
 
         backup_files = [f for f in os.listdir(backup_folder) if f.startswith("player_cards_backup_")]
-        backup_files.sort(reverse=True)
+        backup_files.sort(key=lambda f: os.path.getmtime(os.path.join(backup_folder, f)))
 
         if len(backup_files) > MAX_BACKUPS:
-            for old_file in backup_files[MAX_BACKUPS:]:
+            for old_file in backup_files[:-MAX_BACKUPS]:
                 old_filepath = os.path.join(backup_folder, old_file)
                 os.remove(old_filepath)
                 logging.info(f"Removed old backup: {old_file}")
