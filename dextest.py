@@ -62,6 +62,7 @@ except ValueError:
 # Bot setup
 intents = discord.Intents.default()
 intents.message_content = True
+intents.members = True
 bot = commands.Bot(command_prefix='!', intents=intents)
 
 # Global state variables
@@ -1708,6 +1709,27 @@ async def progress(ctx):
     view = ProgressView(user_cards, missing_cards, ctx.author)
     view.message = await ctx.send(embed=view.create_embed(), view=view)
 
+@bot.command(name='show_random_card', help="Show a random card you own")
+async def show_random_card(ctx):
+    user_id = str(ctx.author.id)
+    user_cards = player_cards.get(user_id, [])
+    if not user_cards:
+        await ctx.send("You don't have any cards yet!")
+        return
+    card_name = random.choice(user_cards)
+    card = next((c for c in cards if c['name'] == card_name), None)
+    if not card:
+        await ctx.send(f"Card data for `{card_name}` not found.")
+        return
+    embed = discord.Embed(title=f"Random Card: {card['name']}")
+    embed.set_image(url=card['card_image_url'])
+    embed.add_field(name="Health", value=card["health"])
+    embed.add_field(name="Attack", value=card["attack"])
+    embed.add_field(name="Rarity", value=f"{card['rarity']}%")
+    if "description" in card:
+        embed.add_field(name="Description", value=card["description"], inline=False)
+    await ctx.send(embed=embed)
+
 @bot.command(name='see_card')
 async def see_card(ctx, *, card_name: str):
     user_id = str(ctx.author.id)  # Ensure user ID is a string
@@ -2495,7 +2517,7 @@ async def info(ctx):
 
     embed.add_field(
         name="🏷️ Version",
-        value="1.5.6 - \"The Random Stuff Update\"", 
+        value="1.5.7 - \"The Random Stuff Update\"", 
         inline=False
     )
 
@@ -2519,7 +2541,7 @@ async def info(ctx):
     
     embed.add_field(
         name="📜 Latest Changes",
-        value="• Bugfixes\n• Added card trading system\n• Enhanced battle system",
+        value="• Command to show a random card\n• Bugfixes\n• Added card trading system",
         inline=False
     )
 
@@ -3178,6 +3200,17 @@ signal.signal(signal.SIGTERM, handle_shutdown_signal)
 
 # Custom shutdown function
 async def shutdown_bot():
+    global spawned_messages
+    for message in spawned_messages:
+        try:
+            view = View.from_message(message)
+            for item in view.children:
+                if isinstance(item, Button):
+                    item.disabled = True
+            await message.edit(view=view)
+        except Exception as e:
+            logging.error(f"Failed to disable button on shutdown for message {getattr(message, 'id', '?')}: {e}")
+
     all_channels = [bot.get_channel(int(test_channel_id))] + [bot.get_channel(int(id)) for id in channel_ids]
     logging.info(f"Attempting to send disconnect message to {len(all_channels)} channels")
     
