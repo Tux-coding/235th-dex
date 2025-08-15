@@ -2442,6 +2442,7 @@ async def list_commands(ctx):
         name="🃏 Card Collection",
         value=(
             "`!see_card [card name]` - View a card you've caught\n"
+            "`!show_random_card` - View a random card you've caught\n"
             "`!progress` - Show your card collection progress\n"
             "`!stats [card name]` - Show stats for a specific card\n"
             "`!give @user [card name]` - Give a card to another user"
@@ -2486,7 +2487,7 @@ async def list_commands(ctx):
     
     embed.set_thumbnail(url="https://cdn.discordapp.com/app-icons/1321813254128930867/450fa2947cf99f3182797b7b503c5c63.png")
 
-    embed.set_footer(text="Need help? Join our support server: discord.gg/yRNxTXtm")
+    embed.set_footer(text="Need help? Join our support server: discord.gg/VMhy3VSXYx")
     
     await ctx.send(embed=embed)
 
@@ -2517,13 +2518,19 @@ async def info(ctx):
 
     embed.add_field(
         name="🏷️ Version",
-        value="1.5.7 - \"The Random Stuff Update\"", 
+        value="1.5.7.1 - \"The Random Stuff Update\"", 
         inline=False
     )
 
     embed.add_field(
         name="👨‍💻 Developers",
-        value="<@1035607651985403965>\n<@573878397952851988>\n<@845973389415284746>",
+        value=(
+            "**Current:**\n"
+            "<@573878397952851988>\n"
+            "**Retired:**\n"
+            "<@1035607651985403965>\n"
+            "<@845973389415284746>"
+        ),
         inline=True
     )
 
@@ -2541,7 +2548,7 @@ async def info(ctx):
     
     embed.add_field(
         name="📜 Latest Changes",
-        value="• Command to show a random card\n• Bugfixes\n• Added card trading system",
+        value="• Hotfix to update '!commands_dex' command and update some stuff\n• Command to show a random card\n• Bugfixes",
         inline=False
     )
 
