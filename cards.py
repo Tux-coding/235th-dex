@@ -96,7 +96,7 @@ cards = [
         "aliases": ["Rancour"],
         "spawn_image_url": "https://i.imgur.com/7zxapp6.png",
         "card_image_url": "https://i.imgur.com/CjvRccv.png",
-        "rarity": 12.5,
+        "rarity": 0,
         "health": 6950,
         "attack": 3050,
         "description": "Rancor is an adaptable, honest, persistent, understanding, rational, Norwegian and easy-going clone. Missions he takes are mostly all around, as he's well rounded in (almost) everything, and is a good tactician... sort of."
@@ -126,7 +126,7 @@ cards = [
         "aliases": ["Merthod"],
         "spawn_image_url": "https://media.discordapp.net/attachments/1322205679028670495/1323578208863649863/RobloxScreenShot20241231_100652348.png?ex=677505c3&is=6773b443&hm=e8aad1e00d28942444ea357afa5b4ce2d0d4cd1949ad84e29fb99aae522be1f8&=&format=webp&quality=lossless&width=384&height=350",
         "card_image_url": "https://media.discordapp.net/attachments/1322202570529177642/1323672693647609937/Just_another_trooper_trying_to_stay_alive._He_doesnt_like_insurgents._His_left_arm_and_left_eye_are_gone_due_to_the_Gulag_21.png?ex=67755dc2&is=67740c42&hm=ddb0d3ac0879577f7497b50ccf367d6fe0afe12850451350bf7b79528dd56b49&=&format=webp&quality=lossless&width=479&height=671",
-        "rarity": 70,
+        "rarity": 0,
         "health": 1700,
         "attack": 500,
         "description": "CT-3838, otherwiese known as \"Mertho\" is an irritating jerk, that often ruins missions just because he finds it amusing."
@@ -156,7 +156,7 @@ cards = [
         "aliases": ["Vocabulary"],
         "spawn_image_url": "https://media.discordapp.net/attachments/1322205679028670495/1323987029956235304/RobloxScreenShot20250101_131047926.png?ex=67768282&is=67753102&hm=ec5f28ea32edcadee43190286cc5cdbe0d9197d69142a99813f2bc1e9c8d336f&=&format=webp&quality=lossless",
         "card_image_url": "https://media.discordapp.net/attachments/1322202570529177642/1323988014418104330/Just_another_trooper_trying_to_stay_alive._He_doesnt_like_insurgents._His_left_arm_and_left_eye_are_gone_due_to_the_Gulag_24.png?ex=6776836d&is=677531ed&hm=f57ab17956ed12fe5e9a1d4a326a09c83794975d06a5e305d386536a988b3c89&=&format=webp&quality=lossless&width=479&height=671",
-        "rarity": 45,
+        "rarity": 0,
         "health": 3750,
         "attack": 2050,
         "description": "A veteran of the 31st Shepherd Battalion, skilled marksman, and kind hearted brother of the 235th Elite Corps."
@@ -166,10 +166,10 @@ cards = [
         "aliases": ["Rendar", "Auron", "GONK"],
         "spawn_image_url": "https://i.imgur.com/oxlSqLr.png",
         "card_image_url": "https://i.imgur.com/iLKJPTT.png",
-        "rarity": 25,
+        "rarity": 1,
         "health": 6500,
         "attack": 2850,
-        "description": "A Jedi knight, commanding the 93rd Helios legion alongside Hounder, with the left part of the body completely scarred by an explosion. He had to use cybernetic implants in order to stay alive."
+        "description": "The Jedi General, commanding the 93rd Helios legion alongside Hounder, with the left part of the body completely scarred by an explosion. He had to use cybernetic implants in order to stay alive."
     },
     {
         "name": "Skye",
@@ -186,7 +186,7 @@ cards = [
         "aliases": ["Jekeshi", "Vale", "Smurf"],
         "spawn_image_url": "https://cdn.discordapp.com/attachments/1322205679028670495/1327722115100835933/RobloxScreenShot20250111_202353810.png?ex=67841914&is=6782c794&hm=7bf5d91914998c58b51b630f24bc248cff0a42389bad4bf3b9d71a4aaf9498a1&",
         "card_image_url": "https://cdn.discordapp.com/attachments/1322202570529177642/1327730759452201031/CC-_12.png?ex=67842121&is=6782cfa1&hm=052958065501727e5bc27b03ad171c8617ca998d70a7baecdfa91cebc1562042&",
-        "rarity": 7.5,
+        "rarity": 0,
         "health": 9250,
         "attack": 5500,
         "description": "Femboy jedi general <3",
@@ -236,7 +236,7 @@ cards = [
         "aliases": ["Hawk"],
         "spawn_image_url": "https://media.discordapp.net/attachments/1322205679028670495/1328445706154803231/RobloxScreenShot20250113_202833195.png?ex=678763b9&is=67861239&hm=665929510234995d9d4de2c0ec421619b207d7dcc560376cf34e36caa268c835&=&format=webp&quality=lossless&width=448&height=350",
         "card_image_url": "https://media.discordapp.net/attachments/1322202570529177642/1328445432933781525/Kopie_van_Just_another_trooper_trying_to_stay_alive._He_doesnt_like_insurgents._His_left_arm_and_left_eye_are_gone_due_to_the_Gulag_1.png?ex=67876378&is=678611f8&hm=48b5fd84fcbbda4ea8caec9be1c1840bdda674a8acace2a0e4f869f549b2321f&=&format=webp&quality=lossless&width=479&height=671",
-        "rarity": 40,
+        "rarity": 0,
         "health": 6000,
         "attack": 3000,
         "description": "\"Breaker\" is an ex Ri and now a hawk squad member, he has a bunch of skills and tactics to be used.",
@@ -316,7 +316,7 @@ cards = [
         "aliases": ["rookworst", ],
         "spawn_image_url": "https://i.imgur.com/VwPnCxu.png",
         "card_image_url": "https://i.imgur.com/7UkRnRo.png",
-        "rarity": 86,
+        "rarity": 0,
         "health": 1500,
         "attack": 750,
         "description": "Rossonero"

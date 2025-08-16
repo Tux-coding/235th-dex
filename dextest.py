@@ -495,21 +495,22 @@ class ProgressView(View):
     def __init__(self, user_cards, missing_cards, user):
         super().__init__(timeout=None)
         self.user_cards = user_cards  
-        self.unique_user_cards = list(set(user_cards)) # Remove duplicates
+        self.unique_user_cards = list(set(user_cards))
         self.missing_cards = missing_cards
         self.user = user
         self.current_page = 0
-        self.viewing_owned = True  # Start by viewing owned cards
-        
-        # Calculate pages needed for owned cards
-        self.owned_pages = max(1, (len(self.unique_user_cards) + 9) // 10)  # At least 1 page
-        
-        # Calculate pages needed for missing cards
-        self.missing_pages = max(1, (len(self.missing_cards) + 9) // 10)  # At least 1 page
-        
-        # Total pages across both sections
+        self.viewing_owned = True
+
+        card_counts = Counter(self.user_cards)
+        self.rarity_zero_cards = [card for card in card_counts if next((c for c in cards if c['name'] == card), {}).get('rarity', 100) == 0]
+        self.other_cards = [card for card in card_counts if card not in self.rarity_zero_cards]
+
+        self.owned_pages = max(1, (len(self.other_cards) + 9) // 10)
+
+        self.missing_pages = max(1, (len(self.missing_cards) + 9) // 10)
+
         self.total_pages = self.owned_pages + self.missing_pages
-        
+
         self.update_buttons()
 
     def create_embed(self):
@@ -610,18 +611,25 @@ class ProgressView(View):
             description=f"Showing your owned unique cards ({len(set(self.unique_user_cards))}/{len(set(self.unique_user_cards)) + len(self.missing_cards)} unique cards collected)",
             color=discord.Color.green()
         )
+        card_counts = Counter(self.user_cards)
         start = self.current_page * 10
-        end = min(start + 10, len(self.user_cards))
-        
-        if self.user_cards:
-            # Count occurrences of each card
-            card_counts = Counter(self.user_cards)
-            owned_cards = "\n".join([f"\u2022 {card} x{count}" if count > 1 else f"\u2022 {card}" 
-                                     for card, count in card_counts.items()][start:end])
+        end = min(start + 10, len(self.other_cards))
+
+        if self.current_page == 0 and self.rarity_zero_cards:
+            rarity_zero_section = "**OG Cards (Rarity 0%)**\n" + "\n".join(
+                [f"\u2022 {card} x{card_counts[card]}" if card_counts[card] > 1 else f"\u2022 {card}" for card in self.rarity_zero_cards]
+            )
+            embed.add_field(name="🌟 OG Cards", value=rarity_zero_section, inline=False)
+
+        if self.other_cards:
+            owned_cards = "\n".join(
+                [f"\u2022 {card} x{card_counts[card]}" if card_counts[card] > 1 else f"\u2022 {card}" for card in self.other_cards][start:end]
+            )
             embed.add_field(name="📋 Your Cards", value=owned_cards, inline=False)
         else:
-            embed.add_field(name="📋 Your Cards", value="You don't have any cards yet.", inline=False)
-        
+            if not (self.current_page == 0 and self.rarity_zero_cards):
+                embed.add_field(name="📋 Your Cards", value="You don't have any cards yet.", inline=False)
+
         embed.set_footer(text=f"Page {self.current_page + 1}/{self.owned_pages} (Owned Cards) • Use buttons to navigate")
         return embed
             
@@ -702,12 +710,12 @@ class TradeSession:
             card_data = next((c for c in cards if c['name'] == card_name), None)
             if not card_data:
                 return card_name
-            
-            # Lower rarity % means rarer card
             rarity = card_data.get('rarity', 100)
-            if rarity < 5:  # Very rare cards
+            if rarity == 0:
+                return f"**{card_name}** 🌟"
+            elif rarity < 5:
                 return f"{card_name} 🌟"
-            elif rarity < 10:  # Rare cards
+            elif rarity < 10:
                 return f"{card_name} ⭐"
             else:
                 return card_name
@@ -859,6 +867,10 @@ class TradeSession:
         except Exception as e:
             logging.error(f"Error disabling trade buttons: {e}")
 
+        if hasattr(bot, 'active_trades'):
+            bot.active_trades.pop(self.initiator_id, None)
+            bot.active_trades.pop(self.recipient_id, None)
+
 class TradeInviteView(View):
     def __init__(self, trade_session):
         super().__init__(timeout=None)
@@ -886,12 +898,42 @@ class TradeInviteView(View):
 
     @discord.ui.button(label="Decline Trade", style=discord.ButtonStyle.red)
     async def decline_trade(self, interaction: discord.Interaction, button: discord.ui.Button):
-        if interaction.user.id != self.trade_session.recipient.id:
+        # Allow both initiator and recipient to decline
+        user_id = interaction.user.id
+        if user_id == self.trade_session.recipient.id:
+            await interaction.response.send_message("You declined the trade.", ephemeral=True)
+            await self.trade_session.cancel_trade(f"{interaction.user.mention} declined the trade.")
+        elif user_id == self.trade_session.initiator.id:
+            # Show confirmation dialog for initiator
+            await interaction.response.send_message(
+                "Are you sure you want to cancel this trade?",
+                view=DeclineConfirmView(self.trade_session, interaction.user),
+                ephemeral=True
+            )
+        else:
             await interaction.response.send_message("This trade invitation isn't for you!", ephemeral=True)
+
+class DeclineConfirmView(View):
+    def __init__(self, trade_session, user):
+        super().__init__(timeout=30)
+        self.trade_session = trade_session
+        self.user = user
+
+    @discord.ui.button(label="Yes, cancel trade", style=discord.ButtonStyle.danger)
+    async def confirm(self, interaction: discord.Interaction, button: discord.ui.Button):
+        if interaction.user.id != self.user.id:
+            await interaction.response.send_message("This confirmation isn't for you!", ephemeral=True)
             return
-        
-        await interaction.response.send_message("You declined the trade.")
-        await self.trade_session.cancel_trade(f"{interaction.user.mention} declined the trade.")
+        await interaction.response.send_message("You cancelled the trade.", ephemeral=True)
+        await self.trade_session.cancel_trade(f"{self.user.mention} (initiator) cancelled the trade.")
+
+    @discord.ui.button(label="No, keep trade", style=discord.ButtonStyle.secondary)
+    async def cancel(self, interaction: discord.Interaction, button: discord.ui.Button):
+        if interaction.user.id != self.user.id:
+            await interaction.response.send_message("This confirmation isn't for you!", ephemeral=True)
+            return
+        await interaction.response.send_message("Trade not cancelled.", ephemeral=True)
+        self.stop()
 
 # Battle System UI
 class CardBattle:
@@ -2518,7 +2560,7 @@ async def info(ctx):
 
     embed.add_field(
         name="🏷️ Version",
-        value="1.5.7.1 - \"The Random Stuff Update\"", 
+        value="1.6.0 - \"The OG Update\"", 
         inline=False
     )
 
