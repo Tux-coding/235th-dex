@@ -17,7 +17,7 @@ from collections import Counter
 from aiohttp import client_exceptions
 
 import discord # type: ignore
-from discord import Interaction
+from discord import Interaction, app_commands
 from discord.ext import commands, tasks # type: ignore
 from discord.ui import Button, View, Modal, TextInput, Select #type:ignore 
 from dotenv import load_dotenv # type: ignore //please ensure that you have python-dotenv installed (command is "pip install python-dotenv")
@@ -28,7 +28,7 @@ from cards import cards
 #=================================================================
 # CONFIG & GLOBALS
 #=================================================================
-
+  
 # Configuring logging
 logging.basicConfig(level=logging.INFO, format='%(asctime)s:%(levelname)s:%(name)s: %(message)s')
 
@@ -67,7 +67,7 @@ bot = commands.Bot(command_prefix='!', intents=intents)
 
 # Global state variables
 player_cards = {}
-last_spawned_card = None
+last_spawned_card_per_channel = {}
 spawned_messages = []
 allowed_guilds = [int(test_channel_id)] + [int(channel_id) for channel_id in channel_ids]
 battle_lock = asyncio.Lock()
@@ -173,19 +173,12 @@ def get_spawn_channels():
     
     return channels
 
-def select_random_card():
-    """Select a random card different from the last one"""
-    global last_spawned_card
-    card = weighted_random_choice(cards)
-    retry_count = 0
-    max_retries = 5  # Prevent infinite loop
-    
-    while card == last_spawned_card and retry_count < max_retries:
-        card = weighted_random_choice(cards)
-        retry_count += 1
-    
-    last_spawned_card = card
-    return card
+def select_random_card(exclude_card_name=None):
+    """Select a random card, optionally excluding a specific card name."""
+    available_cards = [card for card in cards if card['name'] != exclude_card_name] if exclude_card_name else cards
+    if not available_cards:
+        return random.choice(cards)  # fallback, should not happen
+    return weighted_random_choice(available_cards)
 
 def count_lines_of_code() -> int:
     project_dir = os.path.dirname(os.path.abspath(__file__))
@@ -243,6 +236,9 @@ def update_trade_stats(card_name: str):
     if card_name not in trade_stats:
         trade_stats[card_name] = 0
     trade_stats[card_name] += 1
+
+def is_authorized_slash(interaction: discord.Interaction):
+    return str(interaction.user.id) in authorized_user_ids
 
 #=================================================================
 # DATA MANAGEMENT
@@ -1633,7 +1629,7 @@ async def view_user(ctx, user: discord.Member):
     joined_at = user.joined_at.strftime("%d-%m-%Y") if user.joined_at else "Unknown"
     
     embed.add_field(
-        name="📋 Account Details",
+        name="Account Details",
         value=f"• Discord Name: {user.name}\n"
               f"• Display Name: {user.display_name}\n"
               f"• Account Created: {created_at}\n"
@@ -1645,7 +1641,7 @@ async def view_user(ctx, user: discord.Member):
     # Add card collection stats
     if not user_cards:
         embed.add_field(
-            name="🃏 Card Collection",
+            name="Card Collection",
             value="This user hasn't collected any cards yet.",
             inline=False
         )
@@ -1683,7 +1679,7 @@ async def view_user(ctx, user: discord.Member):
             f"• Most Duplicated: {most_duplicated_value}"
         )
         
-        embed.add_field(name="🃏 Card Collection", value=collection_info, inline=False)
+        embed.add_field(name="Card Collection", value=collection_info, inline=False)
     
     # Add battle statistics if available
     if target_user_id in user_stats:
@@ -1700,22 +1696,9 @@ async def view_user(ctx, user: discord.Member):
             f"• Trades Completed: **{stats.get('trades_completed', 0)}**"
         )
         
-        embed.add_field(name="⚔️ Battle Statistics", value=battle_info, inline=False)
+        embed.add_field(name="Battle Statistics", value=battle_info, inline=False)
     else:
-        embed.add_field(name="⚔️ Battle Statistics", value="No battle data recorded for this user.", inline=False)
-    
-    # Admin actions section
-    admin_actions = (
-        f"• `!givecard [card] @{user.name}` - Give a card to user\n"
-        f"• `!removecard [card] @{user.name}` - Remove a card from user\n"
-    )
-    
-    if BlacklistManager.is_blacklisted(target_user_id):
-        admin_actions += f"• `!unblacklist {target_user_id}` - Remove user from blacklist"
-    else:
-        admin_actions += f"• `!blacklist {target_user_id}` - Add user to blacklist"
-    
-    embed.add_field(name="🔧 Admin Actions", value=admin_actions, inline=False)
+        embed.add_field(name="Battle Statistics", value="No battle data recorded for this user.", inline=False)
     
     # Send the main info embed
     await ctx.send(embed=embed)
@@ -1741,27 +1724,27 @@ async def shutdown(ctx):
     await shutdown_bot()
 
 # Card Collection Commands
-@bot.command(name='progress')
-async def progress(ctx):
-    user_id = str(ctx.author.id)
+@bot.tree.command(name="progress", description="Show your card collection progress")
+async def progress_slash(interaction: discord.Interaction):
+    user_id = str(interaction.user.id)
     total_cards = len(cards)
     user_cards = player_cards.get(user_id, [])
     missing_cards = [card['name'] for card in cards if card['name'] not in user_cards]
 
-    view = ProgressView(user_cards, missing_cards, ctx.author)
-    view.message = await ctx.send(embed=view.create_embed(), view=view)
+    view = ProgressView(user_cards, missing_cards, interaction.user)
+    view.message = await interaction.response.send_message(embed=view.create_embed(), view=view)
 
-@bot.command(name='show_random_card', help="Show a random card you own")
-async def show_random_card(ctx):
-    user_id = str(ctx.author.id)
+@bot.tree.command(name="show_random_card", description="Show a random card you own")
+async def show_random_card_slash(interaction: discord.Interaction):
+    user_id = str(interaction.user.id)
     user_cards = player_cards.get(user_id, [])
     if not user_cards:
-        await ctx.send("You don't have any cards yet!")
+        await interaction.response.send_message("You don't have any cards yet!")
         return
     card_name = random.choice(user_cards)
     card = next((c for c in cards if c['name'] == card_name), None)
     if not card:
-        await ctx.send(f"Card data for `{card_name}` not found.")
+        await interaction.response.send_message(f"Card data for `{card_name}` not found.")
         return
     embed = discord.Embed(title=f"Random Card: {card['name']}")
     embed.set_image(url=card['card_image_url'])
@@ -1770,7 +1753,7 @@ async def show_random_card(ctx):
     embed.add_field(name="Rarity", value=f"{card['rarity']}%")
     if "description" in card:
         embed.add_field(name="Description", value=card["description"], inline=False)
-    await ctx.send(embed=embed)
+    await interaction.response.send_message(embed=embed)
 
 @bot.command(name='see_card')
 async def see_card(ctx, *, card_name: str):
@@ -2449,17 +2432,17 @@ async def trade_help(ctx):
     await ctx.send(embed=embed)
 
 # Misc Commands
-@bot.command(name='hello')
-async def hello(ctx):
-    await ctx.send('Hello! I am the 235th dex! At your service!')
+@bot.tree.command(name="hello", description="Get a greeting from the bot")
+async def hello_slash(interaction: discord.Interaction):
+    await interaction.response.send_message('Hello! I am the 235th dex!')
 
-@bot.command(name='random_number',help="Gives a random number.")
-async def random_number(ctx):
+@bot.tree.command(name="random_number", description="Generate a random number")
+async def random_number_slash(interaction: discord.Interaction):
     random_number = random.randint(0, 10000000)
-    await ctx.send(f'Your random number is: {random_number}')
+    await interaction.response.send_message(f'Your random number is: {random_number}')
 
-@bot.command(name='commands_dex', help="Shows a list of all the commands you can use.")
-async def list_commands(ctx):
+@bot.tree.command(name="commands_dex", description="Show all available commands for the 235th Dex")
+async def commands_slash(interaction: discord.Interaction):
     embed = discord.Embed(
         title="🎮 235th Dex Command Center",
         description="Here are all the commands available to you:",
@@ -2470,11 +2453,11 @@ async def list_commands(ctx):
     embed.add_field(
         name="📝 General",
         value=(
-            "`!hello` - Get a greeting from the bot\n"
-            "`!random_number` - Generate a random number\n"
-            "`!info_dex` - View information about the bot\n"
-            "`!commands_dex` - Show this command list\n"
-            "`!gud_boy` - Shows a good boy GIF"
+            "`/hello` - Get a greeting from the bot\n"
+            "`/random_number` - Generate a random number\n"
+            "`/info_dex` - View information about the bot\n"
+            "`/commands_dex` - Show this command list\n"
+            "`/gud_boy` - Shows a good boy GIF"
         ),
         inline=False
     )
@@ -2483,11 +2466,11 @@ async def list_commands(ctx):
     embed.add_field(
         name="🃏 Card Collection",
         value=(
-            "`!see_card [card name]` - View a card you've caught\n"
-            "`!show_random_card` - View a random card you've caught\n"
-            "`!progress` - Show your card collection progress\n"
-            "`!stats [card name]` - Show stats for a specific card\n"
-            "`!give @user [card name]` - Give a card to another user"
+            "`/see_card [card name]` - View a card you've caught\n"
+            "`/show_random_card` - View a random card you've caught\n"
+            "`/progress` - Show your card collection progress\n"
+            "`/stats [card name]` - Show stats for a specific card\n"
+            "`/give @user [card name]` - Give a card to another user"
         ),
         inline=False
     )
@@ -2496,7 +2479,7 @@ async def list_commands(ctx):
     embed.add_field(
         name="⚔️ Battle System",
         value=(
-            "`!battle @user` - Challenge another user to a battle\n"
+            "`/battle @user` - Challenge another user to a battle\n"
             "`!battle add [card name]` - Add a card to your battle team\n"
             "`!battle cards` - See your currently selected cards\n"
             "`!battle ready` - Confirm your card selection\n"
@@ -2531,10 +2514,10 @@ async def list_commands(ctx):
 
     embed.set_footer(text="Need help? Join our support server: discord.gg/VMhy3VSXYx")
     
-    await ctx.send(embed=embed)
+    await interaction.response.send_message(embed=embed)
 
-@bot.command(name='info_dex', aliases=['dex_info', 'bot_info'], help="General info about the dex")
-async def info(ctx):
+@bot.tree.command(name="info_dex", description="View information about the bot")
+async def info_slash(interaction: discord.Interaction):
     # get total lines of code
     total_lines_of_code = count_lines_of_code()
 
@@ -3016,6 +2999,7 @@ async def on_ready():
     global spawned_messages
     load_player_cards()  # Load player cards when the bot starts
     validate_card_data()
+    await bot.tree.sync()
     print(f'We have logged in as {bot.user}')
     logging.info("Logging is configured correctly.")
     
@@ -3049,7 +3033,6 @@ async def on_ready():
 
     spawn_card.start()
     backup_player_data.start()  # Start the backup task
-
 
 @bot.event
 async def on_command_error(ctx, error):
@@ -3136,7 +3119,7 @@ async def check_conditions(ctx):
 
 @tasks.loop(minutes=45)
 async def spawn_card():
-    global last_spawned_card, spawned_messages
+    global spawned_messages, last_spawned_card_per_channel
     channels = []
     try:
         # Disable buttons of previous cards
@@ -3158,68 +3141,38 @@ async def spawn_card():
 
         # Get valid channels based on spawn mode
         channels = get_spawn_channels()
-        
         if not channels:
             logging.info("No channels configured for spawning cards.")
             return
 
-        # Select a card that's different from the last one
-        card1 = select_random_card()
-        card2 = None
-
-        retry_count = 0
-        max_retries = 10
-
-        while retry_count < max_retries:
-            card2 = weighted_random_choice(cards)
-            if card2['name'] != card1['name']:
-                break
-            retry_count += 1
-
-        # Log the selected cards for verification
-        logging.info(f"Selected cards: {card1['name']} and {card2['name']}")
+        spawn_titles = [
+            "A wild card has appeared!", "Think fast, chucklenuts!",
+            "Look at this beauty, what might it be?", "Houston, we have a card!",
+            "Card alert!", "Card incoming!", "Be fast!", "Catch it if you can!",
+            "Card on the loose!", "Card on 12'oclock!"
+        ]
         
-        # Different titles for each card
-        spawn_titles = ["A wild card has appeared!", "Think fast, chucklenuts!", 
-                       "Look at this beauty, what might it be?", "Houston, we have a card!", 
-                       "Card alert!", "Card incoming!", "Be fast!", "Catch it if you can!", 
-                       "Card on the loose!", "Card on 12'oclock!"]
-
-        # For each channel, select a unique card
-        used_cards = set()  # Track cards we've already used
-        
-        for channel_index, channel in enumerate(channels):
+        for channel in channels:
             try:
-                # Select a card that hasn't been used yet in this spawn cycle
-                retry_count = 0
-                max_retries = 10
-                
-                card = weighted_random_choice(cards)
-                while card['name'] in used_cards and retry_count < max_retries:
-                    card = weighted_random_choice(cards)
-                    retry_count += 1
-                
-                used_cards.add(card['name'])
+                last_card_name = last_spawned_card_per_channel.get(channel.id)
+                card = select_random_card(exclude_card_name=last_card_name)
+                last_spawned_card_per_channel[channel.id] = card['name']
+
                 spawn_title = random.choice(spawn_titles)
-                
-                # Create the embed for this card
                 embed = discord.Embed(title=spawn_title, description="Click the button below to catch it!")
                 embed.set_image(url=card['spawn_image_url'])
-                
-                # Send the card to this specific channel
-                msg = await channel.send(embed=embed, view=CatchView(card['name']), 
+
+                msg = await channel.send(embed=embed, view=CatchView(card['name']),
                                         allowed_mentions=discord.AllowedMentions.none())
                 spawned_messages.append(msg)
-                
                 logging.info(f"Card spawned in channel {channel.id}: {card['name']}")
-                
             except discord.Forbidden:
                 logging.error(f"Missing permissions to send messages in channel {channel.id}")
-            except discord.HTTPException as e:  
+            except discord.HTTPException as e:
                 logging.error(f"Failed to send card to channel {channel.id}: {e}")
             except Exception as e:
                 logging.error(f"Unexpected error sending card to channel {channel.id}: {e}")
-                
+
     except Exception as e:
         logging.error(f"An error occurred during card spawn: {e}", exc_info=True)
         for channel in channels:
@@ -3227,6 +3180,7 @@ async def spawn_card():
                 await channel.send("An error occurred while spawning cards.")
             except:
                 pass
+
 #=================================================================
 # INITIALISATION & STARTUP
 #=================================================================
