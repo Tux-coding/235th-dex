@@ -274,12 +274,12 @@ cards = [
     {
         "name": "Vic",
         "aliases": ["Victory"],
-        "spawn_image_url": "https://i.imgur.com/g3tu6mr.png",
-        "card_image_url": "https://i.imgur.com/tpbxbtn.png",
-        "rarity": 65,
-        "health": 2150,
-        "attack": 1100,
-        "description": "Member of Helios legion, 14th Alshemy Platoon, Platoon Executive, Corporal, and of course, A FRENCH AAAAAH"
+        "spawn_image_url": "https://i.imgur.com/Je5PxZ8.png",
+        "card_image_url": "https://i.imgur.com/zpWeuTW.png",
+        "rarity": 45,
+        "health": 3000,
+        "attack": 1550,
+        "description": "Vic is an ARC trooper and Staff Sergeant in the 128th Haven Company, of which he is also the executive. He is also 100% French!"
     },
     {
         "name": "Apok",
@@ -363,7 +363,7 @@ cards = [
     },
     {
         "name": "Sanghelios",
-        "aliases": ["Sangheli"],
+        "aliases": ["Helicopter"],
         "spawn_image_url": "https://i.imgur.com/JwKNNKh.png",
         "card_image_url": "https://i.imgur.com/7Yr4VUU.png",
         "rarity": 31,
@@ -381,4 +381,24 @@ cards = [
         "attack": 1650,
         "description": "A corporal of the 235th Elite Corps with two skull logos on his helmet."
     },
+    {
+        "name": "Checkmate",
+        "aliases": ["Chess"],
+        "spawn_image_url": "https://i.imgur.com/TSd5ZmC.png",
+        "card_image_url": "https://i.imgur.com/CaJETbD.png",
+        "rarity": 20,
+        "health": 6750,
+        "attack": 3340,
+        "description": "Checkmate, the former leader of Umbara Platoon, specializes in hand-to-hand combat with his vibro-knife. He does not play chess."
+    },
+    {
+        "name": "Archer",
+        "aliases": ["Perseus", "Hrvatska"],
+        "spawn_image_url": "https://i.imgur.com/Mo9IAME.png",
+        "card_image_url": "https://i.imgur.com/KFrJ1ge.png",
+        "rarity": 62,
+        "health": 2250,
+        "attack": 1250,
+        "description": "Archer, the former leader of Umbara Platoon, specializes in hand-to-hand combat with his vibro-knife. He does not play chess."
+    }
 ]
