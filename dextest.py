@@ -2793,8 +2793,8 @@ async def info_slash(interaction: discord.Interaction):
     embed.add_field(
         name="Latest Changes",
         value=(
-            "• Updated `/commands_dex` and help texts\n"
-            "• Added random card command\n"
+            "• All commands are now slash commands\n"
+            "• Added new cards\n"
             "• Bugfixes and improvements"
         ),
         inline=False
