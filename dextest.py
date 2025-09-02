@@ -605,16 +605,35 @@ class ProgressView(View):
         await interaction.response.edit_message(embed=self.create_embed(), view=self)
             
     def create_owned_embed(self):
-        display_name = self.display_name_override if self.display_name_override else self.user.display_name
+        if self.display_name_override:
+            owner_text = f"{self.display_name_override}'s"
+        else:
+            owner_text = "your"
         embed = discord.Embed(
             title="📚 Card Collection Progress",
-            description=f"Showing {display_name}'s owned unique cards ({len(set(self.unique_user_cards))}/{len(set(self.unique_user_cards)) + len(self.missing_cards)} unique cards collected)",
+            description=f"Showing {owner_text} owned unique cards ({len(set(self.unique_user_cards))}/{len(set(self.unique_user_cards)) + len(self.missing_cards)} unique cards collected)",
             color=discord.Color.green()
         )
         card_counts = Counter(self.user_cards)
         start = self.current_page * 10
         end = min(start + 10, len(self.other_cards))
 
+        sigma_card = "Sigma-squad"
+        if sigma_card in card_counts:
+            embed.add_field(
+                name="🟪 Sigma?",
+                value=f"• {sigma_card} x{card_counts[sigma_card]}" if card_counts[sigma_card] > 1 else f"• {sigma_card}",
+                inline=False
+            )
+        
+        dev_cards = ["Mixer", "Eagles", "Pipopro"]
+        owned_dev_cards = [card for card in dev_cards if card in card_counts]
+        if owned_dev_cards:
+            dev_section = "\n".join(
+                [f"• {card} x{card_counts[card]}" if card_counts[card] > 1 else f"• {card}" for card in owned_dev_cards]
+            )
+            embed.add_field(name="👑 Developer cards", value=dev_section, inline=False)
+        
         if self.current_page == 0 and self.rarity_zero_cards:
             rarity_zero_section = "**OG Cards (Rarity 0%)**\n" + "\n".join(
                 [f"\u2022 {card} x{card_counts[card]}" if card_counts[card] > 1 else f"\u2022 {card}" for card in self.rarity_zero_cards]
@@ -1539,6 +1558,7 @@ class LeaderboardSelect(discord.ui.Select):
         await self.parent_view.update_leaderboard(interaction, self.values[0])
 
 async def get_leaderboard_embed(category: str):
+    global cards
     category = category.lower()
     # Skip authorized users from leaderboards
     regular_users = {user_id: cards_ for user_id, cards_ in player_cards.items() if user_id not in authorized_user_ids}
@@ -2169,10 +2189,9 @@ async def view_user(ctx, user: discord.Member):
 
     if user_cards:
         missing_cards = [card_info['name'] for card_info in cards if card_info['name'] not in user_cards]
-        view = ProgressView(user_cards, missing_cards, user, display_name_override=user.display_name)
+        view = ProgressView(user_cards, missing_cards, ctx.author, display_name_override=user.display_name)
         await ctx.send("📚 **Card Collection Details:**", embed=view.create_embed(), view=view)
-    
-    # Log the action
+
     logging.info(f"Admin {ctx.author} viewed detailed information for {user.display_name} (ID: {target_user_id})")
 
 @bot.command(name='shutdown', help="Shut down the bot.")
@@ -2252,7 +2271,6 @@ async def stats_slash(interaction: discord.Interaction, card_name: str):
     user_id = str(interaction.user.id)
     user_cards = player_cards.get(user_id, [])
     card_name_lower = card_name.strip().lower()
-    # Only search in user's cards
     user_card = next(
         (card for card in user_cards if
          card.lower() == card_name_lower or

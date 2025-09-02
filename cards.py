@@ -84,12 +84,12 @@ cards = [
     {
         "name": "Sandy",
         "aliases": ["Granular"],
-        "spawn_image_url": "https://media.discordapp.net/attachments/1322205679028670495/1328809463808786484/RobloxScreenShot20250114_202141022.png?ex=67cded40&is=67cc9bc0&hm=ffc5380c0d4dcf711286e7ce8487ad98f804b3edf70f6742054ee83378a5e10b&=&format=webp&quality=lossless",
-        "card_image_url": "https://media.discordapp.net/attachments/1322202570529177642/1328809380963024958/Kopie_van_Just_another_trooper_trying_to_stay_alive._He_doesnt_like_insurgents._His_left_arm_and_left_eye_are_gone_due_to_the_Gulag_3.png?ex=67cded2c&is=67cc9bac&hm=517a0556055f176fe7f543ae4541d799ad7d9d1f6e69ff6c014eb656d8df2bcb&=&format=webp&quality=lossless",
-        "rarity": 50,
-        "health": 3000,
-        "attack": 1950,
-        "description": "Sandy, also known as CT-2457, is a clone engineer in the 31st Shepherd Battalion. He is called Sandy because of his dirty armour on his first mission, which was to Tatooine."
+        "spawn_image_url": "https://i.imgur.com/hwshNgl.png",
+        "card_image_url": "https://i.imgur.com/y741sd7.png",
+        "rarity": 30,
+        "health": 4500,
+        "attack": 2300,
+        "description": "Executive of the 31st Shepherd Battalion. He likes to eat fries. He is the leader of the 31st Cover Squad and is a Warrant Officer."
     },
     {
         "name": "Rancor",
@@ -274,7 +274,7 @@ cards = [
     {
         "name": "Vic",
         "aliases": ["Victory"],
-        "spawn_image_url": "https://i.imgur.com/Je5PxZ8.png",
+        "spawn_image_url": "https://i.imgur.com/lLVk5Mw.png",
         "card_image_url": "https://i.imgur.com/zpWeuTW.png",
         "rarity": 45,
         "health": 3000,
