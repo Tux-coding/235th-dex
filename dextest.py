@@ -2782,7 +2782,7 @@ async def info_slash(interaction: discord.Interaction):
 
     embed.add_field(
         name="Version",
-        value="2.0.0 - \"The Slash Command Update\"", 
+        value="2.1.1 - \"The Slash Command Update but Bugfixes\"", 
         inline=False
     )
     embed.add_field(

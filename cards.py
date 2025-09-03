@@ -274,7 +274,7 @@ cards = [
     {
         "name": "Vic",
         "aliases": ["Victory"],
-        "spawn_image_url": "https://i.imgur.com/lLVk5Mw.png",
+        "spawn_image_url": "https://i.imgur.com/KmvROzr.png",
         "card_image_url": "https://i.imgur.com/zpWeuTW.png",
         "rarity": 45,
         "health": 3000,
