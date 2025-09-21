@@ -114,12 +114,12 @@ cards = [
     {
         "name": "Longshot",
         "aliases": ["Shortshot"],
-        "spawn_image_url": "https://media.discordapp.net/attachments/1322205679028670495/1323671916631949362/RobloxScreenShot20241231_161614848.png?ex=67755d09&is=67740b89&hm=cab4a3d1dba4eb57b42e592905780faaa24d5ffba9746ce3406325c7f520ef0d&=&format=webp&quality=lossless&width=480&height=350",
-        "card_image_url": "https://media.discordapp.net/attachments/1322202570529177642/1323671828111298584/Just_another_trooper_trying_to_stay_alive._He_doesnt_like_insurgents._His_left_arm_and_left_eye_are_gone_due_to_the_Gulag_19.png?ex=67755cf4&is=67740b74&hm=05d5e4c11313875aea75d4c7e227bf32546af435d3755ebac0e66d817c11d2f5&=&format=webp&quality=lossless&width=479&height=671",
+        "spawn_image_url": "https://i.imgur.com/pJkChv7.png",
+        "card_image_url": "https://i.imgur.com/2XkFDao.png",
         "rarity": 70,
-        "health": 2000,
-        "attack": 650,
-        "description": "Not your typical clone has his chip removed and survived in a CIS prison; his last corp died in an ariel bombardment, after this he joined the 235th."
+        "health": 1999,
+        "attack": 999,
+        "description": "Not your typical clone survived a CIS prison and has had his chip removed. He is part of the 66th, and races in AT-TE's."
     },
     {
         "name": "Mertho",
@@ -400,5 +400,15 @@ cards = [
         "health": 2250,
         "attack": 1250,
         "description": "Archer, the former leader of Umbara Platoon, specializes in hand-to-hand combat with his vibro-knife. He does not play chess."
+    },
+    {
+        "name": "Rylo",
+        "aliases": ["Bacon"],
+        "spawn_image_url": "https://i.imgur.com/ZIqJ3lk.png",
+        "card_image_url": "https://i.imgur.com/UtmQhp2.png",
+        "rarity": 60,
+        "health": 2250,
+        "attack": 1125,
+        "description": "As an ITF member, Rylo serves as basic infantry. The only thing stopping him from being a bit normal is his obsession with bacon."
     }
 ]

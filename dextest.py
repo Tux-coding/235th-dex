@@ -451,10 +451,15 @@ class CatchModal(Modal):
             input_name = self.card_input.value.lower()
             if input_name == self.card_name.lower() or input_name in [alias.lower() for alias in next(card['aliases'] for card in cards if card['name'].lower() == self.card_name.lower())]:
                 user_id = str(user.id)
-                player_cards.setdefault(user_id, []).append(self.card_name)
+                user_cards = player_cards.setdefault(user_id, [])
+                is_new_card = self.card_name not in user_cards
+                user_cards.append(self.card_name)
                 save_player_cards()
                 update_user_stats(user_id, 'cards_caught')
-                await interaction.response.send_message(f"{user.mention} caught the card: {self.card_name}!", ephemeral=False)
+                message = f"{user.mention} caught the card: {self.card_name}!"
+                if is_new_card:
+                    message += "\nThis is the first time you catched this card! It will make a fine addition to your collection..."
+                await interaction.response.send_message(message, ephemeral=False)
                 self.view.card_claimed = True
                 for item in self.view.children:
                     if isinstance(item, Button):
@@ -2782,7 +2787,7 @@ async def info_slash(interaction: discord.Interaction):
 
     embed.add_field(
         name="Version",
-        value="2.1.1 - \"The Slash Command Update but Bugfixes\"", 
+        value="2.2.0 - \"Bacon Update\"", 
         inline=False
     )
     embed.add_field(
@@ -2811,8 +2816,8 @@ async def info_slash(interaction: discord.Interaction):
     embed.add_field(
         name="Latest Changes",
         value=(
-            "• All commands are now slash commands\n"
-            "• Added new cards\n"
+            "• Added new cards + reworked cards message\n"
+            "• Revised Sandy card and added new dividers in /progress command\n"
             "• Bugfixes and improvements"
         ),
         inline=False
