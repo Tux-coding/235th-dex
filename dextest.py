@@ -624,26 +624,25 @@ class ProgressView(View):
         end = min(start + 10, len(self.other_cards))
 
         sigma_card = "Sigma-squad"
-        if sigma_card in card_counts:
-            embed.add_field(
-                name="🟪 Sigma?",
-                value=f"• {sigma_card} x{card_counts[sigma_card]}" if card_counts[sigma_card] > 1 else f"• {sigma_card}",
-                inline=False
-            )
-        
         dev_cards = ["Mixer", "Eagles", "Pipopro"]
         owned_dev_cards = [card for card in dev_cards if card in card_counts]
-        if owned_dev_cards:
-            dev_section = "\n".join(
-                [f"• {card} x{card_counts[card]}" if card_counts[card] > 1 else f"• {card}" for card in owned_dev_cards]
-            )
-            embed.add_field(name="👑 Developer cards", value=dev_section, inline=False)
-        
-        if self.current_page == 0 and self.rarity_zero_cards:
-            rarity_zero_section = "**OG Cards (Rarity 0%)**\n" + "\n".join(
-                [f"\u2022 {card} x{card_counts[card]}" if card_counts[card] > 1 else f"\u2022 {card}" for card in self.rarity_zero_cards]
-            )
-            embed.add_field(name="🌟 OG Cards", value=rarity_zero_section, inline=False)
+
+        if self.current_page == 0:
+            if sigma_card in card_counts:
+                embed.add_field(
+                    name="🟪 Sigma?",
+                    value=f"• {sigma_card} x{card_counts[sigma_card]}" if card_counts[sigma_card] > 1 else f"• {sigma_card}",
+                    inline=False
+                )
+            if owned_dev_cards:
+                dev_section = "\n".join(
+                    [f"• {card} x{card_counts[card]}" if card_counts[card] > 1 else f"• {card}" for card in owned_dev_cards]
+                )
+                embed.add_field(name="👑 Developer cards", value=dev_section, inline=False)
+            if self.rarity_zero_cards:
+                embed.add_field(name="\u2B50 OG Cards (Rarity 0%)", value="\n".join(
+                    [f"\u2022 {card} x{card_counts[card]}" if card_counts[card] > 1 else f"\u2022 {card}" for card in self.rarity_zero_cards]
+                ), inline=False)
 
         if self.other_cards:
             owned_cards = "\n".join(
@@ -1538,40 +1537,40 @@ class LeaderboardView(discord.ui.View):
         super().__init__(timeout=60)
         self.ctx_or_interaction = ctx_or_interaction
         self.category = initial_category
-        self.add_item(LeaderboardSelect(self, initial_category)) # godo
+        self.select = LeaderboardSelect(self, selected=self.category)
+        self.add_item(self.select)
 
     async def update_leaderboard(self, interaction, category):
+        self.category = category
+        self.clear_items()
+        self.select = LeaderboardSelect(self, selected=self.category)
+        self.add_item(self.select)
         embed = await get_leaderboard_embed(category)
         await interaction.response.edit_message(embed=embed, view=self)
 
 class LeaderboardSelect(discord.ui.Select):
-    def __init__(self, parent_view, initial_category):
+    def __init__(self, parent_view, selected="general"):
         options = [
-            discord.SelectOption(label="General", value="general", description="General statistics", default=initial_category=="general"),
-            discord.SelectOption(label="Total Cards", value="total", description="Total cards leaderboard", default=initial_category=="total"),
-            discord.SelectOption(label="Unique Cards", value="unique", description="Unique cards leaderboard", default=initial_category=="unique"),
-            discord.SelectOption(label="Rarest Cards", value="rarest", description="Rarest cards and their owners", default=initial_category=="rarest"),
-            discord.SelectOption(label="Activity", value="activity", description="Most active players", default=initial_category=="activity"),
-            discord.SelectOption(label="Most Traded", value="traded", description="Most frequently traded cards", default=initial_category=="traded"),
-            discord.SelectOption(label="Battles", value="battles", description="Battle champions", default=initial_category=="battles"),
+            discord.SelectOption(label="General", value="general", description="General statistics", default=(selected == "general")),
+            discord.SelectOption(label="Total Cards", value="total", description="Total cards leaderboard", default=(selected == "total")),
+            discord.SelectOption(label="Unique Cards", value="unique", description="Unique cards leaderboard", default=(selected == "unique")),
+            discord.SelectOption(label="Rarest Cards", value="rarest", description="Rarest cards and their owners", default=(selected == "rarest")),
+            discord.SelectOption(label="Help", value="help", description="Leaderboard help", default=(selected == "help")),
         ]
         super().__init__(placeholder="Select leaderboard category...", min_values=1, max_values=1, options=options)
         self.parent_view = parent_view
-    
+
     async def callback(self, interaction: discord.Interaction):
-        self.parent_view.category = self.values[0]
         await self.parent_view.update_leaderboard(interaction, self.values[0])
 
 async def get_leaderboard_embed(category: str):
     global cards
     category = category.lower()
-    # Skip authorized users from leaderboards
     regular_users = {user_id: cards_ for user_id, cards_ in player_cards.items() if user_id not in authorized_user_ids}
     total_users = len(regular_users)
     total_cards_collected = sum(len(cards_) for cards_ in regular_users.values())
     embed = None
-    
-    # Handle case when there are no cards yet
+
     if not regular_users or total_cards_collected == 0:
         embed = discord.Embed(
             title="235th Dex Statistics", 
@@ -1581,29 +1580,23 @@ async def get_leaderboard_embed(category: str):
         return embed
     
     if category == "general":
-        # Top Collectors (by total cards)
         collectors = [(user_id, len(cards)) for user_id, cards in regular_users.items()]
         top_collectors = sorted(collectors, key=lambda x: x[1], reverse=True)[:5]
-        
-        # Unique Cards Leaderboard
         unique_collectors = [(user_id, len(set(cards))) for user_id, cards in regular_users.items()]
         top_unique_collectors = sorted(unique_collectors, key=lambda x: x[1], reverse=True)[:5]
-        
-        # Most Collected Card
         all_cards = [card for cards in regular_users.values() for card in cards]
         card_counts = Counter(all_cards)
-        
-        # Get most collected card (with safeguard if no cards exist)
         most_collected_card = card_counts.most_common(1)[0][0] if card_counts else "None"
         most_collected_count = card_counts.get(most_collected_card, 0)
-        
-        # Rarest Card Owned based on rarity value
         card_rarity = {card['name']: card['rarity'] for card in cards}
         unique_owned_cards = set(all_cards)
-        
+
         if unique_owned_cards:
             try:
-                rarest_card_owned = min(unique_owned_cards, key=lambda card: card_rarity.get(card, float('inf')))
+                rarest_card_owned = min(
+                    (c for c in unique_owned_cards if card_rarity.get(c, 100) > 0 or c == "Sigma-squad"),
+                    key=lambda card: card_rarity.get(card, float('inf'))
+                )
                 rarest_card_rarity = card_rarity.get(rarest_card_owned, "Unknown")
             except (ValueError, KeyError):
                 rarest_card_owned = "Error determining rarest card"
@@ -1617,30 +1610,23 @@ async def get_leaderboard_embed(category: str):
             description="Global statistics for the card game",
             color=discord.Color.gold()
         )
-        
         embed.add_field(
             name="📈 User Stats",
             value=f"**Total Players**: {total_users}\n**Total Cards Collected**: {total_cards_collected}",
             inline=False
         )
-        
-        # Top Collectors (format with card counts)
         if top_collectors:
             top_collectors_text = "\n".join([f"{idx+1}. <@{user_id}>: **{count}** cards" 
                                     for idx, (user_id, count) in enumerate(top_collectors)])
             embed.add_field(name="🏆 Top Collectors (Total Cards)", value=top_collectors_text, inline=True)
         else:
             embed.add_field(name="🏆 Top Collectors", value="No data yet", inline=True)
-        
-        # Top Unique Collectors
         if top_unique_collectors:
             unique_collectors_text = "\n".join([f"{idx+1}. <@{user_id}>: **{count}** unique cards" 
                                         for idx, (user_id, count) in enumerate(top_unique_collectors)])
             embed.add_field(name="🌟 Top Collectors (Unique Cards)", value=unique_collectors_text, inline=True)
         else:
             embed.add_field(name="🌟 Top Unique Collectors", value="No data yet", inline=True)
-        
-        # Card Stats section
         card_stats = [
             f"**Most Collected Card**: {most_collected_card} ({most_collected_count}× collected)",
             f"**Rarest Card Owned**: {rarest_card_owned} ({rarest_card_rarity}% rarity)"
@@ -1648,20 +1634,16 @@ async def get_leaderboard_embed(category: str):
         embed.add_field(name="🃏 Card Stats", value="\n".join(card_stats), inline=False)
     
     elif category == "total":
-        # Total Cards Leaderboard (including duplicates)
         collectors = [(user_id, len(cards)) for user_id, cards in regular_users.items()]
         top_collectors = sorted(collectors, key=lambda x: x[1], reverse=True)[:10]
-        
         embed = discord.Embed(
             title="🏆 Total Cards Leaderboard",
             description="Players ranked by total number of cards owned (including duplicates)",
             color=discord.Color.gold()
         )
-        
         if top_collectors:
             leaderboard_text = ""
             for idx, (user_id, count) in enumerate(top_collectors):
-                # Add medal emoji for top 3
                 if idx == 0:
                     prefix = "🥇"
                 elif idx == 1:
@@ -1670,33 +1652,25 @@ async def get_leaderboard_embed(category: str):
                     prefix = "🥉"
                 else:
                     prefix = f"{idx+1}."
-                
                 leaderboard_text += f"{prefix} <@{user_id}>: **{count}** cards\n"
-            
             embed.add_field(name="Leaderboard", value=leaderboard_text, inline=False)
         else:
             embed.add_field(name="Leaderboard", value="No data available yet", inline=False)
     
     elif category == "unique":
-        # Unique Cards Leaderboard
         unique_collectors = [(user_id, len(set(cards))) for user_id, cards in regular_users.items()]
         top_unique = sorted(unique_collectors, key=lambda x: x[1], reverse=True)[:10]
-        
-        # Calculate completion percentage for each player
         total_available_cards = len(cards)
         completion_data = [(user_id, count, round((count / total_available_cards) * 100, 1)) 
                           for user_id, count in top_unique]
-        
         embed = discord.Embed(
             title="🌟 Unique Cards Leaderboard",
             description=f"Players ranked by number of unique cards collected (out of {total_available_cards} total)",
             color=discord.Color.blue()
         )
-        
         if top_unique:
             leaderboard_text = ""
             for idx, (user_id, count, percentage) in enumerate(completion_data):
-                # Add medal emoji for top 3
                 if idx == 0:
                     prefix = "🥇"
                 elif idx == 1:
@@ -1705,23 +1679,19 @@ async def get_leaderboard_embed(category: str):
                     prefix = "🥉"
                 else:
                     prefix = f"{idx+1}."
-                
                 leaderboard_text += f"{prefix} <@{user_id}>: **{count}** unique cards (**{percentage}%** complete)\n"
-            
             embed.add_field(name="Leaderboard", value=leaderboard_text, inline=False)
         else:
             embed.add_field(name="Leaderboard", value="No data available yet", inline=False)
     
     elif category == "rarest":
-        # Rarest Cards Leaderboard
-        # First, get all card rarities
         card_rarity = {card['name']: card['rarity'] for card in cards}
-        
-        # Get the 10 rarest cards based on rarity value (lower is rarer)
-        rarest_cards = sorted([(name, rarity) for name, rarity in card_rarity.items()], 
-                             key=lambda x: x[1])[:10]
-        
-        # Find owners for each rare card
+        rarest_cards = []
+        for card in cards:
+            if card['rarity'] == 0 and card['name'] != "Sigma-squad":
+                continue
+            rarest_cards.append((card['name'], card['rarity']))
+        rarest_cards = sorted(rarest_cards, key=lambda x: x[1])[:10]
         rarest_cards_with_owners = []
         for card_name, rarity in rarest_cards:
             owners = []
@@ -1729,24 +1699,20 @@ async def get_leaderboard_embed(category: str):
                 if card_name in user_cards:
                     owners.append(user_id)
             rarest_cards_with_owners.append((card_name, rarity, owners))
-        
         embed = discord.Embed(
             title="💎 Rarest Cards Leaderboard",
             description="The rarest cards and their lucky owners",
             color=discord.Color.purple()
         )
-        
         if rarest_cards_with_owners:
             for idx, (card_name, rarity, owners) in enumerate(rarest_cards_with_owners):
                 if owners:
-                    # Limit the number of owners shown to prevent too long messages
                     displayed_owners = owners[:5]
                     owner_text = ", ".join([f"<@{owner}>" for owner in displayed_owners])
                     if len(owners) > 5:
                         owner_text += f" and {len(owners) - 5} more"
                 else:
                     owner_text = "No owners yet"
-                
                 embed.add_field(
                     name=f"{idx+1}. {card_name} ({rarity}% rarity)",
                     value=f"**Owners**: {owner_text}",
@@ -1755,190 +1721,35 @@ async def get_leaderboard_embed(category: str):
         else:
             embed.add_field(name="Rarest Cards", value="No data available yet", inline=False)
     
-    elif category == "activity":
-        # Most Active Users Leaderboard
-        # First check if user_stats exists and has data
-        if not hasattr(bot, 'user_stats') or not user_stats:
-            embed = discord.Embed(
-                title="⚡ Activity Leaderboard",
-                description="No activity data has been recorded yet!",
-                color=discord.Color.orange()
-            )
-            return embed
-        
-        # Filter authorized users from stats
-        filtered_stats = {user_id: stats for user_id, stats in user_stats.items() 
-                         if user_id not in authorized_user_ids}
-        
-        # Calculate total activity score (sum of all activities)
-        activity_scores = []
-        for user_id, stats in filtered_stats.items():
-            total_score = stats.get('battles_fought', 0) + stats.get('trades_completed', 0) + stats.get('cards_caught', 0)
-            activity_scores.append((user_id, total_score, stats))
-        
-        # Sort by total activity score
-        top_active_users = sorted(activity_scores, key=lambda x: x[1], reverse=True)[:10]
-        
-        embed = discord.Embed(
-            title="⚡ Activity Leaderboard",
-            description="Players ranked by their overall activity",
-            color=discord.Color.orange()
-        )
-        
-        if top_active_users:
-            leaderboard_text = ""
-            for idx, (user_id, score, stats) in enumerate(top_active_users):
-                # Add medal emoji for top 3
-                if idx == 0:
-                    prefix = "🥇"
-                elif idx == 1:
-                    prefix = "🥈"
-                elif idx == 2:
-                    prefix = "🥉"
-                else:
-                    prefix = f"{idx+1}."
-                
-                battles = stats.get('battles_fought', 0)
-                wins = stats.get('battles_won', 0)
-                trades = stats.get('trades_completed', 0)
-                cards = stats.get('cards_caught', 0)
-                
-                leaderboard_text += f"{prefix} <@{user_id}>: **{score}** points\n" \
-                                   f"  ┣ Battles: {battles} ({wins} wins)\n" \
-                                   f"  ┣ Trades: {trades}\n" \
-                                   f"  ┗ Cards Caught: {cards}\n"
-            
-            embed.add_field(name="Most Active Players", value=leaderboard_text, inline=False)
-        else:
-            embed.add_field(name="Most Active Players", value="No activity data yet", inline=False)
-    
-    elif category == "traded":
-        # Most Traded Cards Leaderboard
-        # First check if trade_stats exists and has data
-        if not hasattr(bot, 'trade_stats') or not trade_stats:
-            embed = discord.Embed(
-                title="🔄 Most Traded Cards",
-                description="No trade data has been recorded yet!",
-                color=discord.Color.teal()
-            )
-            return embed
-        
-        # Get top traded cards
-        top_traded = sorted(trade_stats.items(), key=lambda x: x[1], reverse=True)[:10]
-        
-        embed = discord.Embed(
-            title="🔄 Most Traded Cards",
-            description="Cards that change hands most frequently",
-            color=discord.Color.teal()
-        )
-        
-        if top_traded:
-            leaderboard_text = ""
-            for idx, (card_name, count) in enumerate(top_traded):
-                # Add medal emoji for top 3
-                if idx == 0:
-                    prefix = "🥇"
-                elif idx == 1:
-                    prefix = "🥈"
-                elif idx == 2:
-                    prefix = "🥉"
-                else:
-                    prefix = f"{idx+1}."
-                
-                leaderboard_text += f"{prefix} **{card_name}**: {count} trades\n"
-            
-            embed.add_field(name="Trade Leaderboard", value=leaderboard_text, inline=False)
-        else:
-            embed.add_field(name="Trade Leaderboard", value="No trade data yet", inline=False)
-    
-    elif category == "battles":
-        # Battle Champions Leaderboard
-        # First check if user_stats exists and has data
-        if not hasattr(bot, 'user_stats') or not user_stats:
-            embed = discord.Embed(
-                title="⚔️ Battle Champions",
-                description="No battle data has been recorded yet!",
-                color=discord.Color.red()
-            )
-            return embed
-        
-        # Filter authorized users from stats
-        filtered_stats = {user_id: stats for user_id, stats in user_stats.items() 
-                         if user_id not in authorized_user_ids}
-        
-        # Calculate win rates and total battles
-        battle_stats = []
-        for user_id, stats in filtered_stats.items():
-            battles = stats.get('battles_fought', 0)
-            wins = stats.get('battles_won', 0)
-            win_rate = (wins / battles) * 100 if battles > 0 else 0
-            
-            # Only include users who have fought at least 3 battles
-            if battles >= 3:
-                battle_stats.append((user_id, wins, battles, round(win_rate, 1)))
-        
-        # Sort by wins, then by win rate
-        top_battlers = sorted(battle_stats, key=lambda x: (x[1], x[3]), reverse=True)[:10]
-        
-        embed = discord.Embed(
-            title="⚔️ Battle Champions",
-            description="Players ranked by battle victories",
-            color=discord.Color.red()
-        )
-        
-        if top_battlers:
-            leaderboard_text = ""
-            for idx, (user_id, wins, battles, win_rate) in enumerate(top_battlers):
-                # Add medal emoji for top 3
-                if idx == 0:
-                    prefix = "🥇"
-                elif idx == 1:
-                    prefix = "🥈"
-                elif idx == 2:
-                    prefix = "🥉"
-                else:
-                    prefix = f"{idx+1}."
-                
-                leaderboard_text += f"{prefix} <@{user_id}>: **{wins}** wins ({battles} battles, {win_rate}% win rate)\n"
-
+    elif category == "help":
         embed = discord.Embed(
             title="📊 Leaderboard Help",
             description="View different types of leaderboards and statistics",
             color=discord.Color.blue()
         )
-        
         embed.add_field(
             name="Available Leaderboard Types",
             value=(
-                "• `/leaderboard general` - General statistics (default)\n"
-                "• `/leaderboard total` - Total cards leaderboard\n"
-                "• `/leaderboard unique` - Unique cards leaderboard\n"
-                "• `/leaderboard rarest` - Rarest cards and their owners\n"
-                "• `/leaderboard activity` - Most active players\n"
-                "• `/leaderboard traded` - Most frequently traded cards\n"
-                "• `/leaderboard battles` - Battle champions\n"
-                "• `/leaderboard help` - Show this help message"
+                "• **General** - Overall statistics and top collectors\n"
+                "• **Total Cards** - Players ranked by total cards (including duplicates)\n"
+                "• **Unique Cards** - Players ranked by unique cards collected\n"
+                "• **Rarest Cards** - The rarest cards and their owners\n"
+                "• **Help** - Show this help message"
             ),
             inline=False
         )
-    
     else:
-        # Invalid category
         embed = discord.Embed(
             title="📊 Leaderboard",
             description=f"Unknown leaderboard type: `{category}`",
             color=discord.Color.red()
         )
-        
         embed.add_field(
             name="Available Types", 
-            value=(
-                "Use `/leaderboard help` to see available options"
-            ),
+            value="Use `/leaderboard` and select a category from the dropdown.",
             inline=False
         )
-    
-    # Set footer with timestamp
+
     current_time = datetime.datetime.now().strftime("%d-%m-%Y %H:%M")
     embed.set_footer(text=f"Stats as of {current_time}")
     return embed
@@ -2787,7 +2598,7 @@ async def info_slash(interaction: discord.Interaction):
 
     embed.add_field(
         name="Version",
-        value="2.2.0 - \"Bacon Update\"", 
+        value="2.3 - \"This update has changed the world.\"", 
         inline=False
     )
     embed.add_field(
@@ -2816,8 +2627,8 @@ async def info_slash(interaction: discord.Interaction):
     embed.add_field(
         name="Latest Changes",
         value=(
+            "• Fixed /leaderboard and /progress commands\n"
             "• Added new cards + reworked cards message\n"
-            "• Revised Sandy card and added new dividers in /progress command\n"
             "• Bugfixes and improvements"
         ),
         inline=False
@@ -2969,7 +2780,6 @@ async def on_message(message):
         elif content.startswith('!!'):
             return
         elif not is_auth:
-            await message.channel.send("❗ Old '!' commands are being phased out. Please use slash commands instead (type `/` to see available commands).")
             return
         else:
             # Allow authorized users to use all commands
