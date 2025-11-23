@@ -69,15 +69,22 @@ bot = commands.Bot(command_prefix='!', intents=intents)
 player_cards = {}
 last_spawned_card_per_channel = {}
 spawned_messages = []
-allowed_guilds = [int(test_channel_id)] + [int(channel_id) for channel_id in channel_ids]
+allowed_channel_ids = [int(test_channel_id)] + [int(channel_id) for channel_id in channel_ids]
+allowed_guild_ids = set()
 battle_lock = asyncio.Lock()
 trade_lock = asyncio.Lock()
 submit_lock = asyncio.Lock()
+spawn_lock = asyncio.Lock()
 is_test_mode = spawn_mode == 'test'
 blacklist_file = "blacklist.json"
 start_time = datetime.datetime.now()
 user_stats = {}
 trade_stats = {}
+
+MESSAGE_THRESHOLD = 60
+SPAWN_TIMEOUT_MINUTES = 75
+MESSAGE_COUNT = 0
+LAST_SPAWN_TIME = datetime.datetime.now()
 
 backup_folder = "backup_folder"
 os.makedirs(backup_folder, exist_ok=True)
@@ -236,6 +243,7 @@ def update_trade_stats(card_name: str):
     if card_name not in trade_stats:
         trade_stats[card_name] = 0
     trade_stats[card_name] += 1
+
 #=================================================================
 # DATA MANAGEMENT
 #=================================================================
@@ -1820,15 +1828,12 @@ async def set_spawn_mode(ctx, mode: str):
 @commands.check(is_authorized)
 async def spawn_card_command(ctx, *, args: str):
     args = args.strip().lower()
-    
-    # Check if 'test' is in the arguments
     use_test_channel = False
     channel_index = None
-    
-    # Parse arguments to check for test flag or channel index
+
     if args.endswith(' test'):
         use_test_channel = True
-        card_name = args[:-5].strip()  # Remove ' test' from the end
+        card_name = args[:-5].strip()
     elif ' in ' in args and args.split(' in ')[1].isdigit():
         parts = args.split(' in ')
         card_name = parts[0].strip()
@@ -1842,15 +1847,13 @@ async def spawn_card_command(ctx, *, args: str):
             return
     else:
         card_name = args
-    
-    # Validate card name
+
     if not all(c.isalnum() or c.isspace() or c in ["'", "-"] for c in card_name):
         await ctx.send("Invalid card name. Only alphanumeric characters, spaces, apostrophes, and hyphens are allowed.")
         return
 
     card = next((card for card in cards if card_name == card["name"].lower() or card_name in [alias.lower() for alias in card.get("aliases", [])]), None)
     if card:
-        # Choose the channel based on the parameters
         if use_test_channel:
             channel = bot.get_channel(int(test_channel_id))
             channel_name = "test channel"
@@ -1858,7 +1861,6 @@ async def spawn_card_command(ctx, *, args: str):
             channel = bot.get_channel(int(channel_ids[channel_index]))
             channel_name = f"channel #{channel_index}"
         else:
-            # Default to the first main channel if not specified
             channel = bot.get_channel(int(channel_ids[0]))
             channel_name = "main channel"
 
@@ -1881,7 +1883,7 @@ async def admin_give_card(ctx, card: str, receiving_user: discord.Member):
     receiver_cards = player_cards.setdefault(receiver_id, [])
     receiver_cards.append(card)
 
-    save_player_cards()  # Save the updated player cards
+    save_player_cards()
     await ctx.send(f"{ctx.author.mention} has given `{card}` to {receiving_user.mention}.")
     logging.info(f"Admin: {ctx.author} gave {card} to {receiving_user}.")
 
@@ -1895,12 +1897,32 @@ async def remove_card(ctx, card: str, user: discord.Member):
     if card_lower in map(str.lower, user_cards):
         actual_card_name = next(c for c in user_cards if c.lower() == card_lower)
         user_cards.remove(actual_card_name)
-        save_player_cards()  # Save the updated player cards
+        save_player_cards()
         await ctx.send(f"Removed `{actual_card_name}` from {user.mention}'s inventory.")
         logging.info(f"Admin: {ctx.author} removed {actual_card_name} from {user}.")
     else:
         await ctx.send(f"{user.mention} does not have the card `{card}`.")
         logging.info(f"Admin: {ctx.author} attempted to remove {card} from {user}, but {user} did not possess {card}.")
+
+@bot.command(name='set_spawn_threshold')
+@commands.check(is_authorized)
+async def set_spawn_threshold(ctx, value: int):
+    global MESSAGE_THRESHOLD
+    if value < 1:
+        await ctx.send("Threshold must be at least 1.")
+        return
+    MESSAGE_THRESHOLD = value
+    await ctx.send(f"Message spawn threshold set to {MESSAGE_THRESHOLD}.")
+
+@bot.command(name='set_spawn_timeout')
+@commands.check(is_authorized)
+async def set_spawn_timeout(ctx, minutes: int):
+    global SPAWN_TIMEOUT_MINUTES
+    if minutes < 1:
+        await ctx.send("Timeout must be at least 1.")
+        return
+    SPAWN_TIMEOUT_MINUTES = minutes
+    await ctx.send(f"Spawn timeout set to {SPAWN_TIMEOUT_MINUTES} minutes.")
 
 @bot.command(name='view_user', aliases=['user_info', 'view_progress'], help="Admin command to view detailed user information")
 @commands.check(is_authorized)
@@ -1917,15 +1939,13 @@ async def view_user(ctx, user: discord.Member):
     target_user_id = str(user.id)
     total_cards_count = len(cards)
     user_cards = player_cards.get(target_user_id, [])
-    
-    # Create main embed with user info
+
     embed = discord.Embed(
         title=f"👤 User Information: {user.display_name}",
         description=f"Detailed information for user ID: {target_user_id}",
         color=discord.Color.blue()
     )
-    
-    # Add account details
+
     created_at = user.created_at.strftime("%d-%m-%Y")
     joined_at = user.joined_at.strftime("%d-%m-%Y") if user.joined_at else "Unknown"
     
@@ -1938,8 +1958,7 @@ async def view_user(ctx, user: discord.Member):
               f"• Bot Status: {'🚫 Blacklisted' if BlacklistManager.is_blacklisted(target_user_id) else '✅ In good standing'}",
         inline=False
     )
-    
-    # Add card collection stats
+
     if not user_cards:
         embed.add_field(
             name="Card Collection",
@@ -1947,14 +1966,10 @@ async def view_user(ctx, user: discord.Member):
             inline=False
         )
     else:
-        # Count total unique cards (no duplicates)
         unique_cards = set(user_cards)
-        # Get card duplicates info
         card_counts = Counter(user_cards)
-        # Calculate duplicates
         total_duplicates = len(user_cards) - len(unique_cards)
-        
-        # Find rarest card owned by rarity value
+
         card_rarity = {card_info['name']: card_info['rarity'] for card_info in cards}
         try:
             rarest_card = min(set(user_cards), key=lambda card_name: card_rarity.get(card_name, float('inf')))
@@ -1965,8 +1980,7 @@ async def view_user(ctx, user: discord.Member):
         except (ValueError, KeyError):
             rarest_card_value = "Unable to determine"
             most_duplicated_value = "Unable to determine"
-        
-        # Count cards by rarity tiers
+
         common_cards = sum(1 for card in unique_cards if card_rarity.get(card, 100) >= 20)
         uncommon_cards = sum(1 for card in unique_cards if 10 <= card_rarity.get(card, 100) < 20)
         rare_cards = sum(1 for card in unique_cards if 5 <= card_rarity.get(card, 100) < 10)
@@ -1981,8 +1995,7 @@ async def view_user(ctx, user: discord.Member):
         )
         
         embed.add_field(name="Card Collection", value=collection_info, inline=False)
-    
-    # Add battle statistics if available
+
     if target_user_id in user_stats:
         stats = user_stats[target_user_id]
         battles_fought = stats.get('battles_fought', 0)
@@ -2141,8 +2154,7 @@ async def give_card_slash(
             ):
                 await interaction.response.send_message(f"You don't own the card `{card}`.", ephemeral=True)
                 return
-            
-            # Find the exact card name (preserving case)
+
             actual_card_name = next(
                 (c for c in sender_cards if
                  card_lower == c.lower() or
@@ -2188,7 +2200,6 @@ async def battle_slash(
     challenger_id = str(challenger.id)
     opponent_id = str(opponent.id)
 
-    # Check if both players have cards
     if challenger_id not in player_cards or not player_cards[challenger_id]:
         await interaction.response.send_message("You don't have any cards to battle with!", ephemeral=True)
         return
@@ -2196,7 +2207,6 @@ async def battle_slash(
         await interaction.response.send_message(f"{opponent.display_name} doesn't have any cards to battle with!", ephemeral=True)
         return
 
-    # Check for ongoing battles
     if not hasattr(bot, 'ongoing_battles'):
         bot.ongoing_battles = set()
     if not hasattr(bot, 'active_battles'):
@@ -2209,7 +2219,6 @@ async def battle_slash(
         await interaction.response.send_message(f"{opponent.display_name} is already in a battle!", ephemeral=True)
         return
 
-    # Show help if requested
     if help:
         embed = discord.Embed(
             title="Card Battle Help",
@@ -2237,19 +2246,15 @@ async def battle_slash(
             inline=False
         )
         await interaction.response.send_message(embed=embed, ephemeral=True)
-        # Continue to start the battle after showing help
         followup = interaction.followup
     else:
         await interaction.response.defer()
         followup = interaction.followup
 
-    # Add both players to ongoing battles
     bot.ongoing_battles.add(challenger_id)
     bot.ongoing_battles.add(opponent_id)
 
-    # Start the battle UI flow
     try:
-        # Use the interaction as the context for CardBattle
         battle = CardBattle(interaction, challenger, opponent)
         bot.active_battles.append(battle)
         await battle.start_battle()
@@ -2492,7 +2497,6 @@ class Trade(commands.GroupCog, name="trade"):
         )
         await interaction.response.send_message(embed=embed, ephemeral=True)
 
-# Misc Commands
 @bot.tree.command(name="hello", description="Get a greeting from the bot")
 async def hello_slash(interaction: discord.Interaction):
     await interaction.response.send_message('Hello! I am the 235th dex!')
@@ -2510,8 +2514,7 @@ async def commands_slash(interaction: discord.Interaction):
         description="Here are all the commands available to you:",
         color=discord.Color.purple()
     )
-    
-    # General Commands
+
     embed.add_field(
         name="📝 General",
         value=(
@@ -2523,8 +2526,7 @@ async def commands_slash(interaction: discord.Interaction):
         ),
         inline=False
     )
-    
-    # Card Collection Commands
+
     embed.add_field(
         name="🃏 Card Collection",
         value=(
@@ -2536,8 +2538,7 @@ async def commands_slash(interaction: discord.Interaction):
         ),
         inline=False
     )
-    
-    # Battle Commands
+
     embed.add_field(
         name="⚔️ Battle System",
         value=(
@@ -2563,8 +2564,7 @@ async def commands_slash(interaction: discord.Interaction):
         ),
         inline=False
     )
-    
-    # Bot Stats
+
     embed.add_field(
         name="📊 Leaderboard",
         value="`/leaderboard [Optional mode]` - Show general statistics about the card game",
@@ -2661,16 +2661,20 @@ async def leaderboard_slash(interaction: discord.Interaction):
 #=================================================================
 @bot.event
 async def on_ready():
-    # Do some commands stuff
-    global spawned_messages
-    load_player_cards()  # Load player cards when the bot starts
+    global spawned_messages, allowed_guild_ids
+    load_player_cards()
     validate_card_data()
     await bot.tree.sync()
     await bot.add_cog(Trade(bot))
     print(f'We have logged in as {bot.user}')
     logging.info("Logging is configured correctly.")
-    
-    # Send online message to all channels
+
+    allowed_guild_ids.clear()
+    for cid in allowed_channel_ids:
+        ch = bot.get_channel(cid)
+        if ch and ch.guild:
+            allowed_guild_ids.add(ch.guild.id)
+
     all_channels = [bot.get_channel(int(test_channel_id))] + [bot.get_channel(int(id)) for id in channel_ids]
     logging.info(f"Attempting to send online message to {len(all_channels)} channels")
     
@@ -2683,8 +2687,7 @@ async def on_ready():
                 logging.error(f"Failed to send message to channel {channel.id}: {e}")
         else:
             logging.error(f"Channel not found.")
-    
-    # Disable buttons of previous cards on restart
+
     try:
         for message in spawned_messages:
             if hasattr(message, 'components') and message.components:
@@ -2698,8 +2701,10 @@ async def on_ready():
 
     spawned_messages = []
 
-    spawn_card.start()
-    backup_player_data.start()  # Start the backup task
+    await spawn_card_in_channels()
+
+    spawn_card_monitor.start()
+    backup_player_data.start()
 
 @bot.event
 async def on_command_error(ctx, error):
@@ -2737,7 +2742,7 @@ async def on_command_error(ctx, error):
 
 @bot.event
 async def on_guild_join(guild):
-    if guild.id not in allowed_guilds:
+    if guild.id not in allowed_guild_ids:
         logging.warning(f"Unauthorized guild joined: {guild.name} (ID: {guild.id}). Leaving the server.")
         if guild.system_channel:
             await guild.system_channel.send("This bot is restricted to specific servers. Leaving now.")
@@ -2747,10 +2752,18 @@ async def on_guild_join(guild):
 
 @bot.event
 async def on_message(message):
+    global MESSAGE_COUNT
     if message.author == bot.user:
         return
 
     content = message.content.lower()
+
+    if message.guild and message.guild.id in allowed_guild_ids and not message.author.bot:
+        MESSAGE_COUNT += 1
+
+    logging.info(
+        f"Message received from {message.author} in {getattr(message.channel,'id','?')} | MESSAGE_COUNT={MESSAGE_COUNT}"
+    )
 
     responses = {
         "good bot": {
@@ -2773,7 +2786,6 @@ async def on_message(message):
     if content.startswith('!'):
         user_id = str(message.author.id)
         is_auth = user_id in authorized_user_ids
-    
         if content.strip() == '!commands_dex':
             await message.channel.send("Please use `/commands_dex` instead.")
             return
@@ -2782,7 +2794,6 @@ async def on_message(message):
         elif not is_auth:
             return
         else:
-            # Allow authorized users to use all commands
             await bot.process_commands(message)
             return
 
@@ -2798,33 +2809,29 @@ async def check_conditions(ctx):
         await ctx.send("We are currently updating the bot, please wait until we are finished.")
         raise commands.CheckFailure("Bot is in test mode.")
 
-@tasks.loop(minutes=45)
-async def spawn_card():
-    global spawned_messages, last_spawned_card_per_channel
-    channels = []
-    try:
-        # Disable buttons of previous cards
-        for message in spawned_messages:
-            try:
-                view = View.from_message(message)
-                for item in view.children:
-                    if isinstance(item, Button):
-                        item.disabled = True
-                await message.edit(view=view)
-            except discord.NotFound:
-                logging.info(f"Message {message.id} not found, likely deleted")
-            except discord.HTTPException as e:
-                logging.error(f"HTTP error disabling buttons: {e}")
-            except Exception as e:
-                logging.error(f"Error disabling buttons on message {message.id}: {e}")
-        
-        spawned_messages = []
-
-        # Get valid channels based on spawn mode
+async def spawn_card_in_channels():
+    global spawned_messages, last_spawned_card_per_channel, LAST_SPAWN_TIME
+    if spawn_mode == 'none':
+        return
+    async with spawn_lock:
         channels = get_spawn_channels()
         if not channels:
             logging.info("No channels configured for spawning cards.")
             return
+
+        for old_msg in spawned_messages:
+            try:
+                if hasattr(old_msg, "components") and old_msg.components:
+                    v = View()
+                    for row in old_msg.components:
+                        for comp in row.children:
+                            if isinstance(comp, discord.Button):
+                                b = Button(label=comp.label, style=comp.style, disabled=True)
+                                v.add_item(b)
+                    await old_msg.edit(view=v)
+            except Exception as e:
+                logging.error(f"Failed to disable old spawn message {getattr(old_msg,'id','?')}: {e}")
+        spawned_messages.clear()
 
         spawn_titles = [
             "A wild card has appeared!", "Think fast, chucklenuts!",
@@ -2832,49 +2839,107 @@ async def spawn_card():
             "Card alert!", "Card incoming!", "Be fast!", "Catch it if you can!",
             "Card on the loose!", "Card on 12'oclock!"
         ]
-        
+
         for channel in channels:
             try:
                 last_card_name = last_spawned_card_per_channel.get(channel.id)
                 card = select_random_card(exclude_card_name=last_card_name)
                 last_spawned_card_per_channel[channel.id] = card['name']
-
-                spawn_title = random.choice(spawn_titles)
-                embed = discord.Embed(title=spawn_title, description="Click the button below to catch it!")
-                embed.set_image(url=card['spawn_image_url'])
-
+                embed = discord.Embed(
+                    title=random.choice(spawn_titles),
+                    description="Click the button below to catch it!"
+                ).set_image(url=card['spawn_image_url'])
                 msg = await channel.send(embed=embed, view=CatchView(card['name']),
-                                        allowed_mentions=discord.AllowedMentions.none())
+                                         allowed_mentions=discord.AllowedMentions.none())
                 spawned_messages.append(msg)
                 logging.info(f"Card spawned in channel {channel.id}: {card['name']}")
-            except discord.Forbidden:
-                logging.error(f"Missing permissions to send messages in channel {channel.id}")
-            except discord.HTTPException as e:
-                logging.error(f"Failed to send card to channel {channel.id}: {e}")
             except Exception as e:
-                logging.error(f"Unexpected error sending card to channel {channel.id}: {e}")
+                logging.error(f"Error spawning card in channel {getattr(channel,'id','?')}: {e}")
 
-    except Exception as e:
-        logging.error(f"An error occurred during card spawn: {e}", exc_info=True)
-        for channel in channels:
-            try:
-                await channel.send("An error occurred while spawning cards.")
-            except:
-                pass
+        LAST_SPAWN_TIME = datetime.datetime.now()
+
+@tasks.loop(seconds=30)
+async def spawn_card_monitor():
+    global MESSAGE_COUNT, LAST_SPAWN_TIME
+    now = datetime.datetime.now()
+    minutes_since = (now - LAST_SPAWN_TIME).total_seconds() / 60
+    if MESSAGE_COUNT >= MESSAGE_THRESHOLD or minutes_since >= SPAWN_TIMEOUT_MINUTES:
+        await spawn_card_in_channels()
+        MESSAGE_COUNT = 0
+
+# @tasks.loop(minutes=45)
+# async def spawn_card():
+#     global spawned_messages, last_spawned_card_per_channel
+#     channels = []
+#     try:
+#         for message in spawned_messages:
+#             try:
+#                 view = View.from_message(message)
+#                 for item in view.children:
+#                     if isinstance(item, Button):
+#                         item.disabled = True
+#                 await message.edit(view=view)
+#             except discord.NotFound:
+#                 logging.info(f"Message {message.id} not found, likely deleted")
+#             except discord.HTTPException as e:
+#                 logging.error(f"HTTP error disabling buttons: {e}")
+#             except Exception as e:
+#                 logging.error(f"Error disabling buttons on message {message.id}: {e}")
+        
+#         spawned_messages = []
+
+#         channels = get_spawn_channels()
+#         if not channels:
+#             logging.info("No channels configured for spawning cards.")
+#             return
+
+#         spawn_titles = [
+#             "A wild card has appeared!", "Think fast, chucklenuts!",
+#             "Look at this beauty, what might it be?", "Houston, we have a card!",
+#             "Card alert!", "Card incoming!", "Be fast!", "Catch it if you can!",
+#             "Card on the loose!", "Card on 12'oclock!"
+#         ]
+        
+#         for channel in channels:
+#             try:
+#                 last_card_name = last_spawned_card_per_channel.get(channel.id)
+#                 card = select_random_card(exclude_card_name=last_card_name)
+#                 last_spawned_card_per_channel[channel.id] = card['name']
+
+#                 spawn_title = random.choice(spawn_titles)
+#                 embed = discord.Embed(title=spawn_title, description="Click the button below to catch it!")
+#                 embed.set_image(url=card['spawn_image_url'])
+
+#                 msg = await channel.send(embed=embed, view=CatchView(card['name']),
+#                                         allowed_mentions=discord.AllowedMentions.none())
+#                 spawned_messages.append(msg)
+#                 logging.info(f"Card spawned in channel {channel.id}: {card['name']}")
+#             except discord.Forbidden:
+#                 logging.error(f"Missing permissions to send messages in channel {channel.id}")
+#             except discord.HTTPException as e:
+#                 logging.error(f"Failed to send card to channel {channel.id}: {e}")
+#             except Exception as e:
+#                 logging.error(f"Unexpected error sending card to channel {channel.id}: {e}")
+
+#     except Exception as e:
+#         logging.error(f"An error occurred during card spawn: {e}", exc_info=True)
+#         for channel in channels:
+#             try:
+#                 await channel.send("An error occurred while spawning cards.")
+#             except:
+#                 pass
 
 #=================================================================
 # INITIALISATION & STARTUP
 #=================================================================
-# Handle shutdown signal
 def handle_shutdown_signal(signal, frame):
-    save_player_cards()  # Save player cards on shutdown
+    save_player_cards()
     loop = asyncio.get_event_loop()
     loop.create_task(shutdown_bot())
 
 signal.signal(signal.SIGINT, handle_shutdown_signal)
 signal.signal(signal.SIGTERM, handle_shutdown_signal)
 
-# Custom shutdown function
 async def shutdown_bot():
     global spawned_messages
     for message in spawned_messages:
@@ -2921,18 +2986,17 @@ if __name__ == "__main__":
         except discord.errors.ConnectionClosed as e:
             retry_count += 1
             logging.warning(f"Connection closed. Attempting reconnect {retry_count}/{max_retries}")
-            time.sleep(5)  # Wait before retrying
+            time.sleep(5)
         except client_exceptions.ClientConnectorError as e:
             retry_count += 1
             logging.warning(f"Connection error: {e}. Attempting reconnect {retry_count}/{max_retries}")
-            time.sleep(10)  # Longer wait for DNS issues
+            time.sleep(10)
         except Exception as e:
             logging.error(f"Unhandled error: {e}")
             break
     
     if retry_count >= max_retries:
         logging.critical(f"Failed to connect after {max_retries} attempts. Giving up.")
-        # Save data before exiting to prevent data loss
         save_player_cards()
         create_backup()
         print(f"Bot shutdown after {max_retries} failed connection attempts. Check logs for details.")
