@@ -410,5 +410,25 @@ cards = [
         "health": 2250,
         "attack": 1125,
         "description": "As an ITF member, Rylo serves as basic infantry. The only thing stopping him from being a bit normal is his obsession with bacon."
+    },
+    {
+        "name": "Bolter",
+        "aliases": ["Metalhead"],
+        "spawn_image_url": "https://i.imgur.com/CPKw3ab.png",
+        "card_image_url": "https://i.imgur.com/GHkzel1.png",  
+        "rarity": 70,
+        "health": 1999,
+        "attack": 999,
+        "description": "X"
+    },
+    {
+        "name": "Havoc",
+        "aliases": ["Mothlover"],
+        "spawn_image_url": "https://i.imgur.com/uvNAOwE.png",
+        "card_image_url": "https://i.imgur.com/DqiCxDd.png",  
+        "rarity": 50,
+        "health": 2700,
+        "attack": 1350,
+        "description": "Heavy gunner, with a bit of a Northern Irish edge to him. Known for his dry jokes, and a weird obsession with moths."
     }
 ]

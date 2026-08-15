@@ -8,6 +8,7 @@ import asyncio
 import signal
 import json
 import time
+import math
 import aiohttp
 import datetime
 import shutil
@@ -81,8 +82,14 @@ start_time = datetime.datetime.now()
 user_stats = {}
 trade_stats = {}
 
-MESSAGE_THRESHOLD = 60
-SPAWN_TIMEOUT_MINUTES = 75
+def get_env_int(var_name, default):
+    try:
+        return int(os.getenv(var_name, default))
+    except Exception:
+        return default
+SPAWN_TIMEOUT_MINUTES = get_env_int('SPAWN_TIMEOUT_MINUTES', 60)
+MESSAGE_THRESHOLD = get_env_int('MESSAGE_THRESHOLD', 75)
+
 MESSAGE_COUNT = 0
 LAST_SPAWN_TIME = datetime.datetime.now()
 
@@ -422,6 +429,100 @@ async def card_name_autocomplete(
         for card in filtered[:25]
     ]
 
+def format_card_with_rarity(card_name: str) -> str:
+    """Format a card name with rarity indicators"""
+    card_data = next((c for c in cards if c['name'] == card_name), None)
+    if not card_data:
+        return card_name
+    rarity = card_data.get('rarity', 100)
+    if rarity == 0:
+        return f"**{card_name}** 🌟"
+    elif rarity < 5:
+        return f"{card_name} 🌟"
+    elif rarity < 10:
+        return f"{card_name} ⭐"
+    else:
+        return card_name
+
+def format_cards_with_rarity(card_list: list[str]) -> str:
+    """Format a list of cards with rarity indicators, returns 'None' if empty"""
+    if not card_list:
+        return "None"
+    return ", ".join([format_card_with_rarity(card) for card in card_list])
+
+def find_card_by_name(card_name: str, search_list: list[str] = None) -> str:
+    """
+    Find a card by name or alias in user's cards or global cards.
+    Returns the actual card name if found, None otherwise.
+    
+    Args:
+        card_name: The card name or alias to search for
+        search_list: List of cards to search in (defaults to global cards)
+    """
+    card_name_lower = card_name.strip().lower()
+    
+    if search_list is None:
+        search_list = [c['name'] for c in cards]
+    
+    for card in search_list:
+        # Direct name match
+        if card.lower() == card_name_lower:
+            return card
+        
+        # Alias match
+        card_data = next((c for c in cards if c['name'].lower() == card.lower()), None)
+        if card_data and 'aliases' in card_data:
+            if card_name_lower in [alias.lower() for alias in card_data['aliases']]:
+                return card
+    
+    return None
+
+def get_card_data(card_name: str) -> dict:
+    card_name_lower = card_name.strip().lower()
+    return next(
+        (c for c in cards if c['name'].lower() == card_name_lower or
+         card_name_lower in [alias.lower() for alias in c.get('aliases', [])]),
+        None
+    )
+
+def check_user_permissions(user_id: str, raise_error: bool = False) -> bool:
+    user_id_str = str(user_id)
+    
+    if BlacklistManager.is_blacklisted(user_id_str) and user_id_str not in authorized_user_ids:
+        if raise_error:
+            raise commands.CheckFailure("User is blacklisted")
+        return False
+    
+    if is_test_mode and user_id_str not in authorized_user_ids:
+        if raise_error:
+            raise commands.CheckFailure("Bot is in test mode")
+        return False
+    
+    return True
+
+def validate_pvp_participants(initiator: discord.Member, recipient: discord.Member, action: str = "battle") -> tuple[bool, str]:
+    if recipient.id == initiator.id:
+        return False, f"You can't {action} with yourself!"
+    
+    if recipient.bot:
+        return False, f"You can't {action} with a bot!"
+    
+    initiator_id = str(initiator.id)
+    recipient_id = str(recipient.id)
+    
+    if initiator_id not in player_cards or not player_cards[initiator_id]:
+        return False, f"You don't have any cards to {action} with!"
+    
+    if recipient_id not in player_cards or not player_cards[recipient_id]:
+        return False, f"{recipient.display_name} doesn't have any cards to {action} with!"
+    
+    return True, ""
+
+def ensure_bot_attribute(attr_name: str, default_value):
+    if not hasattr(bot, attr_name):
+        setattr(bot, attr_name, default_value)
+    return getattr(bot, attr_name)
+
 #=================================================================
 # UI COMPONENTS
 #=================================================================
@@ -485,12 +586,12 @@ class CatchButton(Button):
 
     async def callback(self, interaction: discord.Interaction):
         user_id = str(interaction.user.id)
-        if is_test_mode and user_id not in authorized_user_ids:
-            await interaction.response.send_message("We are currently updating the bot, please wait until we are finished.", ephemeral=True)
-            return
-        
-        if BlacklistManager.is_blacklisted(str(interaction.user.id)) and user_id not in authorized_user_ids:
-            await interaction.response.send_message("You are blacklisted and cannot use this bot.", ephemeral=True)
+
+        if not check_user_permissions(user_id):
+            if is_test_mode:
+                await interaction.response.send_message("We are currently updating the bot, please wait until we are finished.", ephemeral=True)
+            else:
+                await interaction.response.send_message("You are blacklisted and cannot use this bot.", ephemeral=True)
             return
         
         user = interaction.user
@@ -737,24 +838,8 @@ class TradeSession:
         if not self.active:
             return
         
-        def format_card_with_rarity(card_name):
-            card_data = next((c for c in cards if c['name'] == card_name), None)
-            if not card_data:
-                return card_name
-            rarity = card_data.get('rarity', 100)
-            if rarity == 0:
-                return f"**{card_name}** 🌟"
-            elif rarity < 5:
-                return f"{card_name} 🌟"
-            elif rarity < 10:
-                return f"{card_name} ⭐"
-            else:
-                return card_name
-    
-        initiator_cards_str = "None" if not self.initiator_cards else ", ".join(
-            [format_card_with_rarity(card) for card in self.initiator_cards])
-        recipient_cards_str = "None" if not self.recipient_cards else ", ".join(
-            [format_card_with_rarity(card) for card in self.recipient_cards])
+        initiator_cards_str = format_cards_with_rarity(self.initiator_cards)
+        recipient_cards_str = format_cards_with_rarity(self.recipient_cards)
         
         embed = discord.Embed(
             title="📦 Trade in Progress",
@@ -1811,7 +1896,7 @@ async def force_backup(ctx):
         await ctx.send(f"Backup failed: {str(e)}")
         logging.error(f"Manual backup failed: {e}", exc_info=True)
 
-@bot.command(name='set_spawn_mode', help="Set the spawn mode to 'both', 'test', or 'none'.")
+@bot.command(name='set_spawn_mode')
 @commands.check(is_authorized)
 async def set_spawn_mode(ctx, mode: str):
     global spawn_mode, is_test_mode
@@ -1824,7 +1909,7 @@ async def set_spawn_mode(ctx, mode: str):
     else:
         await ctx.send("Invalid mode. Please choose from 'both', 'test', or 'none'.")
 
-@bot.command(name='spawn_card', help="Spawn a specific card.")
+@bot.command(name='spawn_card')
 @commands.check(is_authorized)
 async def spawn_card_command(ctx, *, args: str):
     args = args.strip().lower()
@@ -1924,7 +2009,7 @@ async def set_spawn_timeout(ctx, minutes: int):
     SPAWN_TIMEOUT_MINUTES = minutes
     await ctx.send(f"Spawn timeout set to {SPAWN_TIMEOUT_MINUTES} minutes.")
 
-@bot.command(name='view_user', aliases=['user_info', 'view_progress'], help="Admin command to view detailed user information")
+@bot.command(name='view_user', aliases=['user_info', 'view_progress'])
 @commands.check(is_authorized)
 async def view_user(ctx, user: discord.Member):
     """
@@ -2023,7 +2108,7 @@ async def view_user(ctx, user: discord.Member):
 
     logging.info(f"Admin {ctx.author} viewed detailed information for {user.display_name} (ID: {target_user_id})")
 
-@bot.command(name='shutdown', help="Shut down the bot.")
+@bot.command(name='shutdown')
 @commands.check(is_authorized)
 async def shutdown(ctx):
     await ctx.send("Shutting down the bot...")
@@ -2073,20 +2158,10 @@ async def see_card_slash(interaction: discord.Interaction, card_name: str):
         await interaction.response.send_message("You haven't caught any cards yet.", ephemeral=True)
         return
 
-    card_name_lower = card_name.strip().lower()
-    user_card = next(
-        (card for card in user_cards if
-         card.lower() == card_name_lower or
-         any(card_name_lower == alias.lower() for alias in next((c.get('aliases', []) for c in cards if c['name'].lower() == card.lower()), []))
-        ),
-        None
-    )
+    user_card = find_card_by_name(card_name, user_cards)
+
     if user_card:
-        selected_card = next(
-            card for card in cards
-            if card["name"].lower() == card_name_lower or
-               card_name_lower in [alias.lower() for alias in card.get("aliases", [])]
-        )
+        selected_card = get_card_data(user_card)
         embed = discord.Embed(title=f"Here's your {selected_card['name']}", description="")
         embed.set_image(url=selected_card["card_image_url"])
         await interaction.response.send_message(embed=embed)
@@ -2099,25 +2174,16 @@ async def see_card_slash(interaction: discord.Interaction, card_name: str):
 async def stats_slash(interaction: discord.Interaction, card_name: str):
     user_id = str(interaction.user.id)
     user_cards = player_cards.get(user_id, [])
-    card_name_lower = card_name.strip().lower()
-    user_card = next(
-        (card for card in user_cards if
-         card.lower() == card_name_lower or
-         any(card_name_lower == alias.lower() for alias in next((c.get('aliases', []) for c in cards if c['name'].lower() == card.lower()), []))
-        ),
-        None
-    )
+    
+    user_card = find_card_by_name(card_name, user_cards)
+    
     if user_card:
-        selected_card = next(
-            card for card in cards
-            if card["name"].lower() == card_name_lower or
-               card_name_lower in [alias.lower() for alias in card.get("aliases", [])]
-        )
+        selected_card = get_card_data(user_card)
         embed = discord.Embed(title=f"Stats for {selected_card['name']}", description="")
         embed.add_field(name="Health", value=selected_card["health"], inline=True)
         embed.add_field(name="Damage", value=selected_card["attack"], inline=True)
         embed.add_field(name="Rarity", value=f"{selected_card['rarity']}%", inline=True)
-        embed.add_field(name="Description", value=selected_card["description"], inline=False)
+        embed.add_field(name="Description", value=selected_card.get("description", "N/A"), inline=False)
         await interaction.response.send_message(embed=embed)
     else:
         await interaction.response.send_message("You don't have this card.", ephemeral=True)
@@ -2135,7 +2201,6 @@ async def give_card_slash(
 ):
     sender_id = str(interaction.user.id)
     receiver_id = str(receiving_user.id)
-    card_lower = card.lower()
     
     if receiving_user.id == interaction.user.id:
         await interaction.response.send_message("You can't give a card to yourself!", ephemeral=True)
@@ -2147,30 +2212,17 @@ async def give_card_slash(
     async with battle_lock:
         try:
             sender_cards = player_cards.get(sender_id, [])
-            if not any(
-                card_lower == c.lower() or 
-                card_lower in [alias.lower() for alias in next((card_obj['aliases'] for card_obj in cards if card_obj['name'].lower() == c.lower()), [])]
-                for c in sender_cards
-            ):
+            actual_card_name = find_card_by_name(card, sender_cards)
+            
+            if not actual_card_name:
                 await interaction.response.send_message(f"You don't own the card `{card}`.", ephemeral=True)
                 return
-
-            actual_card_name = next(
-                (c for c in sender_cards if
-                 card_lower == c.lower() or
-                 card_lower in [alias.lower() for alias in next((card_obj['aliases'] for card_obj in cards if card_obj['name'].lower() == c.lower()), [])]
-                ),
-                None
-            )
-            if not actual_card_name:
-                await interaction.response.send_message(f"Error finding card `{card}` in your inventory.", ephemeral=True)
-                return
-                
-            # Remove the card from the sender's inventory
+            
             sender_cards.remove(actual_card_name)
             receiver_cards = player_cards.setdefault(receiver_id, [])
             receiver_cards.append(actual_card_name)
             save_player_cards()
+            
             await interaction.response.send_message(
                 f"{interaction.user.mention} has given `{actual_card_name}` to {receiving_user.mention}."
             )
@@ -2180,42 +2232,27 @@ async def give_card_slash(
             await interaction.response.send_message("An error occurred during card transfer.", ephemeral=True)
 
 @bot.tree.command(name="battle", description="Challenge another user to a card battle")
-@app_commands.describe(
-    opponent="The user you want to battle",
-    help="Show battle help before starting"
-)
-async def battle_slash(
-    interaction: discord.Interaction,
-    opponent: discord.Member,
-    help: bool = False
-):
+@app_commands.describe(opponent="The user you want to battle", help="Show battle help before starting")
+async def battle_slash(interaction: discord.Interaction, opponent: discord.Member, help: bool = False):
     challenger = interaction.user
-    if opponent.id == challenger.id:
-        await interaction.response.send_message("You can't battle yourself!", ephemeral=True)
+    
+    # Validate participants
+    is_valid, error_msg = validate_pvp_participants(challenger, opponent, "battle")
+    if not is_valid:
+        await interaction.response.send_message(error_msg, ephemeral=True)
         return
-    if opponent.bot:
-        await interaction.response.send_message("You can't battle a bot!", ephemeral=True)
-        return
-
+    
     challenger_id = str(challenger.id)
     opponent_id = str(opponent.id)
-
-    if challenger_id not in player_cards or not player_cards[challenger_id]:
-        await interaction.response.send_message("You don't have any cards to battle with!", ephemeral=True)
-        return
-    if opponent_id not in player_cards or not player_cards[opponent_id]:
-        await interaction.response.send_message(f"{opponent.display_name} doesn't have any cards to battle with!", ephemeral=True)
-        return
-
-    if not hasattr(bot, 'ongoing_battles'):
-        bot.ongoing_battles = set()
-    if not hasattr(bot, 'active_battles'):
-        bot.active_battles = []
-
-    if challenger_id in bot.ongoing_battles:
+    
+    # Ensure attributes exist
+    ongoing_battles = ensure_bot_attribute('ongoing_battles', set())
+    active_battles = ensure_bot_attribute('active_battles', [])
+    
+    if challenger_id in ongoing_battles:
         await interaction.response.send_message("You're already in a battle!", ephemeral=True)
         return
-    if opponent_id in bot.ongoing_battles:
+    if opponent_id in ongoing_battles:
         await interaction.response.send_message(f"{opponent.display_name} is already in a battle!", ephemeral=True)
         return
 
@@ -2251,20 +2288,20 @@ async def battle_slash(
         await interaction.response.defer()
         followup = interaction.followup
 
-    bot.ongoing_battles.add(challenger_id)
-    bot.ongoing_battles.add(opponent_id)
+    ongoing_battles.add(challenger_id)
+    ongoing_battles.add(opponent_id)
 
     try:
         battle = CardBattle(interaction, challenger, opponent)
-        bot.active_battles.append(battle)
+        active_battles.append(battle)
         await battle.start_battle()
     except Exception as e:
         logging.error(f"Battle error: {e}", exc_info=True)
         await followup.send("An error occurred while setting up the battle.", ephemeral=True)
-        bot.ongoing_battles.discard(challenger_id)
-        bot.ongoing_battles.discard(opponent_id)
-        if 'battle' in locals() and battle in getattr(bot, 'active_battles', []):
-            bot.active_battles.remove(battle)
+        ongoing_battles.discard(challenger_id)
+        ongoing_battles.discard(opponent_id)
+        if 'battle' in locals() and battle in active_battles:
+            active_battles.remove(battle)
 
 class Trade(commands.GroupCog, name="trade"):
     def __init__(self, bot):
@@ -2275,29 +2312,26 @@ class Trade(commands.GroupCog, name="trade"):
     async def start(self, interaction: discord.Interaction, user: discord.Member):
         initiator_id = str(interaction.user.id)
         recipient_id = str(user.id)
-        if initiator_id == recipient_id:
-            await interaction.response.send_message("You can't trade with yourself!", ephemeral=True)
+    
+        # Validate participants
+        is_valid, error_msg = validate_pvp_participants(interaction.user, user, "trade")
+        if not is_valid:
+            await interaction.response.send_message(error_msg, ephemeral=True)
             return
-        if user.bot:
-            await interaction.response.send_message("You can't trade with a bot!", ephemeral=True)
-            return
-        if initiator_id not in player_cards or not player_cards[initiator_id]:
-            await interaction.response.send_message("You don't have any cards to trade!", ephemeral=True)
-            return
-        if recipient_id not in player_cards or not player_cards[recipient_id]:
-            await interaction.response.send_message(f"{user.display_name} doesn't have any cards to trade!", ephemeral=True)
-            return
-        if not hasattr(self.bot, 'active_trades'):
-            self.bot.active_trades = {}
-        if initiator_id in self.bot.active_trades:
+    
+        # Ensure active_trades exists
+        active_trades = ensure_bot_attribute('active_trades', {})
+    
+        if initiator_id in active_trades:
             await interaction.response.send_message("You're already in an active trade!", ephemeral=True)
             return
-        if recipient_id in self.bot.active_trades:
+        if recipient_id in active_trades:
             await interaction.response.send_message(f"{user.display_name} is already in an active trade!", ephemeral=True)
             return
+    
         trade_session = TradeSession(interaction, interaction.user, user)
-        self.bot.active_trades[initiator_id] = trade_session
-        self.bot.active_trades[recipient_id] = trade_session
+        active_trades[initiator_id] = trade_session
+        active_trades[recipient_id] = trade_session
         await trade_session.start_trade()
         await interaction.response.send_message(f"Trade started with {user.mention}!", ephemeral=True)
 
@@ -2305,44 +2339,38 @@ class Trade(commands.GroupCog, name="trade"):
     @app_commands.describe(card="The card you want to add")
     async def add(self, interaction: discord.Interaction, card: str):
         user_id = str(interaction.user.id)
-        if not hasattr(self.bot, 'active_trades') or user_id not in self.bot.active_trades:
+        active_trades = ensure_bot_attribute('active_trades', {})
+        
+        if user_id not in active_trades:
             await interaction.response.send_message("You're not in an active trade!", ephemeral=True)
             return
-        trade = self.bot.active_trades[user_id]
+        
+        trade = active_trades[user_id]
         trade.reset_activity_timer()
+        
         if not trade.active:
-            del self.bot.active_trades[user_id]
+            del active_trades[user_id]
             await interaction.response.send_message("That trade is no longer active.", ephemeral=True)
             return
+        
         is_initiator = (user_id == trade.initiator_id)
         if (is_initiator and trade.initiator_confirmed) or (not is_initiator and trade.recipient_confirmed):
             await interaction.response.send_message("You've already confirmed the trade! Use `/trade unconfirm` to make changes.", ephemeral=True)
             return
+        
         user_cards = player_cards.get(user_id, [])
-        card_lower = card.lower()
-        found_card = None
-        for c in user_cards:
-            card_data = next((ci for ci in cards if ci['name'].lower() == c.lower()), None)
-            if c.lower() == card_lower:
-                found_card = c
-                break
-            elif card_data and 'aliases' in card_data:
-                if card_lower in [alias.lower() for alias in card_data['aliases']]:
-                    found_card = c
-                    break
+        found_card = find_card_by_name(card, user_cards)
+        
         if not found_card:
             await interaction.response.send_message(f"You don't have a card named `{card}`!", ephemeral=True)
             return
-        if is_initiator:
-            if found_card in trade.initiator_cards:
-                await interaction.response.send_message(f"You've already added `{found_card}` to the trade!", ephemeral=True)
-                return
-            trade.initiator_cards.append(found_card)
-        else:
-            if found_card in trade.recipient_cards:
-                await interaction.response.send_message(f"You've already added `{found_card}` to the trade!", ephemeral=True)
-                return
-            trade.recipient_cards.append(found_card)
+        
+        target_list = trade.initiator_cards if is_initiator else trade.recipient_cards
+        if found_card in target_list:
+            await interaction.response.send_message(f"You've already added `{found_card}` to the trade!", ephemeral=True)
+            return
+        
+        target_list.append(found_card)
         await interaction.response.send_message(f"Added `{found_card}` to your trade offer.", ephemeral=True)
         await trade.update_trade_status()
 
@@ -2350,35 +2378,33 @@ class Trade(commands.GroupCog, name="trade"):
     @app_commands.describe(card="The card you want to remove")
     async def remove(self, interaction: discord.Interaction, card: str):
         user_id = str(interaction.user.id)
-        if not hasattr(self.bot, 'active_trades') or user_id not in self.bot.active_trades:
+        active_trades = ensure_bot_attribute('active_trades', {})
+        
+        if user_id not in active_trades:
             await interaction.response.send_message("You're not in an active trade!", ephemeral=True)
             return
-        trade = self.bot.active_trades[user_id]
+        
+        trade = active_trades[user_id]
         trade.reset_activity_timer()
+        
         if not trade.active:
-            del self.bot.active_trades[user_id]
+            del active_trades[user_id]
             await interaction.response.send_message("That trade is no longer active.", ephemeral=True)
             return
+        
         is_initiator = (user_id == trade.initiator_id)
         if (is_initiator and trade.initiator_confirmed) or (not is_initiator and trade.recipient_confirmed):
             await interaction.response.send_message("You've already confirmed the trade! Use `/trade unconfirm` to make changes.", ephemeral=True)
             return
-        card_lower = card.lower()
-        user_trade_cards = trade.initiator_cards if is_initiator else trade.recipient_cards
-        card_to_remove = None
-        for c in user_trade_cards:
-            card_data = next((ci for ci in cards if ci['name'].lower() == c.lower()), None)
-            if c.lower() == card_lower:
-                card_to_remove = c
-                break
-            elif card_data and 'aliases' in card_data:
-                if card_lower in [alias.lower() for alias in card_data['aliases']]:
-                    card_to_remove = c
-                    break
+        
+        target_list = trade.initiator_cards if is_initiator else trade.recipient_cards
+        card_to_remove = find_card_by_name(card, target_list)
+        
         if not card_to_remove:
             await interaction.response.send_message(f"You don't have `{card}` in your trade offer!", ephemeral=True)
             return
-        user_trade_cards.remove(card_to_remove)
+        
+        target_list.remove(card_to_remove)
         await interaction.response.send_message(f"Removed `{card_to_remove}` from your trade offer.", ephemeral=True)
         await trade.update_trade_status()
 
@@ -2637,7 +2663,7 @@ async def info_slash(interaction: discord.Interaction):
 
     await interaction.response.send_message(embed=embed)
 
-@bot.command(name='celebrate', help="Posts a celebration animation (admin only)")
+@bot.command(name='celebrate', help="WOOHOO!")
 @commands.check(is_authorized)
 async def play_gif(ctx):
     embed = discord.Embed(title="Celebration Time!")
@@ -2701,9 +2727,7 @@ async def on_ready():
 
     spawned_messages = []
 
-    await spawn_card_in_channels()
-
-    spawn_card_monitor.start()
+    spawn_card.start()
     backup_player_data.start()
 
 @bot.event
@@ -2730,7 +2754,7 @@ async def on_command_error(ctx, error):
             await ctx.send("There was a network error. Please try again later.")
         else:
             logging.error(f"Command {ctx.command} raised an error: {original}", exc_info=original)
-            await ctx.send(f"An error occurred while running the command: {type(original).__name__}")
+            await ctx.send(f"An error occurred while running the command: {type(original).__name__}. Please ping Mixer so he can fix it!")
     elif isinstance(error, commands.TooManyArguments):
         await ctx.send("Too many arguments provided. Check command usage with `/commands_dex`.")
     elif isinstance(error, commands.CheckFailure):
@@ -2761,9 +2785,7 @@ async def on_message(message):
     if message.guild and message.guild.id in allowed_guild_ids and not message.author.bot:
         MESSAGE_COUNT += 1
 
-    logging.info(
-        f"Message received from {message.author} in {getattr(message.channel,'id','?')} | MESSAGE_COUNT={MESSAGE_COUNT}"
-    )
+    logging.info(f"Message received from {message.author} in {getattr(message.channel,'id','?')} | MESSAGE_COUNT={MESSAGE_COUNT}")
 
     responses = {
         "good bot": {
@@ -2801,37 +2823,57 @@ async def on_message(message):
 
 @bot.before_invoke
 async def check_conditions(ctx):
-    if BlacklistManager.is_blacklisted(str(ctx.author.id)) and str(ctx.author.id) not in authorized_user_ids:
-        await ctx.send("You are blacklisted and cannot use this bot.")
-        raise commands.CheckFailure("User is blacklisted.")
+    user_id = str(ctx.author.id)
     
-    if is_test_mode and str(ctx.author.id) not in authorized_user_ids and not ctx.command.name == 'set_spawn_mode':
-        await ctx.send("We are currently updating the bot, please wait until we are finished.")
-        raise commands.CheckFailure("Bot is in test mode.")
+    if not check_user_permissions(user_id, raise_error=True):
+        if BlacklistManager.is_blacklisted(user_id):
+            await ctx.send("You are blacklisted and cannot use this bot.")
+        else:
+            await ctx.send("We are currently updating the bot, please wait until we are finished.")
+        raise commands.CheckFailure("User permissions check failed")
 
-async def spawn_card_in_channels():
-    global spawned_messages, last_spawned_card_per_channel, LAST_SPAWN_TIME
-    if spawn_mode == 'none':
-        return
-    async with spawn_lock:
+async def disable_catch_buttons(msg):
+    try:
+        if hasattr(msg, "components") and msg.components:
+            v = View()
+            for row in msg.components:
+                for comp in row.children:
+                    if isinstance(comp, discord.Button):
+                        b = Button(label=comp.label, style=comp.style, disabled=True)
+                        v.add_item(b)
+            await msg.edit(view=v)
+    except Exception as e:
+        logging.error(f"Failed to disable catch button for message {getattr(msg,'id','?')}: {e}")
+
+async def schedule_disable_catch(msg, timeout_seconds):
+    await asyncio.sleep(timeout_seconds)
+    await disable_catch_buttons(msg)
+
+@tasks.loop(minutes=45)
+async def spawn_card():
+    global spawned_messages, last_spawned_card_per_channel
+    channels = []
+    try:
+        for message in spawned_messages:
+            try:
+                view = View.from_message(message)
+                for item in view.children:
+                    if isinstance(item, Button):
+                        item.disabled = True
+                await message.edit(view=view)
+            except discord.NotFound:
+                logging.info(f"Message {message.id} not found, likely deleted")
+            except discord.HTTPException as e:
+                logging.error(f"HTTP error disabling buttons: {e}")
+            except Exception as e:
+                logging.error(f"Error disabling buttons on message {message.id}: {e}")
+        
+        spawned_messages = []
+
         channels = get_spawn_channels()
         if not channels:
             logging.info("No channels configured for spawning cards.")
             return
-
-        for old_msg in spawned_messages:
-            try:
-                if hasattr(old_msg, "components") and old_msg.components:
-                    v = View()
-                    for row in old_msg.components:
-                        for comp in row.children:
-                            if isinstance(comp, discord.Button):
-                                b = Button(label=comp.label, style=comp.style, disabled=True)
-                                v.add_item(b)
-                    await old_msg.edit(view=v)
-            except Exception as e:
-                logging.error(f"Failed to disable old spawn message {getattr(old_msg,'id','?')}: {e}")
-        spawned_messages.clear()
 
         spawn_titles = [
             "A wild card has appeared!", "Think fast, chucklenuts!",
@@ -2839,99 +2881,40 @@ async def spawn_card_in_channels():
             "Card alert!", "Card incoming!", "Be fast!", "Catch it if you can!",
             "Card on the loose!", "Card on 12'oclock!"
         ]
-
+        
         for channel in channels:
             try:
                 last_card_name = last_spawned_card_per_channel.get(channel.id)
                 card = select_random_card(exclude_card_name=last_card_name)
                 last_spawned_card_per_channel[channel.id] = card['name']
-                embed = discord.Embed(
-                    title=random.choice(spawn_titles),
-                    description="Click the button below to catch it!"
-                ).set_image(url=card['spawn_image_url'])
+
+                spawn_title = random.choice(spawn_titles)
+                embed = discord.Embed(title=spawn_title, description="Click the button below to catch it!")
+                embed.set_image(url=card['spawn_image_url'])
+
                 msg = await channel.send(embed=embed, view=CatchView(card['name']),
-                                         allowed_mentions=discord.AllowedMentions.none())
+                                        allowed_mentions=discord.AllowedMentions.none())
                 spawned_messages.append(msg)
                 logging.info(f"Card spawned in channel {channel.id}: {card['name']}")
+            except discord.Forbidden:
+                logging.error(f"Missing permissions to send messages in channel {channel.id}")
+            except discord.HTTPException as e:
+                logging.error(f"Failed to send card to channel {channel.id}: {e}")
             except Exception as e:
-                logging.error(f"Error spawning card in channel {getattr(channel,'id','?')}: {e}")
+                logging.error(f"Unexpected error sending card to channel {channel.id}: {e}")
 
-        LAST_SPAWN_TIME = datetime.datetime.now()
-
-@tasks.loop(seconds=30)
-async def spawn_card_monitor():
-    global MESSAGE_COUNT, LAST_SPAWN_TIME
-    now = datetime.datetime.now()
-    minutes_since = (now - LAST_SPAWN_TIME).total_seconds() / 60
-    if MESSAGE_COUNT >= MESSAGE_THRESHOLD or minutes_since >= SPAWN_TIMEOUT_MINUTES:
-        await spawn_card_in_channels()
-        MESSAGE_COUNT = 0
-
-# @tasks.loop(minutes=45)
-# async def spawn_card():
-#     global spawned_messages, last_spawned_card_per_channel
-#     channels = []
-#     try:
-#         for message in spawned_messages:
-#             try:
-#                 view = View.from_message(message)
-#                 for item in view.children:
-#                     if isinstance(item, Button):
-#                         item.disabled = True
-#                 await message.edit(view=view)
-#             except discord.NotFound:
-#                 logging.info(f"Message {message.id} not found, likely deleted")
-#             except discord.HTTPException as e:
-#                 logging.error(f"HTTP error disabling buttons: {e}")
-#             except Exception as e:
-#                 logging.error(f"Error disabling buttons on message {message.id}: {e}")
-        
-#         spawned_messages = []
-
-#         channels = get_spawn_channels()
-#         if not channels:
-#             logging.info("No channels configured for spawning cards.")
-#             return
-
-#         spawn_titles = [
-#             "A wild card has appeared!", "Think fast, chucklenuts!",
-#             "Look at this beauty, what might it be?", "Houston, we have a card!",
-#             "Card alert!", "Card incoming!", "Be fast!", "Catch it if you can!",
-#             "Card on the loose!", "Card on 12'oclock!"
-#         ]
-        
-#         for channel in channels:
-#             try:
-#                 last_card_name = last_spawned_card_per_channel.get(channel.id)
-#                 card = select_random_card(exclude_card_name=last_card_name)
-#                 last_spawned_card_per_channel[channel.id] = card['name']
-
-#                 spawn_title = random.choice(spawn_titles)
-#                 embed = discord.Embed(title=spawn_title, description="Click the button below to catch it!")
-#                 embed.set_image(url=card['spawn_image_url'])
-
-#                 msg = await channel.send(embed=embed, view=CatchView(card['name']),
-#                                         allowed_mentions=discord.AllowedMentions.none())
-#                 spawned_messages.append(msg)
-#                 logging.info(f"Card spawned in channel {channel.id}: {card['name']}")
-#             except discord.Forbidden:
-#                 logging.error(f"Missing permissions to send messages in channel {channel.id}")
-#             except discord.HTTPException as e:
-#                 logging.error(f"Failed to send card to channel {channel.id}: {e}")
-#             except Exception as e:
-#                 logging.error(f"Unexpected error sending card to channel {channel.id}: {e}")
-
-#     except Exception as e:
-#         logging.error(f"An error occurred during card spawn: {e}", exc_info=True)
-#         for channel in channels:
-#             try:
-#                 await channel.send("An error occurred while spawning cards.")
-#             except:
-#                 pass
+    except Exception as e:
+        logging.error(f"An error occurred during card spawn: {e}", exc_info=True)
+        for channel in channels:
+            try:
+                await channel.send("An error occurred while spawning cards.")
+            except:
+                pass
 
 #=================================================================
 # INITIALISATION & STARTUP
 #=================================================================
+
 def handle_shutdown_signal(signal, frame):
     save_player_cards()
     loop = asyncio.get_event_loop()
