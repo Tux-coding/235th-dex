@@ -424,12 +424,12 @@ cards = [
     {
         "name": "Havoc",
         "aliases": ["Mothlover"],
-        "spawn_image_url": "https://i.imgur.com/uvNAOwE.png",
-        "card_image_url": "https://i.imgur.com/DqiCxDd.png",  
-        "rarity": 50,
-        "health": 2700,
-        "attack": 1350,
-        "description": "Heavy gunner, with a bit of a Northern Irish edge to him. Known for his dry jokes, and a weird obsession with moths."
+        "spawn_image_url": "https://i.imgur.com/Fc4hieu.png",
+        "card_image_url": "https://i.imgur.com/ww8CU6K.png",  
+        "rarity": 26,
+        "health": 6900,
+        "attack": 3450,
+        "description": "A good-humoured clone with a strong Northern Irish edge and exceptional skills with heavy weapons. His Z-6, nicknamed Red Hand, is rarely far from his side. A bit of a drunkard, but always reliable; and never short of a joke."
     },
     {
         "name": "Stalemate",
@@ -454,8 +454,8 @@ cards = [
     {
         "name": "Surge",
         "aliases": ["Jonathan"],
-        "spawn_image_url": "https://i.imgur.com/8jGWR4B.png",
-        "card_image_url": "https://i.imgur.com/86A0Zfd.png",
+        "spawn_image_url": "https://i.imgur.com/QHnZp5J.png",
+        "card_image_url": "https://i.imgur.com/8jGWR4B.png",
         "rarity": 36,
         "health": 5700,
         "attack": 2850,
@@ -464,8 +464,8 @@ cards = [
     {
         "name": "Purge",
         "aliases": ["Erase"],
-        "spawn_image_url": "https://i.imgur.com/V5MdpfY.png",
-        "card_image_url": "https://i.imgur.com/EYU65RL.png",
+        "spawn_image_url": "https://i.imgur.com/6McMevs.png",
+        "card_image_url": "https://i.imgur.com/cbyBohD.png",
         "rarity": 52,
         "health": 3700,
         "attack": 1850,
@@ -540,5 +540,15 @@ cards = [
         "health": 4700,
         "attack": 2350,
         "description": "CS-700 Sergeant Major \"Givi\" is a very intelligent and heartful clone Sergeant-Major. He's the leader of the 488th Fautor Squad and member of the 31st Sheperd Company. He has a crazy addiction to kiwis, and his class is infantry."
+    },
+    {
+        "name": "Gale",
+        "aliases": ["Windy"],
+        "spawn_image_url": "https://i.imgur.com/XwaWAej.png",
+        "card_image_url": "https://i.imgur.com/QJO29a9.png",
+        "rarity": 68,
+        "health": 1800,
+        "attack": 900,
+        "description": "BREAD."
     }
 ]
