@@ -106,7 +106,7 @@ cards = [
         "aliases": ["Boiler"],
         "spawn_image_url": "https://media.discordapp.net/attachments/1322205679028670495/1323570324767379497/RobloxScreenShot20241231_093357795.png?ex=6774fe6c&is=6773acec&hm=c75865e285d3d39f4a6476d442a01c9e1dbe3611a0b06cbd862c8c43b770e956&=&format=webp&quality=lossless&width=468&height=350",
         "card_image_url": "https://media.discordapp.net/attachments/1322202570529177642/1323573966652309504/Just_another_trooper_trying_to_stay_alive._He_doesnt_like_insurgents._His_left_arm_and_left_eye_are_gone_due_to_the_Gulag_17.png?ex=677501d0&is=6773b050&hm=8fe64e466f95254086fd222ad3698819eff00c38d7ab2333f132458ca25af856&=&format=webp&quality=lossless&width=479&height=671",
-        "rarity": 17.5,
+        "rarity": 0,
         "health": 5000,
         "attack": 2500,
         "description": "The number one stove! From medic to clone commando to sharpshooter, it is... the STOVE!"
@@ -144,12 +144,12 @@ cards = [
     {
         "name": "Sinner",
         "aliases": ["Repenter"],
-        "spawn_image_url": "https://media.discordapp.net/attachments/1322205679028670495/1323982617527451708/RobloxScreenShot20250101_125340765.png?ex=67767e66&is=67752ce6&hm=57ff065a4ae55a28e1a67ea0dfe6a55959924dd8c7f6c7375c6acb204bfcfb1f&=&format=webp&quality=lossless&width=318&height=350",
-        "card_image_url": "https://media.discordapp.net/attachments/1322202570529177642/1323984903406354543/Just_another_trooper_trying_to_stay_alive._He_doesnt_like_insurgents._His_left_arm_and_left_eye_are_gone_due_to_the_Gulag_23.png?ex=67768087&is=67752f07&hm=c2a2e730930dc2aaa552e1aa40e0d4d01c7bc89aea1608b3c5c67319093fae68&=&format=webp&quality=lossless&width=479&height=671",
-        "rarity": 77,
-        "health": 2550,
-        "attack": 1755,
-        "description": "I aint writing all a that"
+        "spawn_image_url": "https://i.imgur.com/khmwT3b.png",
+        "card_image_url": "https://i.imgur.com/ODCWM87.png",
+        "rarity": 34,
+        "health": 5900,
+        "attack": 2950,
+        "description": "Cat is best friend with dog, fish, horse and birb."
     },
     {
         "name": "Voca",
@@ -196,7 +196,7 @@ cards = [
         "aliases": ["Twinkletoes" ], #dont ask why, what, how, where or when
         "spawn_image_url": "https://cdn.discordapp.com/attachments/1322205679028670495/1327722697647456336/RobloxScreenShot20250111_203536461.png?ex=6784199f&is=6782c81f&hm=ce4fbdf5b8cf708d7fbec195863fdff44e799a322aeaaab456135d17a3a3d078&",
         "card_image_url": "https://cdn.discordapp.com/attachments/1322202570529177642/1327723966873210950/CC-_8.png?ex=67841acd&is=6782c94d&hm=139ff0e1661f647c03b15892c4834a8d8e6c8ebcd76b30688df4397366d3279f&", 
-        "rarity": 8.5,
+        "rarity": 0,
         "health": 6250,
         "attack": 3250,
         "description": "ARC Commander Stars is a member within the GAR, serving alongside Commanders like Reyes, Hounder and Wilson. He currently leads the 31st \"Shepherd\" Battalion in the 235th Elite Corps.",   
@@ -216,7 +216,7 @@ cards = [
         "aliases": ["Rhino", "big boy"],
         "spawn_image_url": "https://i.imgur.com/FmkxBik.png",
         "card_image_url": "https://i.imgur.com/LkSt0I0.png",
-        "rarity": 55,
+        "rarity": 0,
         "attack": 1600,
         "health": 3100,
         "description": "Rhino was an ITF member and then soon changed into FA-C; his notable missions are the rescue of an 'agent' that failed. After this, he left RI to become leader of the 'Minutemen squad.",
@@ -274,12 +274,12 @@ cards = [
     {
         "name": "Vic",
         "aliases": ["Victory"],
-        "spawn_image_url": "https://i.imgur.com/KmvROzr.png",
-        "card_image_url": "https://i.imgur.com/zpWeuTW.png",
-        "rarity": 45,
-        "health": 3000,
-        "attack": 1550,
-        "description": "Vic is an ARC trooper and Staff Sergeant in the 128th Haven Company, of which he is also the executive. He is also 100% French!"
+        "spawn_image_url": "https://i.imgur.com/gm2xoWF.png",
+        "card_image_url": "https://i.imgur.com/vyghbJE.png",
+        "rarity": 18,
+        "health": 7900,
+        "attack": 3950,
+        "description": "ARC-5027 \"Vic\" is an ARC trooper and the Legion Executive of 871st Spitfire; he leads the 366th Umbra Platoon. He is the executive of the ARC troopers. He is loyal, serious and follows orders, but sometimes he tries to do the best choice for the mission. (He's a French patriot, certified)."
     },
     {
         "name": "Apok",
@@ -296,7 +296,7 @@ cards = [
         "aliases": ["Sharpie", "triggerboy"],
         "spawn_image_url": "https://i.imgur.com/EKCz1Ly.png",
         "card_image_url": "https://i.imgur.com/mjEypbU.png",
-        "rarity": 89,
+        "rarity": 0,
         "health": 1200,
         "attack": 550,
         "description": "Going prone, aiming, and pulling the trigger. Target eliminated."
@@ -366,7 +366,7 @@ cards = [
         "aliases": ["Helicopter"],
         "spawn_image_url": "https://i.imgur.com/JwKNNKh.png",
         "card_image_url": "https://i.imgur.com/7Yr4VUU.png",
-        "rarity": 31,
+        "rarity": 0,
         "health": 6100,
         "attack": 2000,
         "description": "Current Director of RI Clone Sergeant Sanghelios of the Republic Intelligence 235th attachement, highly skilled in stealth and disguise along with the essentials for a trooper."
@@ -374,12 +374,12 @@ cards = [
     {
         "name": "Max",
         "aliases": ["Min"],
-        "spawn_image_url": "https://i.imgur.com/6QP8Mg8.png",
-        "card_image_url": "https://i.imgur.com/lnUTCRo.png",
-        "rarity": 71,
-        "health": 2800,
-        "attack": 1650,
-        "description": "A corporal of the 235th Elite Corps with two skull logos on his helmet."
+        "spawn_image_url": "https://i.imgur.com/P9xfzDm.png",
+        "card_image_url": "https://i.imgur.com/v7kVUgb.png",
+        "rarity": 38,
+        "health": 5400,
+        "attack": 2700,
+        "description": "Du du du du Max Verstappen du du du du Max Verstappen"
     },
     {
         "name": "Checkmate",
@@ -404,19 +404,19 @@ cards = [
     {
         "name": "Rylo",
         "aliases": ["Bacon"],
-        "spawn_image_url": "https://i.imgur.com/ZIqJ3lk.png",
-        "card_image_url": "https://i.imgur.com/UtmQhp2.png",
-        "rarity": 60,
-        "health": 2250,
-        "attack": 1125,
-        "description": "As an ITF member, Rylo serves as basic infantry. The only thing stopping him from being a bit normal is his obsession with bacon."
+        "spawn_image_url": "https://i.imgur.com/QmEHgyV.png",
+        "card_image_url": "https://i.imgur.com/D2kV5OA.png",
+        "rarity": 52,
+        "health": 3700,
+        "attack": 1850,
+        "description": "Standard infantry, but has seen many brutal operations and survived. Former member of Sheperd and ITF."
     },
     {
         "name": "Bolter",
         "aliases": ["Metalhead"],
         "spawn_image_url": "https://i.imgur.com/CPKw3ab.png",
         "card_image_url": "https://i.imgur.com/GHkzel1.png",  
-        "rarity": 70,
+        "rarity": 0,
         "health": 1999,
         "attack": 999,
         "description": "X"
@@ -430,5 +430,115 @@ cards = [
         "health": 2700,
         "attack": 1350,
         "description": "Heavy gunner, with a bit of a Northern Irish edge to him. Known for his dry jokes, and a weird obsession with moths."
+    },
+    {
+        "name": "Stalemate",
+        "aliases": ["War"],
+        "spawn_image_url": "https://i.imgur.com/OaM9Oxp.png",
+        "card_image_url": "https://i.imgur.com/JMosuHI.png",
+        "rarity": 52,
+        "health": 3700,
+        "attack": 1850,
+        "description": "Lazy as feugh, mildly rude, and somehow still gets the job done. Sometimes. He loves sleeping too."
+    },
+    {
+        "name": "Rammhawk",
+        "aliases": ["George"],
+        "spawn_image_url": "https://i.imgur.com/uDu522m.png",
+        "card_image_url": "https://i.imgur.com/86A0Zfd.png",
+        "rarity": 68,
+        "health": 1800,
+        "attack": 900,
+        "description": "Rammhawk is a fairly recent addition to the Frogmen. He's an ARF trooper who is best friends with the clone trooper Lev. He took part in a lot of battles when he first started. Now he usually doesn't take part in missions due to unknown reasons."
+    },
+    {
+        "name": "Surge",
+        "aliases": ["Jonathan"],
+        "spawn_image_url": "https://i.imgur.com/8jGWR4B.png",
+        "card_image_url": "https://i.imgur.com/86A0Zfd.png",
+        "rarity": 36,
+        "health": 5700,
+        "attack": 2850,
+        "description": "Surge is one of the few clones that do take things seriously. He is a part of the 93rd Helios Legion, 128th Haven Company and the second in command of the 54th Frogmen Platoon. He leads the 80th Spartan Squad and he is an ARC trooper of the 235th."
+    },
+    {
+        "name": "Purge",
+        "aliases": ["Erase"],
+        "spawn_image_url": "https://i.imgur.com/V5MdpfY.png",
+        "card_image_url": "https://i.imgur.com/EYU65RL.png",
+        "rarity": 52,
+        "health": 3700,
+        "attack": 1850,
+        "description": "Purge is one of the many ITF operatives within Republic Intelligence. His name stems from the desire to erase his past and eliminate all the mistakes he has had."
+    },
+    {
+        "name": "Purger",
+        "aliases": ["Eraser"],
+        "spawn_image_url": "https://i.imgur.com/LZ0WI12.png",
+        "card_image_url": "https://i.imgur.com/MQBtyfw.png",
+        "rarity": 52,
+        "health": 3700,
+        "attack": 1850,
+        "description": "He's the one and only jeffster."
+    },
+    {
+        "name": "Alpine",
+        "aliases": ["Austria"],
+        "spawn_image_url": "https://i.imgur.com/WRkzYG9.png",
+        "card_image_url": "https://i.imgur.com/GINdvMd.png",
+        "rarity": 58,
+        "health": 3000,
+        "attack": 1500,
+        "description": "As a jet trooper, Alpine specializes in providing aerial support on the battlefields. Alpine got his nickname back on Kamino from an ability to climb as well as his personal interest in flying vehicles. He also enjoys spending time with his close buddies who he deeply cares for."
+    },
+    {
+        "name": "Velora Nytha",
+        "aliases": ["Veloren"],
+        "spawn_image_url": "https://i.imgur.com/l6LhY7V.png",
+        "card_image_url": "https://i.imgur.com/vthO2Mp.png",
+        "rarity": 20,
+        "health": 7600,
+        "attack": 3800,
+        "description": "A tempered Jedi who wants the good of all. A sturdy pillar within the high command of the 235th Elite Corps. \"The Force is with us, always.\""
+    },
+    {
+        "name": "Numbscull",
+        "aliases": ["schedel"],
+        "spawn_image_url": "https://i.imgur.com/ishFE9F.png",
+        "card_image_url": "https://i.imgur.com/i93eKVU.png",
+        "rarity": 58,
+        "health": 3000,
+        "attack": 1500,
+        "description": "Sarcastic, never serious, but can easily slice through doors. Is a good runner."
+    },
+    {
+        "name": "Spoiler",
+        "aliases": ["Waster"],
+        "spawn_image_url": "https://i.imgur.com/HefJWjU.png",
+        "card_image_url": "https://i.imgur.com/q1j3XjO.png",
+        "rarity": 52,
+        "health": 3700,
+        "attack": 1850,
+        "description": "As the SOB pilot, Spoiler swoops in and out, delivering troops and heavy gunfire with versatility and precision."
+    },
+    {
+        "name": "Vestige",
+        "aliases": ["Remainder"],
+        "spawn_image_url": "https://i.imgur.com/mNnuW00.png",
+        "card_image_url": "https://i.imgur.com/Aph6Mf8.png",
+        "rarity": 58,
+        "health": 3000,
+        "attack": 1500,
+        "description": "Vestige is a combat medic who is the most active medic in the battlefield, treating brothers at a fast speed to be available. He makes a good duo with Alpine, scouting with him for injured brothers for Vestige so he can move next to them. He's the squad leader of the 512th Saviour Squad. Mainly focuses on support on frontlines and backlines. His dream is to become an ARC. One more member of the 31st Sheperd Company, led by CO-9181 \"Apok\". He wants to become the best medic of the 235th."
+    },
+    {
+        "name": "Givi",
+        "aliases": ["Kiwi"],
+        "spawn_image_url": "https://i.imgur.com/i4cmEv5.png",
+        "card_image_url": "https://i.imgur.com/K4k4D79.png",
+        "rarity": 44,
+        "health": 4700,
+        "attack": 2350,
+        "description": "CS-700 Sergeant Major \"Givi\" is a very intelligent and heartful clone Sergeant-Major. He's the leader of the 488th Fautor Squad and member of the 31st Sheperd Company. He has a crazy addiction to kiwis, and his class is infantry."
     }
 ]

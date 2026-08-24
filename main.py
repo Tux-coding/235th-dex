@@ -200,7 +200,7 @@ def count_lines_of_code() -> int:
 
     for root, _, files in os.walk(project_dir):
         for file in files:
-            if file.endswith('test.py') or file.endswith('cards.py'):
+            if file.endswith('main.py') or file.endswith('cards.py'):
                 file_path = os.path.join(root, file)
                 try:
                     with open(file_path, 'r', encoding='utf-8') as f:
@@ -1909,6 +1909,76 @@ async def set_spawn_mode(ctx, mode: str):
     else:
         await ctx.send("Invalid mode. Please choose from 'both', 'test', or 'none'.")
 
+@bot.command(name='spawn_random_card')
+@commands.check(is_authorized)
+async def spawn_random_card_command(ctx, *, args: str = ""):
+    global last_spawned_card_per_channel, spawned_messages
+
+    args = args.strip().lower()
+    channel = None
+    channel_name = "main channel"
+
+    # Target selection:
+    # !spawn_random_card            -> main channel (channel_ids[0])
+    # !spawn_random_card test       -> test channel
+    # !spawn_random_card in 0       -> channel_ids[0]
+    if args == "" or args == "main":
+        channel = bot.get_channel(int(channel_ids[0]))
+        channel_name = "main channel"
+
+    elif args == "test":
+        channel = bot.get_channel(int(test_channel_id))
+        channel_name = "test channel"
+
+    elif args.startswith("in "):
+        idx_str = args[3:].strip()
+        if not idx_str.isdigit():
+            await ctx.send("Invalid format. Use: !spawn_random_card, !spawn_random_card test, or !spawn_random_card in <index>")
+            return
+
+        channel_index = int(idx_str)
+        if channel_index < 0 or channel_index >= len(channel_ids):
+            await ctx.send(f"Invalid channel index. Use a number between 0 and {len(channel_ids)-1}.")
+            return
+
+        channel = bot.get_channel(int(channel_ids[channel_index]))
+        channel_name = f"channel #{channel_index}"
+
+    else:
+        await ctx.send("Invalid argument. Use: !spawn_random_card, !spawn_random_card test, or !spawn_random_card in <index>")
+        return
+
+    if not channel:
+        await ctx.send(f"Channel not found for {channel_name}.")
+        return
+
+    # Reuse your weighted random spawn logic and avoid immediate repeats per channel
+    last_card_name = last_spawned_card_per_channel.get(channel.id)
+    card = select_random_card(exclude_card_name=last_card_name)
+    last_spawned_card_per_channel[channel.id] = card['name']
+
+    spawn_titles = [
+        "A wild card has appeared!", "Think fast, chucklenuts!",
+        "Look at this beauty, what might it be?", "Houston, we have a card!",
+        "Card alert!", "Card incoming!", "Be fast!", "Catch it if you can!",
+        "Card on the loose!", "Card on 12'oclock!"
+    ]
+
+    embed = discord.Embed(
+        title=random.choice(spawn_titles),
+        description="Click the button below to catch it!"
+    )
+    embed.set_image(url=card['spawn_image_url'])
+
+    msg = await channel.send(
+        embed=embed,
+        view=CatchView(card['name']),
+        allowed_mentions=discord.AllowedMentions.none()
+    )
+    spawned_messages.append(msg)
+
+    await ctx.send(f"Spawned random card {card['name']} in {channel_name}.")
+
 @bot.command(name='spawn_card')
 @commands.check(is_authorized)
 async def spawn_card_command(ctx, *, args: str):
@@ -2624,14 +2694,14 @@ async def info_slash(interaction: discord.Interaction):
 
     embed.add_field(
         name="Version",
-        value="2.3 - \"This update has changed the world.\"", 
+        value="2.3 - \"We're rebooting this :-)\"", 
         inline=False
     )
     embed.add_field(
         name="Developers",
         value=(
-            "**Current:** <@573878397952851988>\n"
-            "**Retired:** <@1035607651985403965>, <@845973389415284746>"
+            "**Current:** <@573878397952851988>, <@1035607651985403965>\n"
+            "**Retired:** <@845973389415284746>"
         ),
         inline=True
     )
@@ -2644,11 +2714,6 @@ async def info_slash(interaction: discord.Interaction):
             f"• **Lines of Code:** {total_lines_of_code}"
         ),
         inline=False
-    )
-    embed.add_field(
-        name="Database",
-        value=f"• **Status:** Healthy\n• **Backups:** {backup_count}/{MAX_BACKUPS}",
-        inline=True
     )
     embed.add_field(
         name="Latest Changes",
@@ -2804,20 +2869,6 @@ async def on_message(message):
             embed.set_image(url=response["image"])
             await message.channel.send(embed=embed)
             break
-    
-    if content.startswith('!'):
-        user_id = str(message.author.id)
-        is_auth = user_id in authorized_user_ids
-        if content.strip() == '!commands_dex':
-            await message.channel.send("Please use `/commands_dex` instead.")
-            return
-        elif content.startswith('!!'):
-            return
-        elif not is_auth:
-            return
-        else:
-            await bot.process_commands(message)
-            return
 
     await bot.process_commands(message)
 
